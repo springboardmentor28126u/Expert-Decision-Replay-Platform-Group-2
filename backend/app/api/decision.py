@@ -10,6 +10,10 @@ from app.schemas.decision import (
     DecisionUpdate
 )
 
+from fastapi import UploadFile, File
+import os
+
+from app.models.decision_document import DecisionDocument
 from app.core.dependencies import get_current_user
 
 router = APIRouter(
@@ -128,3 +132,88 @@ def get_decision(
         raise HTTPException(status_code=404, detail="Decision not found")
 
     return decision
+
+@router.get("/{decision_id}/documents")
+def get_documents(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    documents = (
+        db.query(DecisionDocument)
+        .filter(DecisionDocument.decision_id == decision_id)
+        .all()
+    )
+
+    return documents
+
+@router.post("/{decision_id}/upload")
+def upload_document(
+    decision_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Check if decision exists
+    decision = db.query(Decision).filter(
+        Decision.id == decision_id
+    ).first()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    # Create uploads folder if it doesn't exist
+    os.makedirs("uploads", exist_ok=True)
+
+    # Save file
+    file_path = f"uploads/{file.filename}"
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file.file.read())
+
+    # Save file information in database
+    document = DecisionDocument(
+        decision_id=decision.id,
+        file_name=file.filename,
+        file_path=file_path,
+        uploaded_by=current_user.id
+    )
+
+    db.add(document)
+    db.commit()
+
+    return {
+        "message": "File uploaded successfully",
+        "file_name": file.filename
+    }
+
+@router.delete("/documents/{document_id}")
+def delete_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    import os
+
+    document = (
+        db.query(DecisionDocument)
+        .filter(DecisionDocument.id == document_id)
+        .first()
+    )
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Only the uploader can delete the document
+    if document.uploaded_by != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Delete the file from the uploads folder
+    if os.path.exists(document.file_path):
+        os.remove(document.file_path)
+
+    # Delete the database record
+    db.delete(document)
+    db.commit()
+
+    return {"message": "Document deleted successfully"}

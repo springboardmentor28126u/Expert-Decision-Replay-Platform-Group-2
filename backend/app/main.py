@@ -9,6 +9,11 @@ from app.models.user import User
 from fastapi import Depends
 from app.api.decision import router as decision_router
 from app.models.decision_history import DecisionHistory
+from app.models.decision_document import DecisionDocument
+from app.models.alternative import Alternative
+from app.api.alternative import router as alternative_router
+from app.models.comment import Comment
+
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
@@ -17,6 +22,7 @@ app = FastAPI(title=settings.APP_NAME)
 
 app.include_router(auth_router)
 app.include_router(decision_router)
+app.include_router(alternative_router)
 
 @app.get("/")
 def root():

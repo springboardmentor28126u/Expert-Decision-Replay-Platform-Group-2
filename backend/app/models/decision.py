@@ -24,3 +24,4 @@ class Decision(Base):
     )
 
     creator = relationship("User")
+    
