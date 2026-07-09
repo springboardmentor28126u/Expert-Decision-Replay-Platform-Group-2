@@ -1,0 +1,31 @@
+from pydantic import BaseModel, EmailStr
+from datetime import datetime
+from models import UserRole
+
+# Data expected when a new user registers
+class UserCreate(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str
+    
+# Data expected when a user logs in
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+# Data sent back to the client (never includes password)
+class UserResponse(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Data sent back after successful login
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
