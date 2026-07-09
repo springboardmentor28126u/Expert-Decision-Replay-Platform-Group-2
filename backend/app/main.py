@@ -13,7 +13,7 @@ from app.models.decision_document import DecisionDocument
 from app.models.alternative import Alternative
 from app.api.alternative import router as alternative_router
 from app.models.comment import Comment
-
+from app.api.comment import router as comment_router
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
@@ -23,6 +23,7 @@ app = FastAPI(title=settings.APP_NAME)
 app.include_router(auth_router)
 app.include_router(decision_router)
 app.include_router(alternative_router)
+app.include_router(comment_router)
 
 @app.get("/")
 def root():
