@@ -32,3 +32,8 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": user.email, "role": user.role.value})
     return {"access_token": token, "token_type": "bearer"}
+from app.auth.dependencies import require_role
+
+@router.get("/admin-only")
+def admin_data(user=Depends(require_role("administrator"))):
+    return {"message": f"Welcome administrator {user['email']}"}
