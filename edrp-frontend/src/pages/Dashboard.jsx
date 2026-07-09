@@ -1,59 +1,145 @@
-import { useState, useEffect } from "react";
-import { getCurrentUser, logout } from "../services/api";
-import RoleStamp from "../components/RoleStamp";
-import "./Dashboard.css";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import "../styles/dashboard.css";
 
 function Dashboard() {
-  const [user, setUser] = useState(null);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const data = await getCurrentUser();
-        setUser(data);
-      } catch (err) {
-        setError("Could not load profile. Please log in again.");
-      }
+    const navigate = useNavigate();
+
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchCurrentUser();
+    }, []);
+
+    const fetchCurrentUser = async () => {
+
+        try {
+
+            const response = await api.get("/users/me");
+
+            setUser(response.data);
+
+        } catch (error) {
+
+            localStorage.removeItem("access_token");
+
+            navigate("/login");
+
+        } finally {
+
+            setLoading(false);
+
+        }
+
+    };
+
+    const logout = () => {
+
+        localStorage.removeItem("access_token");
+
+        navigate("/login");
+
+    };
+
+    if (loading) {
+
+        return <h2 className="loading">Loading...</h2>;
+
     }
-    fetchUser();
-  }, []);
 
-  function handleLogout() {
-    logout();
-    window.location.href = "/login";
-  }
+    return (
 
-  return (
-    <div className="dashboard-page">
-      <header className="dashboard-header">
-        <span className="dashboard-header__brand">Expert Decision Replay Platform</span>
-        <button className="btn-ghost" onClick={handleLogout}>Log Out</button>
-      </header>
+        <div className="dashboard">
 
-      {error && <p className="form-error" style={{ textAlign: "center", marginTop: 40 }}>{error}</p>}
+            <header className="dashboard-header">
 
-      {!error && !user && (
-        <p style={{ textAlign: "center", marginTop: 40, color: "var(--line)" }}>Loading record...</p>
-      )}
+                <h1>EDRP Dashboard</h1>
 
-      {user && (
-        <div className="record-card">
-          <p className="record-card__eyebrow">Record No. {user.id}</p>
-          <h1 className="record-card__title">{user.name}</h1>
+                <button onClick={logout}>
+                    Logout
+                </button>
 
-          <div className="record-field">
-            <span className="record-field__label">Email</span>
-            <span className="record-field__value">{user.email}</span>
-          </div>
-          <div className="record-field">
-            <span className="record-field__label">Role</span>
-            <span className="record-field__value"><RoleStamp role={user.role} /></span>
-          </div>
+            </header>
+
+            <div className="welcome-card">
+
+                <h2>Welcome, {user.name}</h2>
+
+                <p>
+                    Manage your profile and teams from here.
+                </p>
+
+            </div>
+
+            <div className="profile-card">
+
+                <h2>User Details</h2>
+
+                <div className="row">
+                    <span>ID</span>
+                    <span>{user.id}</span>
+                </div>
+
+                <div className="row">
+                    <span>Name</span>
+                    <span>{user.name}</span>
+                </div>
+
+                <div className="row">
+                    <span>Email</span>
+                    <span>{user.email}</span>
+                </div>
+
+                <div className="row">
+                    <span>Role</span>
+                    <span>{user.role}</span>
+                </div>
+
+            </div>
+
+            <div className="action-cards">
+
+                <div className="card">
+
+                    <h3>Teams</h3>
+
+                    <p>
+                        View all teams available in the organization.
+                    </p>
+
+                    <button>
+                        View Teams
+                    </button>
+
+                </div>
+
+                {
+                    user.role === "Administrator" &&
+
+                    <div className="card">
+
+                        <h3>Users</h3>
+
+                        <p>
+                            Manage users and assign roles.
+                        </p>
+
+                        <button>
+                            Manage Users
+                        </button>
+
+                    </div>
+                }
+
+            </div>
+
         </div>
-      )}
-    </div>
-  );
+
+    );
+
 }
 
 export default Dashboard;
