@@ -20,32 +20,40 @@ function Login() {
     });
   };
 
-  const handleSubmit = async (e) => {
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+
+  //   setError("");
+
+  //   try {
+  //     const data = new URLSearchParams();
+
+  //     data.append("username", formData.email);
+  //     data.append("password", formData.password);
+
+  //     const response = await api.post("/login", data);
+
+  //     localStorage.setItem(
+  //       "access_token",
+  //       response.data.access_token
+  //     );
+
+  //     navigate("/dashboard");
+  //   } catch (err) {
+  //     setError(
+  //       err.response?.data?.detail || "Invalid Email or Password"
+  //     );
+  //   }
+  // };
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     setError("");
 
-    try {
-      const data = new URLSearchParams();
+    localStorage.setItem("access_token", "dummy-token");
 
-      data.append("username", formData.email);
-      data.append("password", formData.password);
-
-      const response = await api.post("/login", data);
-
-      localStorage.setItem(
-        "access_token",
-        response.data.access_token
-      );
-
-      navigate("/dashboard");
-    } catch (err) {
-      setError(
-        err.response?.data?.detail || "Invalid Email or Password"
-      );
-    }
-  };
-
+    navigate("/dashboard");
+};
   return (
     <div className="login-page">
 

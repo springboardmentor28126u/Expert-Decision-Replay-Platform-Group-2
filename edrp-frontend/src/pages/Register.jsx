@@ -34,7 +34,7 @@ function Register() {
 
         try {
 
-            await api.post("/users", formData);
+            // await api.post("/users", formData);
 
             setSuccess("Registration Successful");
 
