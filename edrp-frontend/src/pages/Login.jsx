@@ -1,57 +1,102 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { loginUser, saveToken } from "../services/api";
-import AuthCard from "../components/AuthCard";
-import "../styles/forms.css";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../services/api";
+import "../styles/login.css";
 
 function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    setError("");
+
     try {
-      const data = await loginUser(email, password);
-      saveToken(data.access_token);
-      setError("");
+      const data = new URLSearchParams();
+
+      data.append("username", formData.email);
+      data.append("password", formData.password);
+
+      const response = await api.post("/login", data);
+
+      localStorage.setItem(
+        "access_token",
+        response.data.access_token
+      );
+
       navigate("/dashboard");
     } catch (err) {
-      setError("Invalid email or password");
+      setError(
+        err.response?.data?.detail || "Invalid Email or Password"
+      );
     }
-  }
+  };
 
   return (
-    <AuthCard
-      title="Sign in to your file"
-      footer={
-        <>Don't have an account? <Link to="/register">Register</Link></>
-      }
-    >
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Email</label>
+    <div className="login-page">
+
+      <div className="login-card">
+
+        <h1>EDRP</h1>
+
+        <p className="subtitle">
+          Expert Decision Replay Platform
+        </p>
+
+        <h2>Login</h2>
+
+        {error && (
+          <p className="error">{error}</p>
+        )}
+
+        <form onSubmit={handleSubmit}>
+
           <input
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            name="email"
+            placeholder="Enter Email"
+            value={formData.email}
+            onChange={handleChange}
             required
           />
-        </div>
-        <div className="form-group">
-          <label>Password</label>
+
           <input
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            name="password"
+            placeholder="Enter Password"
+            value={formData.password}
+            onChange={handleChange}
             required
           />
-        </div>
-        {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="btn-primary">Log In</button>
-      </form>
-    </AuthCard>
+
+          <button type="submit">
+            Login
+          </button>
+
+        </form>
+
+        <p className="register-link">
+          Don't have an account?
+          <Link to="/register"> Register</Link>
+        </p>
+
+      </div>
+
+    </div>
   );
 }
 

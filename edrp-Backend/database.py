@@ -5,14 +5,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 load_dotenv()  # reads .env and loads DB_PASSWORD, JWT_SECRET_KEY, etc.
 
-DATABASE_URL = URL.create(
-    drivername="postgresql+psycopg2",
-    username="postgres",
-    password=os.getenv("DB_PASSWORD"),
-    host="localhost",
-    port=5432,
-    database="edrp_db",
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL)
 
