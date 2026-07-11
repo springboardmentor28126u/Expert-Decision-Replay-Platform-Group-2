@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
+import "./App.css";
 
 const BASE_URL = "http://127.0.0.1:8000/auth";
 
@@ -10,6 +11,15 @@ function App() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("employee");
   const [message, setMessage] = useState("");
+  const [loggedInUser, setLoggedInUser] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      setLoggedInUser({ email: payload.sub, role: payload.role });
+    }
+  }, []);
 
   const handleRegister = async () => {
     try {
@@ -29,41 +39,87 @@ function App() {
     try {
       const res = await axios.post(`${BASE_URL}/login`, { email, password });
       localStorage.setItem("token", res.data.access_token);
-      setMessage("Login successful! Token saved.");
+      const payload = JSON.parse(atob(res.data.access_token.split(".")[1]));
+      setLoggedInUser({ email: payload.sub, role: payload.role });
+      setMessage("");
     } catch (err) {
       setMessage(err.response?.data?.detail || "Login failed");
     }
   };
 
-  return (
-    <div style={{ maxWidth: 400, margin: "50px auto", fontFamily: "sans-serif" }}>
-      <h2>Expert Decision Replay Platform</h2>
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setLoggedInUser(null);
+    setEmail("");
+    setPassword("");
+  };
 
-      <div style={{ marginBottom: 10 }}>
-        <button onClick={() => setMode("login")}>Login</button>
-        <button onClick={() => setMode("register")}>Register</button>
+  if (loggedInUser) {
+    return (
+      <div className="page">
+        <div className="card">
+          <div className="eyebrow">Session Active</div>
+          <h1 className="title">Welcome back</h1>
+          <div className="dashboard-row">
+            <span>Email</span>
+            <span>{loggedInUser.email}</span>
+          </div>
+          <div className="dashboard-row">
+            <span>Role</span>
+            <span>{loggedInUser.role}</span>
+          </div>
+          <button className="logout-btn" onClick={handleLogout}>Log out</button>
+        </div>
       </div>
+    );
+  }
 
-      {mode === "register" && (
-        <input placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} style={{ display: "block", marginBottom: 8, width: "100%" }} />
-      )}
-      <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ display: "block", marginBottom: 8, width: "100%" }} />
-      <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ display: "block", marginBottom: 8, width: "100%" }} />
+  return (
+    <div className="page">
+      <div className="card">
+        <div className="eyebrow">Decision Records, Preserved</div>
+        <h1 className="title">Expert Decision<br />Replay Platform</h1>
 
-      {mode === "register" && (
-        <select value={role} onChange={(e) => setRole(e.target.value)} style={{ display: "block", marginBottom: 8, width: "100%" }}>
-          <option value="employee">Employee</option>
-          <option value="reviewer">Reviewer</option>
-          <option value="manager">Manager</option>
-          <option value="administrator">Administrator</option>
-        </select>
-      )}
+        <div className="tabs">
+          <button className={`tab ${mode === "login" ? "active" : ""}`} onClick={() => setMode("login")}>Login</button>
+          <button className={`tab ${mode === "register" ? "active" : ""}`} onClick={() => setMode("register")}>Register</button>
+        </div>
 
-      <button onClick={mode === "login" ? handleLogin : handleRegister}>
-        {mode === "login" ? "Login" : "Register"}
-      </button>
+        {mode === "register" && (
+          <div className="field">
+            <label>Full name</label>
+            <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Sphoorthi Paidi" />
+          </div>
+        )}
 
-      <p>{message}</p>
+        <div className="field">
+          <label>Email</label>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
+        </div>
+
+        <div className="field">
+          <label>Password</label>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+        </div>
+
+        {mode === "register" && (
+          <div className="field">
+            <label>Role</label>
+            <select value={role} onChange={(e) => setRole(e.target.value)}>
+              <option value="employee">Employee</option>
+              <option value="reviewer">Reviewer</option>
+              <option value="manager">Manager</option>
+              <option value="administrator">Administrator</option>
+            </select>
+          </div>
+        )}
+
+        <button className="submit-btn" onClick={mode === "login" ? handleLogin : handleRegister}>
+          {mode === "login" ? "Log in" : "Create account"}
+        </button>
+
+        {message && <div className="message">{message}</div>}
+      </div>
     </div>
   );
 }

@@ -37,3 +37,25 @@ from app.auth.dependencies import require_role
 @router.get("/admin-only")
 def admin_data(user=Depends(require_role("administrator"))):
     return {"message": f"Welcome administrator {user['email']}"}
+from app.auth.dependencies import get_current_user
+from app.schemas.user import UserUpdate
+
+@router.get("/me", response_model=UserOut)
+def get_my_profile(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == current_user["email"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.put("/me", response_model=UserOut)
+def update_my_profile(updates: UserUpdate, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == current_user["email"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if updates.full_name:
+        user.full_name = updates.full_name
+
+    db.commit()
+    db.refresh(user)
+    return user
