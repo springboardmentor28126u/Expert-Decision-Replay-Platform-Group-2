@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
+
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserOut
+from app.schemas.user import UserCreate, UserLogin, UserOut, UserUpdate, RoleUpdate
 from app.auth.security import hash_password, verify_password, create_access_token
+from app.auth.dependencies import get_current_user, require_role
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
 
 @router.post("/register", response_model=UserOut)
 def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -24,6 +28,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
+
 @router.post("/login")
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == credentials.email).first()
@@ -32,13 +37,12 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": user.email, "role": user.role.value})
     return {"access_token": token, "token_type": "bearer"}
-from app.auth.dependencies import require_role
+
 
 @router.get("/admin-only")
 def admin_data(user=Depends(require_role("administrator"))):
     return {"message": f"Welcome administrator {user['email']}"}
-from app.auth.dependencies import get_current_user
-from app.schemas.user import UserUpdate
+
 
 @router.get("/me", response_model=UserOut)
 def get_my_profile(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
@@ -46,6 +50,7 @@ def get_my_profile(current_user=Depends(get_current_user), db: Session = Depends
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
 
 @router.put("/me", response_model=UserOut)
 def update_my_profile(updates: UserUpdate, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
@@ -59,3 +64,20 @@ def update_my_profile(updates: UserUpdate, current_user=Depends(get_current_user
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.put("/users/{user_id}/role", response_model=UserOut)
+def update_user_role(user_id: int, updates: RoleUpdate, admin=Depends(require_role("administrator")), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.role = updates.role
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.get("/users", response_model=List[UserOut])
+def list_all_users(admin=Depends(require_role("administrator")), db: Session = Depends(get_db)):
+    return db.query(User).all()

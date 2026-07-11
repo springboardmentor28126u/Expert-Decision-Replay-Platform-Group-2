@@ -19,5 +19,9 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+
 class UserUpdate(BaseModel):
     full_name: str | None = None
+
+class RoleUpdate(BaseModel):
+    role: RoleEnum
