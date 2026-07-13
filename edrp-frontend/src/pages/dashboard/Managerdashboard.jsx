@@ -1,50 +1,46 @@
+
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "../../styles/dashboard.css";
 
-
 function ManagerDashboard({ user }) {
-
 
     const statistics = [
 
         {
-            title: "Team Decisions",
-            value: 45
+            title: "Total Team Members",
+            value: 0
         },
 
         {
-            title: "Pending Approvals",
-            value: 10
+            title: "Total Teams",
+            value: 0
         },
 
         {
-            title: "Approved Decisions",
-            value: 32
+            title: "Assigned Team",
+            value: "-"
         },
 
         {
-            title: "Team Members",
-            value: 18
+            title: "Active Users",
+            value: 0
         }
 
     ];
-
 
 
     return (
 
         <DashboardLayout user={user}>
 
-
             <div className="dashboard-page">
-
 
                 <div className="page-header">
 
                     <h1>
                         Manager Dashboard
                     </h1>
-
 
                     <p>
                         Welcome back, {user.name}
@@ -54,36 +50,32 @@ function ManagerDashboard({ user }) {
 
 
 
-                {/* Statistics Cards */}
-
                 <div className="stats-grid">
 
+                    {
+                        statistics.map((item, index) => (
 
-                {
-                    statistics.map((item,index)=>(
+                            <div
+                                className="stat-card"
+                                key={index}
+                            >
 
-                        <div 
-                            className="stat-card"
-                            key={index}
-                        >
+                                <h3>
+                                    {item.title}
+                                </h3>
 
-                            <h3>
-                                {item.title}
-                            </h3>
+                                <h2>
+                                    {item.value}
+                                </h2>
 
+                            </div>
 
-                            <h2>
-                                {item.value}
-                            </h2>
-
-
-                        </div>
-
-                    ))
-                }
-
+                        ))
+                    }
 
                 </div>
+
+             
 
 
 
@@ -93,169 +85,107 @@ function ManagerDashboard({ user }) {
 
                 <div className="dashboard-section">
 
-
                     <h2>
-                        Team Decisions
+                        Team Members
                     </h2>
 
-
-
                     <table className="decision-table">
-
 
                         <thead>
 
                             <tr>
 
-                                <th>
-                                    Decision
-                                </th>
+                                <th>Name</th>
 
-                                <th>
-                                    Owner
-                                </th>
+                                <th>Email</th>
 
-                                <th>
-                                    Status
-                                </th>
-
+                                <th>Role</th>
 
                             </tr>
 
                         </thead>
 
-
-
                         <tbody>
 
-
                             <tr>
 
-                                <td>
-                                    Cloud Migration
-                                </td>
+                                <td>Raj</td>
 
-                                <td>
-                                    Raj
-                                </td>
+                                <td>raj@gmail.com</td>
 
-                                <td>
-                                    Approved
-                                </td>
+                                <td>Manager</td>
 
                             </tr>
 
-
-
                             <tr>
 
-                                <td>
-                                    Security Upgrade
-                                </td>
+                                <td>Anjali</td>
 
-                                <td>
-                                    Anjali
-                                </td>
+                                <td>anjali@gmail.com</td>
 
-                                <td>
-                                    Under Review
-                                </td>
+                                <td>Employee</td>
 
                             </tr>
-
 
                         </tbody>
 
-
                     </table>
 
+                </div>
+
+        
+        
+        <div className="dashboard-section">
+
+            <h2>
+                Quick Actions
+            </h2>
+
+            <div className="approval-list">
+
+                <div className="approval-card">
+
+                    <h3>
+                        View Users
+                    </h3>
+
+                    <p>
+                        Manage all team members.
+                    </p>
+
+                    <button className="approve-btn">
+                        View Users
+                    </button>
 
                 </div>
 
+                <div className="approval-card">
 
+                    <h3>
+                        View Teams
+                    </h3>
 
+                    <p>
+                        Check assigned teams.
+                    </p>
 
-
-                {/* Pending Approvals */}
-
-
-                <div className="dashboard-section">
-
-
-                    <h2>
-                        Pending Approvals
-                    </h2>
-
-
-
-                    <div className="approval-list">
-
-
-                        <div className="approval-card">
-
-                            <h3>
-                                New Hiring Process
-                            </h3>
-
-                            <p>
-                                Submitted by Rahul
-                            </p>
-
-
-                            <button className="approve-btn">
-                                Approve
-                            </button>
-
-
-                            <button className="reject-btn">
-                                Reject
-                            </button>
-
-
-                        </div>
-
-
-
-                        <div className="approval-card">
-
-                            <h3>
-                                Budget Planning
-                            </h3>
-
-                            <p>
-                                Submitted by Anjali
-                            </p>
-
-
-                            <button className="approve-btn">
-                                Approve
-                            </button>
-
-
-                            <button className="reject-btn">
-                                Reject
-                            </button>
-
-
-                        </div>
-
-
-
-                    </div>
-
+                    <button className="approve-btn">
+                        View Teams
+                    </button>
 
                 </div>
-
-
 
             </div>
 
+        </div>
+                
+
+        </div>
 
         </DashboardLayout>
 
     );
 
 }
-
 
 export default ManagerDashboard;

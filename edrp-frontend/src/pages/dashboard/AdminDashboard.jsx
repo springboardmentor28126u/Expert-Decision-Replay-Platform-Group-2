@@ -1,121 +1,168 @@
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "../../styles/dashboard.css";
+
 import {
     Users,
-    FileText,
-    Clock,
-    BarChart3
+    UserCheck,
+    UsersRound,
+    Building2
 } from "lucide-react";
 
-function AdminDashboard({user}) {
+function AdminDashboard({ user }) {
 
+    const statistics = [
 
-const statistics = [
+        {
+            title: "Total Users",
+            value: 0,
+            icon: <Users />
+        },
 
-{
-    title:"Total Users",
-    value:125,
-    icon:<Users />
-},
+        {
+            title: "Total Teams",
+            value: 0,
+            icon: <Building2 />
+        },
 
-{
-    title:"Total Decisions",
-    value:86,
-    icon:<FileText />
-},
+        {
+            title: "Administrators",
+            value: 0,
+            icon: <UserCheck />
+        },
 
-{
-    title:"Pending Approvals",
-    value:12,
-    icon:<Clock />
-},
+        {
+            title: "Managers",
+            value: 0,
+            icon: <UsersRound />
+        }
 
-{
-    title:"Reports Generated",
-    value:24,
-    icon:<BarChart3 />
-}
+    ];
 
-];
+    const recentUsers = [
 
-const activities=[
+        {
+            name: "Raj",
+            email: "raj@gmail.com",
+            role: "Administrator"
+        },
 
-"Raj created a new decision",
-"Anjali approved Cloud Migration",
-"Rahul updated Security Audit"
+        {
+            name: "Anjali",
+            email: "anjali@gmail.com",
+            role: "Employee"
+        },
 
-];
+        {
+            name: "Rahul",
+            email: "rahul@gmail.com",
+            role: "Manager"
+        }
 
+    ];
 
-return(
+    const teams = [
 
-<DashboardLayout user={user}>
+        {
+            name: "Frontend Team",
+            manager: "Raj"
+        },
 
+        {
+            name: "Backend Team",
+            manager: "Rahul"
+        },
 
-<div className="dashboard-page">
+        {
+            name: "QA Team",
+            manager: "Anjali"
+        }
 
+    ];
+    return (
 
-<div className="page-header">
+        <DashboardLayout user={user}>
 
-<h1>
-Administrator Dashboard
-</h1>
+            <div className="dashboard-page">
 
-<p>
-Welcome back, {user.name}
-</p>
+                <div className="page-header">
 
-</div>
+                    <h1>
+                        Administrator Dashboard
+                    </h1>
 
+                    <p>
+                        Welcome back, {user.name}
+                    </p>
 
+                </div>
 
-<div className="stats-grid">
+                <div className="stats-grid">
 
+                    {
 
-{
-statistics.map((item,index)=>(
+                        statistics.map((item, index) => (
 
-<div className="stat-card">
+                            <div
+                                className="stat-card"
+                                key={index}
+                            >
 
+                                <div className="card-icon">
 
-<div className="card-icon">
+                                    {item.icon}
 
-    {item.icon}
+                                </div>
 
-</div>
+                                <div>
 
+                                    <h3>
+                                        {item.title}
+                                    </h3>
 
-    <div>
+                                    <h2>
+                                        {item.value}
+                                    </h2>
 
-        <h3>
-        {item.title}
-        </h3>
+                                </div>
 
-        <h2>
-        {item.value}
-        </h2>
+                            </div>
+
+                        ))
+
+                    }
+
+                </div>
+<div className="dashboard-section">
+
+    <h2>
+        Current User
+    </h2>
+
+    <div className="profile-card">
+
+        <p>
+            <strong>Name:</strong> {user.name}
+        </p>
+
+        <p>
+            <strong>Email:</strong> {user.email}
+        </p>
+
+        <p>
+            <strong>Role:</strong> {user.role}
+        </p>
 
     </div>
 
-
 </div>
-
-
-))
-}
-
-
-</div>
-
 
 
 
 <div className="dashboard-section">
 
     <h2>
-        Recent Decisions
+        Recent Users
     </h2>
-
 
     <table className="decision-table">
 
@@ -123,315 +170,185 @@ statistics.map((item,index)=>(
 
             <tr>
 
-                <th>Decision</th>
-                <th>Status</th>
-                <th>Owner</th>
-                <th>Action</th>
+                <th>Name</th>
+
+                <th>Email</th>
+
+                <th>Role</th>
 
             </tr>
 
         </thead>
 
-
         <tbody>
 
+            {
 
-            <tr>
+                recentUsers.map((item, index) => (
 
-                <td>
-                    Cloud Migration
-                </td>
+                    <tr key={index}>
 
-                <td>
-                    <span className="status approved">
-                        Approved
-                    </span>
-                </td>
+                        <td>
+                            {item.name}
+                        </td>
 
-                <td>
-                    Raj
-                </td>
+                        <td>
+                            {item.email}
+                        </td>
 
-                <td>
+                        <td>
+                            {item.role}
+                        </td>
 
-                    <button className="view-btn">
-                        View
-                    </button>
+                    </tr>
 
-                </td>
+                ))
 
-            </tr>
-
-
-
-            <tr>
-
-                <td>
-                    HR Policy Update
-                </td>
-
-                <td>
-                    <span className="status pending">
-                        Pending
-                    </span>
-                </td>
-
-                <td>
-                    Anjali
-                </td>
-
-                <td>
-
-                    <button className="view-btn">
-                        View
-                    </button>
-
-                </td>
-
-            </tr>
-
-
-
-            <tr>
-
-                <td>
-                    Security Audit
-                </td>
-
-                <td>
-                    <span className="status rejected">
-                        Rejected
-                    </span>
-                </td>
-
-                <td>
-                    Rahul
-                </td>
-
-                <td>
-
-                    <button className="view-btn">
-                        View
-                    </button>
-
-                </td>
-
-            </tr>
-
+            }
 
         </tbody>
 
+    </table>
+
+</div>
+<div className="dashboard-section">
+
+    <h2>
+        Teams
+    </h2>
+
+    <table className="decision-table">
+
+        <thead>
+
+            <tr>
+
+                <th>Team Name</th>
+
+                <th>Manager</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {
+
+                teams.map((team, index) => (
+
+                    <tr key={index}>
+
+                        <td>
+                            {team.name}
+                        </td>
+
+                        <td>
+                            {team.manager}
+                        </td>
+
+                    </tr>
+
+                ))
+
+            }
+
+        </tbody>
 
     </table>
 
-
-
 </div>
 
 
-
-
-
-<div className="dashboard-section">
-
-
-<h2>
-User Activity
-</h2>
-
-
-<ul className="activity-list">
-
-
-{
-activities.map((item,index)=>(
-
-<li key={index}>
-{item}
-</li>
-
-))
-}
-
-
-</ul>
-
-
-</div>
-
-
-
-
-
-<div className="dashboard-section">
-
-
-{/* <h2>
-Reports
-</h2>
-
-
-<button className="report-btn">
-Download Decision Report
-</button>
-
-
-<button className="report-btn">
-Download Audit Report
-</button>
- */}
-
-</div>
 
 <div className="dashboard-section">
 
     <h2>
-        User Activity
+        Quick Actions
     </h2>
 
+    <div className="approval-list">
 
-    <div className="activity-list">
+        <div className="approval-card">
 
+            <h3>
+                View Users
+            </h3>
 
-        <div className="activity-item">
+            <p>
+                Manage all registered users.
+            </p>
 
-            <div className="activity-dot"></div>
-
-            <div>
-
-                <h4>
-                    Raj created a new decision
-                </h4>
-
-                <p>
-                    10 minutes ago
-                </p>
-
-            </div>
+            <button className="approve-btn">
+                View Users
+            </button>
 
         </div>
 
 
 
-        <div className="activity-item">
+        <div className="approval-card">
 
-            <div className="activity-dot"></div>
+            <h3>
+                Create Team
+            </h3>
 
-            <div>
+            <p>
+                Create a new team.
+            </p>
 
-                <h4>
-                    Anjali approved Cloud Migration
-                </h4>
-
-                <p>
-                    1 hour ago
-                </p>
-
-            </div>
+            <button className="approve-btn">
+                Create Team
+            </button>
 
         </div>
 
 
 
-        <div className="activity-item">
+        <div className="approval-card">
 
-            <div className="activity-dot"></div>
+            <h3>
+                Assign Team
+            </h3>
 
-            <div>
+            <p>
+                Assign users to teams.
+            </p>
 
-                <h4>
-                    Rahul updated Security Audit
-                </h4>
-
-                <p>
-                    Yesterday
-                </p>
-
-            </div>
+            <button className="approve-btn">
+                Assign Team
+            </button>
 
         </div>
 
+
+
+        <div className="approval-card">
+
+            <h3>
+                Change Role
+            </h3>
+
+            <p>
+                Update user roles.
+            </p>
+
+            <button className="approve-btn">
+                Change Role
+            </button>
+
+        </div>
 
     </div>
 
-
-</div>
-<div className="dashboard-section">
-
-
-<h2>
-Organization Reports
-</h2>
-
-
-<div className="report-cards">
-
-
-<div className="report-card">
-
-<h3>
-Decision Reports
-</h3>
-
-<p>
-Generate complete decision summary
-</p>
-
-<button>
-Download PDF
-</button>
-
 </div>
 
-
-
-<div className="report-card">
-
-<h3>
-Approval Reports
-</h3>
-
-<p>
-Approval workflow analysis
-</p>
-
-<button>
-Download PDF
-</button>
-
 </div>
-
-
-
-<div className="report-card">
-
-<h3>
-Audit Reports
-</h3>
-
-<p>
-System activity logs
-</p>
-
-<button>
-Download PDF
-</button>
-
-</div>
-
-
-</div>
-
-
-</div>
-</div>
-
 
 </DashboardLayout>
 
-)
+);
 
 }
-
 
 export default AdminDashboard;

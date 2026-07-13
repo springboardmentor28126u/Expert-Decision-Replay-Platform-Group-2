@@ -1,7 +1,6 @@
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 
-
 function DashboardLayout({ user, children }) {
 
     return (
@@ -10,11 +9,9 @@ function DashboardLayout({ user, children }) {
 
             <Sidebar role={user.role} />
 
-
             <div className="main-content">
 
                 <Navbar user={user} />
-
 
                 <main className="page-content">
 
@@ -22,15 +19,12 @@ function DashboardLayout({ user, children }) {
 
                 </main>
 
-
             </div>
-
 
         </div>
 
     );
 
 }
-
 
 export default DashboardLayout;
