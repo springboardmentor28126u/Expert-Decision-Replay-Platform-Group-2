@@ -19,7 +19,7 @@ function Dashboard() {
             id: 1,
             name: "Raj Upadhyay",
             email: "raj@gmail.com",
-            role: ""
+            role: "Manager"
         };
 
         setUser(dummyUser);
