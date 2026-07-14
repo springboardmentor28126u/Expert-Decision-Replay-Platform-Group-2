@@ -80,3 +80,93 @@ def list_users(
     users = db.execute(select(User)).scalars().all()
     return users
 
+from schemas import RoleUpdate
+
+@app.put("/users/{user_id}/role", response_model=UserResponse)
+def update_user_role(
+    user_id: int,
+    role_update: RoleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.admin)),
+):
+    target_user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if target_user.id == current_user.id:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot change your own role"
+        )
+
+    target_user.role = role_update.role
+    db.commit()
+    db.refresh(target_user)
+
+    return target_user
+
+from schemas import DecisionCreate, DecisionResponse, DecisionStatusUpdate
+from models import Decision, DecisionStatus
+from typing import List as ListType
+
+@app.post("/decisions", response_model=DecisionResponse)
+def create_decision(
+    decision: DecisionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    new_decision = Decision(
+        title=decision.title,
+        problem_statement=decision.problem_statement,
+        category=decision.category,
+        created_by=current_user.id,
+    )
+    db.add(new_decision)
+    db.commit()
+    db.refresh(new_decision)
+    return new_decision
+
+
+@app.get("/decisions", response_model=ListType[DecisionResponse])
+def list_decisions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decisions = db.execute(select(Decision)).scalars().all()
+    return decisions
+
+
+@app.get("/decisions/{decision_id}", response_model=DecisionResponse)
+def get_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+    return decision
+
+
+@app.put("/decisions/{decision_id}/status", response_model=DecisionResponse)
+def update_decision_status(
+    decision_id: int,
+    status_update: DecisionStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    decision.status = status_update.status
+    db.commit()
+    db.refresh(decision)
+    return decision

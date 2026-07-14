@@ -29,3 +29,29 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class RoleUpdate(BaseModel):
+    role: UserRole
+
+from models import DecisionStatus
+
+class DecisionCreate(BaseModel):
+    title: str
+    problem_statement: str
+    category: str | None = None
+
+class DecisionResponse(BaseModel):
+    id: int
+    title: str
+    problem_statement: str
+    category: str | None
+    status: DecisionStatus
+    created_by: int
+    created_at: datetime
+    updated_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+class DecisionStatusUpdate(BaseModel):
+    status: DecisionStatus
