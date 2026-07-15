@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import Input from '../components/Input';
 import Select from '../components/Select';
 import Button from '../components/Button';
@@ -20,9 +21,12 @@ const ROLES = [
 ];
 
 /**
- * RegisterPage — Standalone registration page.
+ * RegisterPage — Standalone registration page connected to backend.
  */
 export default function RegisterPage() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,6 +37,9 @@ export default function RegisterPage() {
   });
 
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -42,9 +49,12 @@ export default function RegisterPage() {
     if (errors[fieldName]) {
       setErrors((prev) => ({ ...prev, [fieldName]: '' }));
     }
+    if (submitError) {
+      setSubmitError('');
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
 
@@ -81,8 +91,30 @@ export default function RegisterPage() {
       return;
     }
 
-    console.log('Registering with:', formData);
-    // Integration logic goes here later
+    setLoading(true);
+    setSubmitError('');
+    setSuccessMessage('');
+
+    // Prepare payload matching FastAPI schema (excludes confirmPassword)
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      team: formData.team,
+      role: formData.role,
+    };
+
+    const result = await register(payload);
+
+    if (result.success) {
+      setSuccessMessage('Account created successfully! Redirecting to login...');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2500);
+    } else {
+      setSubmitError(result.error);
+      setLoading(false);
+    }
   };
 
   return (
@@ -90,7 +122,7 @@ export default function RegisterPage() {
       {/* Glass card */}
       <div className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl p-8">
         {/* Brand */}
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center mb-6">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg mb-4">
             <span className="text-white font-bold text-lg">ED</span>
           </div>
@@ -99,6 +131,20 @@ export default function RegisterPage() {
             Join the Decision Replay Platform
           </p>
         </div>
+
+        {/* Global Error Banner */}
+        {submitError && (
+          <div className="mb-5 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-200 text-sm text-center font-medium">
+            {submitError}
+          </div>
+        )}
+
+        {/* Global Success Banner */}
+        {successMessage && (
+          <div className="mb-5 px-4 py-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 text-sm text-center font-medium animate-pulse">
+            {successMessage}
+          </div>
+        )}
 
         {/* Form */}
         <form className="space-y-5" onSubmit={handleSubmit}>
@@ -112,6 +158,7 @@ export default function RegisterPage() {
             value={formData.name}
             onChange={handleChange}
             error={errors.name}
+            disabled={loading}
           />
 
           <Input
@@ -124,6 +171,7 @@ export default function RegisterPage() {
             value={formData.email}
             onChange={handleChange}
             error={errors.email}
+            disabled={loading}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -136,6 +184,7 @@ export default function RegisterPage() {
               value={formData.team}
               onChange={handleChange}
               error={errors.team}
+              disabled={loading}
             />
 
             <Select
@@ -147,6 +196,7 @@ export default function RegisterPage() {
               value={formData.role}
               onChange={handleChange}
               error={errors.role}
+              disabled={loading}
             />
           </div>
 
@@ -160,6 +210,7 @@ export default function RegisterPage() {
             value={formData.password}
             onChange={handleChange}
             error={errors.password}
+            disabled={loading}
           />
 
           <Input
@@ -172,14 +223,26 @@ export default function RegisterPage() {
             value={formData.confirmPassword}
             onChange={handleChange}
             error={errors.confirmPassword}
+            disabled={loading}
           />
 
           <Button
             type="submit"
             variant="primary"
-            className="w-full py-2.5"
+            className="w-full py-2.5 flex items-center justify-center gap-2"
+            disabled={loading}
           >
-            Create account
+            {loading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Creating account...
+              </>
+            ) : (
+              'Create account'
+            )}
           </Button>
         </form>
 
