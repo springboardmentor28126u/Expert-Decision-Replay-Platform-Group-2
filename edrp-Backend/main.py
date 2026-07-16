@@ -9,6 +9,7 @@ from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 from models import Team
 from schemas import TeamCreate, TeamOut
+from routers import decision, category, attachment, alternative, discussion
 
 app = FastAPI()
 
@@ -32,7 +33,7 @@ def read_root():
 
 
 # Create the database tables if they don't exist
-# Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 
 # User management endpoints
@@ -130,3 +131,9 @@ def assign_user_to_team(user_id: int, team_id: int, admin_user: User = Depends(r
     db.commit()
     db.refresh(user)
     return {"id": user.id, "name": user.name, "team_id": user.team_id}
+
+app.include_router(decision.router, prefix="/decisions", tags=["decisions"])
+app.include_router(category.router, prefix="/categories", tags=["categories"])
+app.include_router(attachment.router, prefix="/attachments", tags=["attachments"])
+app.include_router(alternative.router, prefix="/alternatives", tags=["alternatives"])
+app.include_router(discussion.router, tags=["discussions"])
