@@ -9,4 +9,4 @@ bcrypt
 python-dotenv
 python-multipart
 email-validator
- 
+supabase
