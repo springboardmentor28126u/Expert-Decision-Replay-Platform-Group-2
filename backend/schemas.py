@@ -1,91 +1,91 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
-from enum import Enum
+from datetime import datetime
+from models import UserRole, DecisionStatus, RiskLevel, FeasibilityLevel
 
-
-# -------------------------
-# User Roles
-# -------------------------
-class UserRole(str, Enum):
-    employee = "employee"
-    reviewer = "reviewer"
-    manager = "manager"
-    admin = "admin"
-
-
-# -------------------------
-# User Registration
-# -------------------------
+# Data expected when a new user registers
 class UserCreate(BaseModel):
     full_name: str
     email: EmailStr
     password: str
-    role: UserRole = UserRole.employee
-
-
-# -------------------------
-# User Login
-# -------------------------
+    
+# Data expected when a user logs in
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-
-# -------------------------
-# User Response
-# -------------------------
+# Data sent back to the client (never includes password)
 class UserResponse(BaseModel):
     id: int
     full_name: str
-    email: EmailStr
+    email: str
     role: UserRole
     is_active: bool
+    created_at: datetime
 
     class Config:
         from_attributes = True
 
-
-# -------------------------
-# JWT Token Response
-# -------------------------
+# Data sent back after successful login
 class Token(BaseModel):
     access_token: str
-    token_type: str
+    token_type: str = "bearer"
 
+class RoleUpdate(BaseModel):
+    role: UserRole
 
-# -------------------------
-# Token Payload
-# -------------------------
-class TokenData(BaseModel):
-    email: Optional[str] = None
-
-
-# ======================================================
-# Decision Schemas
-# (Used in future milestones)
-# ======================================================
-
-class DecisionStatus(str, Enum):
-    draft = "draft"
-    under_review = "under_review"
-    approved = "approved"
-    rejected = "rejected"
-    archived = "archived"
-
+from models import DecisionStatus
 
 class DecisionCreate(BaseModel):
     title: str
     problem_statement: str
-    category: Optional[str] = None
-
+    category: str | None = None
 
 class DecisionResponse(BaseModel):
     id: int
     title: str
     problem_statement: str
-    category: Optional[str]
+    category: str | None
     status: DecisionStatus
     created_by: int
+    created_at: datetime
+    updated_at: datetime | None
 
     class Config:
         from_attributes = True
+
+class DecisionStatusUpdate(BaseModel):
+    status: DecisionStatus
+    
+class AlternativeCreate(BaseModel):
+    decision_id: int
+    title: str
+    description: str | None = None
+    pros: str | None = None
+    cons: str | None = None
+    cost: float | None = None
+    risk_level: RiskLevel
+    feasibility: FeasibilityLevel
+    
+class AlternativeResponse(BaseModel):
+    id: int
+    decision_id: int
+    title: str
+    description: str | None
+    pros: str | None
+    cons: str | None
+    cost: float | None
+    risk_level: RiskLevel
+    feasibility: FeasibilityLevel
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+        
+class AlternativeUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    pros: str | None = None
+    cons: str | None = None
+    cost: float | None = None
+    risk_level: RiskLevel | None = None
+    feasibility: FeasibilityLevel | None = None

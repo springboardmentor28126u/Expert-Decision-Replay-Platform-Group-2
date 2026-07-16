@@ -1,24 +1,3 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Virtual Environment
 venv/
 .env
-
-# VS Code
-.vscode/
-
-# PyCharm
-.idea/
-
-# Database
-*.db
-
-# Logs
-*.log
-
-# OS Files
-.DS_Store
-Thumbs.db
+__pycache__/
