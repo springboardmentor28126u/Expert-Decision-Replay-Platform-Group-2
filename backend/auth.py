@@ -34,9 +34,11 @@ from sqlalchemy import select
 
 from database import get_db
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+from fastapi.security import HTTPBearer
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+oauth2_scheme = HTTPBearer()
+
+def get_current_user(token = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     from models import User  # imported here to avoid circular import
 
     credentials_exception = HTTPException(
@@ -46,7 +48,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
