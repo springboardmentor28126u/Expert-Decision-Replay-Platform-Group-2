@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "../styles/dashboard.css";
+import "../../styles/dashboard.css";
 
 
 function Users() {

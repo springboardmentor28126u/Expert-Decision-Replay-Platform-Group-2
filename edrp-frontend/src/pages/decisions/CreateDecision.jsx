@@ -1,196 +1,64 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import "../../styles/dashboard.css";
+import DecisionForm from "../../components/decision/DecisionForm";
+
+import dummyCategories from "../../data/dummyCategories";
 import dummyUser from "../../data/dummyUser";
 
+import "../../styles/decision.css";
+
+
 function CreateDecision() {
-    const user = dummyUser;
 
-    const navigate = useNavigate();
+  const user = dummyUser;
 
-    const [formData, setFormData] = useState({
+  const navigate = useNavigate();
 
-        title: "",
-        description: "",
-        category: "",
-        status: "Draft"
 
-    });
+  const handleCreate = (formData) => {
 
-    const handleChange = (e) => {
+    console.log("New Decision:", formData);
 
-        setFormData({
+    alert("Decision Created Successfully!");
 
-            ...formData,
-            [e.target.name]: e.target.value
+    // Backend connect hone ke baad
+    // await createDecision(formData);
 
-        });
+    navigate("/decisions");
 
-    };
+  };
 
-    const handleSubmit = (e) => {
 
-        e.preventDefault();
+  return (
 
-        console.log(formData);
+    <DashboardLayout user={user}>
 
-        alert("Decision Created Successfully");
+      <div className="page-header">
 
-        navigate("/decisions");
+        <h2>Create Decision</h2>
 
-    };
+      </div>
 
-    return (
 
-        <DashboardLayout user={user}>
+      <DecisionForm
 
-            <div className="dashboard-page">
+        initialData={{}}
 
-                <div className="page-header">
+        categories={dummyCategories}
 
-                    <h1>Create Decision</h1>
+        onSubmit={handleCreate}
 
-                </div>
+        buttonText="Create Decision"
 
-                <form
-                    className="decision-form"
-                    onSubmit={handleSubmit}
-                >
+      />
 
-                    <label>
 
-                        Decision Title
+    </DashboardLayout>
 
-                    </label>
-
-                    <input
-
-                        type="text"
-
-                        name="title"
-
-                        value={formData.title}
-
-                        onChange={handleChange}
-
-                        required
-
-                    />
-
-                    <label>
-
-                        Description
-
-                    </label>
-
-                    <textarea
-
-                        name="description"
-
-                        rows="5"
-
-                        value={formData.description}
-
-                        onChange={handleChange}
-
-                    />
-
-                    <label>
-
-                        Category
-
-                    </label>
-
-                    <select
-
-                        name="category"
-
-                        value={formData.category}
-
-                        onChange={handleChange}
-
-                    >
-
-                        <option value="">
-
-                            Select Category
-
-                        </option>
-
-                        <option value="Technology">
-
-                            Technology
-
-                        </option>
-
-                        <option value="AI">
-
-                            AI
-
-                        </option>
-
-                        <option value="Business">
-
-                            Business
-
-                        </option>
-
-                    </select>
-
-                    <label>
-
-                        Status
-
-                    </label>
-
-                    <select
-
-                        name="status"
-
-                        value={formData.status}
-
-                        onChange={handleChange}
-
-                    >
-
-                        <option>
-
-                            Draft
-
-                        </option>
-
-                        <option>
-
-                            In Review
-
-                        </option>
-
-                        <option>
-
-                            Finalized
-
-                        </option>
-
-                    </select>
-
-                    <button
-                        type="submit"
-                        className="approve-btn"
-                    >
-
-                        Create Decision
-
-                    </button>
-
-                </form>
-
-            </div>
-
-        </DashboardLayout>
-
-    );
+  );
 
 }
+
 
 export default CreateDecision;

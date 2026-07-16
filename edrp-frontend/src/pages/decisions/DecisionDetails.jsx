@@ -7,8 +7,9 @@ import dummyUser from "../../data/dummyUser";
 import AlternativeList from "../../components/AlternativeList";
 import KnowledgeList from "../../components/KnowledgeList";
 import AttachmentList from "../../components/AttachmentList";
-import VersionHistory from "../../components/VersionHistory";
-
+import VersionHistory from "./VersionHistory";
+// import VersionHistory from "../../components/VersionHistory";
+import VersionHistoryList from "../../components/decision/VersionHistoryList";
 function DecisionDetails() {
 
     const user = dummyUser;
@@ -66,26 +67,65 @@ function DecisionDetails() {
 
                 {/* Alternatives */}
 
-                <AlternativeList decisionId={decision.id} />
+                <div className="dashboard-section">
 
+                <AlternativeList decisionId={decision.id} /> 
+
+                <Link
+                    to={`/decisions/${decision.id}/alternatives`}
+                    className="approve-btn"
+                >
+                    View All Alternatives
+                </Link>
+
+            </div>
                 {/* Knowledge */}
+
+                <div className="dashboard-section">
 
                 <KnowledgeList decisionId={decision.id} />
 
+                <Link
+                    to={`/decisions/${decision.id}/knowledge`}
+                    className="approve-btn"
+                >
+                    View Knowledge
+                </Link>
+
+                </div>
+
                 {/* Attachments */}
+
+                <div className="dashboard-section">
 
                 <AttachmentList decisionId={decision.id} />
 
+                    <Link
+                        to={`/decisions/${decision.id}/attachments`}
+                        className="approve-btn"
+                    >
+                        View All Attachments
+                    </Link>
+
+                </div>
                 {/* Version History */}
 
-                <VersionHistory decisionId={decision.id} />
+                <div className="dashboard-section">
+                <VersionHistoryList decisionId={decision.id}/>                   
+                 <Link
+                        to={`/decisions/${decision.id}/history`}
+                        className="approve-btn"
+                    >
+                        View Version History
+                    </Link>
 
+                </div>
                 {(isAdmin || isManager) && (
 
                     <div className="dashboard-section">
 
                         <Link
-                            to={`/decisions/edit/${decision.id}`}
+                            to={`/decisions/${decision.id}/edit`}
                             className="approve-btn"
                         >
                             Edit Decision

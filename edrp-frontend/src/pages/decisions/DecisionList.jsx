@@ -111,12 +111,12 @@ function DecisionList() {
 
                                             <>
 
-                                                <Link
-                                                    to={`/decisions/edit/${decision.id}`}
-                                                    className="approve-btn"
-                                                >
-                                                    Edit
-                                                </Link>
+                                               <Link
+                                                to={`/decisions/${decision.id}/edit`}
+                                                className="approve-btn"
+                                            >
+                                                Edit
+                                            </Link>
 
                                                 <button
                                                     className="reject-btn"

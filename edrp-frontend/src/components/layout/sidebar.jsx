@@ -60,7 +60,7 @@ function Sidebar({ role }) {
                             </li>
 
                             <li>
-                                <Link to="/teams">
+                                <Link to="/admin/teams">
                                     Teams
                                 </Link>
                             </li>

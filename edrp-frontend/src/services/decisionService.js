@@ -29,3 +29,18 @@
 //     const response = await api.delete(`/decisions/${id}`);
 //     return response.data;
 // };
+// Backend integration will be added later.
+
+export const getAllDecisions = async () => {
+  return [];
+};
+
+export const getDecisionById = async (id) => {
+  return null;
+};
+
+export const createDecision = async (data) => {};
+
+export const updateDecision = async (id, data) => {};
+
+export const deleteDecision = async (id) => {};

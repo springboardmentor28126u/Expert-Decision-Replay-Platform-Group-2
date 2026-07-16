@@ -1,8 +1,10 @@
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
+import dummyUser from "../../data/dummyUser";
 
-function DashboardLayout({ user, children }) {
-
+function DashboardLayout({ user = dummyUser, children }) {
+    console.log("Current User:", user);
+    console.log("Role:", user.role);
     return (
 
         <div className="layout">
