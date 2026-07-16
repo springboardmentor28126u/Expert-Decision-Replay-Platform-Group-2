@@ -34,6 +34,7 @@ class RoleUpdate(BaseModel):
     role: UserRole
 
 from models import DecisionStatus
+from discussion import DiscussionMessageType
 
 class DecisionCreate(BaseModel):
     title: str
@@ -55,3 +56,38 @@ class DecisionResponse(BaseModel):
 
 class DecisionStatusUpdate(BaseModel):
     status: DecisionStatus
+
+class DiscussionCreate(BaseModel):
+    decision_id: int
+    message: str
+    message_type: DiscussionMessageType = DiscussionMessageType.comment
+    attachment_url: str | None = None
+
+
+class DiscussionReplyCreate(BaseModel):
+    parent_id: int
+    message: str
+    message_type: DiscussionMessageType = DiscussionMessageType.reply
+    attachment_url: str | None = None
+
+
+class DiscussionUpdate(BaseModel):
+    message: str | None = None
+    attachment_url: str | None = None
+
+
+class DiscussionResponse(BaseModel):
+    id: int
+    decision_id: int
+    user_id: int
+    parent_id: int | None
+    message: str
+    message_type: DiscussionMessageType
+    attachment_url: str | None
+    created_at: datetime
+    updated_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
