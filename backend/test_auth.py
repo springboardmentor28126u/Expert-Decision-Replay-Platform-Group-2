@@ -4,7 +4,7 @@ BASE_URL = "http://127.0.0.1:8000"
 
 # Step 1: Login 
 login_response = requests.post(f"{BASE_URL}/login", json={
-    "email": "admin.test@example.com",
+    "email": "employee.test@example.com",
     "password": "test1234"
 })
 
@@ -20,7 +20,7 @@ print("Me response:", me_response.json())
 
 # Step 3: Try accessing /users as employee (should be blocked)
 users_response = requests.get(f"{BASE_URL}/users", headers=headers)
-print("Users list status (as employee):", users_response.status_code)
+print("Users list status:", users_response.status_code)
 print("Response:", users_response.json())
 
 # Step 4: Try to update a user's role

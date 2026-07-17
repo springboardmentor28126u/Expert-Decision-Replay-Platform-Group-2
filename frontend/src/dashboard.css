@@ -1,0 +1,174 @@
+.dash-wrapper {
+  min-height: 100vh;
+  background: #14181F;
+  color: #F1F3F6;
+  font-family: "Segoe UI", -apple-system, sans-serif;
+}
+
+.dash-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #14181F;
+  color: #9AA5B5;
+}
+
+.dash-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: #1E2430;
+  border-bottom: 1px solid #2E3646;
+}
+
+.dash-logo {
+  font-weight: 700;
+  font-size: 18px;
+  color: #4FD1B5;
+  letter-spacing: 0.05em;
+}
+
+.dash-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dash-user {
+  font-size: 13px;
+  color: #9AA5B5;
+}
+
+.dash-user b {
+  color: #4FD1B5;
+  text-transform: capitalize;
+}
+
+.dash-logout {
+  background: none;
+  border: 1px solid #2E3646;
+  color: #9AA5B5;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dash-logout:hover {
+  border-color: #4FD1B5;
+  color: #4FD1B5;
+}
+
+.dash-main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 32px;
+}
+
+.dash-heading {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.dash-subheading {
+  color: #9AA5B5;
+  font-size: 14px;
+  margin: 0 0 32px;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.dash-card {
+  background: #1E2430;
+  border: 1px solid #2E3646;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.dash-card-label {
+  font-size: 13px;
+  color: #9AA5B5;
+  margin: 0 0 8px;
+}
+
+.dash-card-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #F1F3F6;
+  margin: 0 0 6px;
+}
+
+.dash-card-note {
+  font-size: 12px;
+  color: #6B7280;
+  margin: 0;
+}
+
+.dash-section {
+  margin-top: 20px;
+}
+
+.dash-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.dash-role-summary {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.dash-role-pill {
+  background: rgba(79, 209, 181, 0.12);
+  color: #4FD1B5;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1E2430;
+  border: 1px solid #2E3646;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.dash-table th {
+  text-align: left;
+  font-size: 12px;
+  color: #9AA5B5;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2E3646;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dash-table td {
+  padding: 12px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid #2E3646;
+}
+
+.dash-role-badge {
+  background: rgba(79, 209, 181, 0.12);
+  color: #4FD1B5;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
