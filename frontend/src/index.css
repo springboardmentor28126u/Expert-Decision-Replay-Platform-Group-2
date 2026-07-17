@@ -1,0 +1,44 @@
+/* Reset CSS */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Body */
+body {
+  margin: 0;
+  background-color: #f8fafc;
+  color: #1f2937;
+  min-height: 100vh;
+}
+
+/* Root Element */
+#root {
+  min-height: 100vh;
+}
+
+/* Links */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+}
+
+/* Inputs */
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  display: block;
+}
