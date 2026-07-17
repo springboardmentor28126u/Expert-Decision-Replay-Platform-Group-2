@@ -238,7 +238,39 @@ def _save_discussion_attachment(attachment: UploadFile | None) -> str | None:
     return f"/uploads/discussion/{filename}"
 
 
-@app.post("/discussion", response_model=DiscussionResponse)
+@app.post(
+    "/discussion",
+    response_model=DiscussionResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "decision_id": {"type": "integer"},
+                            "message": {"type": "string"},
+                            "attachment_url": {"type": "string"}
+                        },
+                        "required": ["decision_id", "message"]
+                    }
+                },
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "decision_id": {"type": "integer"},
+                            "message": {"type": "string"},
+                            "attachment": {"type": "string", "format": "binary"},
+                            "attachment_url": {"type": "string"}
+                        },
+                        "required": ["decision_id", "message"]
+                    }
+                }
+            }
+        }
+    }
+)
 async def add_discussion_comment(
     request: Request,
     db: Session = Depends(get_db),
@@ -265,7 +297,39 @@ async def add_discussion_comment(
     )
 
 
-@app.post("/discussion/reply", response_model=DiscussionResponse)
+@app.post(
+    "/discussion/reply",
+    response_model=DiscussionResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "parent_id": {"type": "integer"},
+                            "message": {"type": "string"},
+                            "attachment_url": {"type": "string"}
+                        },
+                        "required": ["parent_id", "message"]
+                    }
+                },
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "parent_id": {"type": "integer"},
+                            "message": {"type": "string"},
+                            "attachment": {"type": "string", "format": "binary"},
+                            "attachment_url": {"type": "string"}
+                        },
+                        "required": ["parent_id", "message"]
+                    }
+                }
+            }
+        }
+    }
+)
 async def reply_to_discussion_comment(
     request: Request,
     db: Session = Depends(get_db),
@@ -306,7 +370,35 @@ def get_decision_discussion_thread(
     return get_comments_for_decision(db, decision_id)
 
 
-@app.put("/discussion/{discussion_id}", response_model=DiscussionResponse)
+@app.put(
+    "/discussion/{discussion_id}",
+    response_model=DiscussionResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "message": {"type": "string"},
+                            "attachment_url": {"type": "string"}
+                        }
+                    }
+                },
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "message": {"type": "string"},
+                            "attachment": {"type": "string", "format": "binary"},
+                            "attachment_url": {"type": "string"}
+                        }
+                    }
+                }
+            }
+        }
+    }
+)
 async def edit_discussion_comment(
     discussion_id: int,
     request: Request,
