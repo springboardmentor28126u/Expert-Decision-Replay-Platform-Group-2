@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expert Decision Replay Platform</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; margin: 0; padding: 0; }
+        
+        /* Sidebar Layout styling */
+        .app-wrapper { display: flex; height: 100vh; overflow: hidden; }
+        
+        /* ── Sidebar ─────────────────────────────────────────── */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+            color: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            z-index: 100;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+        }
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 24px;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .logo-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, #6366F1, #818CF8);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+        }
+        .logo-text-top { font-size: 14px; font-weight: 800; color: #FFFFFF; line-height: 1; }
+        .logo-text-bottom { font-size: 10px; color: #94A3B8; font-weight: 500; margin-top: 2px; }
+
+        .nav-links {
+            list-style: none;
+            padding: 12px 12px;
+            margin: 0;
+            display: flex; flex-direction: column; gap: 2px;
+            flex: 1; overflow-y: auto;
+        }
+        .nav-links::-webkit-scrollbar { width: 3px; }
+        .nav-links::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 14px;
+            border-radius: 8px;
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 13px; font-weight: 600;
+            transition: all 0.15s ease;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.06); color: #FFFFFF; }
+        .nav-item.active { background: #6366F1; color: #FFFFFF; box-shadow: 0 2px 8px rgba(99,102,241,0.3); }
+        .nav-section-label {
+            font-size: 9px; font-weight: 700; color: #475569;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            padding: 12px 14px 4px;
+        }
+
+        .user-profile-bottom {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            display: flex; align-items: center; gap: 12px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .user-profile-bottom:hover { background: rgba(255,255,255,0.04); }
+        .user-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: linear-gradient(135deg, #6366F1, #818CF8);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700; color: white;
+            flex-shrink: 0;
+        }
+        .user-name { font-size: 13px; font-weight: 700; color: #FFFFFF; }
+        .user-role { font-size: 11px; color: #94A3B8; }
+
+        
+        .main-content { 
+            margin-left: 260px; 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #F8FAFC;
+        }
+        
+        .header-bar {
+            height: 64px;
+            background-color: white;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 2rem;
+            flex-shrink: 0;
+        }
+        
+        .content-area {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+    </style>
+    {% block css %}{% endblock %}
+</head>
+<body>
+
+    <div class="app-wrapper">
+        
+        <!-- Sidebar -->
+    <aside class="sidebar">
+        <a href="#" class="sidebar-logo">
+            <div class="logo-icon">
+                <i data-lucide="zap" style="color: white; width: 18px; height: 18px;"></i>
+            </div>
+            <div>
+                <div class="logo-text-top">EDRP</div>
+                <div class="logo-text-bottom">Decision Platform</div>
+            </div>
+        </a>
+
+        <ul class="nav-links">
+            <li class="nav-section-label">Overview</li>
+            <li><a href="{{ url_for('dashboard') }}" class="nav-item active"><i data-lucide="layout-dashboard" style="width: 17px; height: 17px;"></i> Dashboard</a></li>
+
+            <li class="nav-section-label">Management</li>
+            <li><a href="{{ url_for('users') }}" class="nav-item"><i data-lucide="users" style="width: 17px; height: 17px;"></i> User Management</a></li>
+            <li><a href="{{ url_for('roles') }}" class="nav-item"><i data-lucide="shield" style="width: 17px; height: 17px;"></i> Role Management</a></li>
+            <li><a href="{{ url_for('teams') }}" class="nav-item"><i data-lucide="git-branch" style="width: 17px; height: 17px;"></i> Team Management</a></li>
+            <li><a href="{{ url_for('decisions') }}" class="nav-item"><i data-lucide="file-text" style="width: 17px; height: 17px;"></i> Decision Management</a></li>
+
+            <li class="nav-section-label">Analytics</li>
+            <li><a href="{{ url_for('repository') }}" class="nav-item"><i data-lucide="database" style="width: 17px; height: 17px;"></i> Knowledge Repository</a></li>
+            <li><a href="{{ url_for('reports') }}" class="nav-item"><i data-lucide="bar-chart-2" style="width: 17px; height: 17px;"></i> Reports &amp; Analytics</a></li>
+            <li><a href="{{ url_for('audit') }}" class="nav-item"><i data-lucide="clipboard-list" style="width: 17px; height: 17px;"></i> Audit Logs</a></li>
+
+            <li class="nav-section-label">Settings</li>
+            <li><a href="#" class="nav-item"><i data-lucide="settings" style="width: 17px; height: 17px;"></i> System Config</a></li>
+            <li><a href="#" class="nav-item"><i data-lucide="bell" style="width: 17px; height: 17px;"></i> Notifications</a></li>
+            <li><a href="{{ url_for('profile') }}" class="nav-item"><i data-lucide="user" style="width: 17px; height: 17px;"></i> Profile</a></li>
+        </ul>
+
+        <a href="{{ url_for('profile') }}" class="user-profile-bottom">
+            <div class="user-avatar">{{ session.get('initials', 'SA') }}</div>
+            <div style="flex: 1;">
+                <div class="user-name">{{ session.get('full_name', 'System Admin') }}</div>
+                <div class="user-role">System Administrator</div>
+            </div>
+            <i data-lucide="log-out" style="width: 15px; height: 15px; color: #64748B; cursor: pointer;"
+               onclick="window.location.href='{{ url_for('logout') }}'; event.preventDefault();"></i>
+        </a>
+    </aside>
+
+    
+        <!-- ================= MAIN CONTENT ================= -->
+        <div class="main-content">
+            
+            <div class="header-bar">
+                {% if session.get("logged_in") %}
+                <div class="d-flex align-items-center" style="gap: 1rem;">
+                    <button class="btn btn-light rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; border: 1px solid #e2e8f0;">
+                        <i data-lucide="bell" style="width: 18px; height: 18px; color: #64748b;"></i>
+                    </button>
+                    <div class="d-flex align-items-center" style="gap: 0.5rem; cursor: pointer;">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #e2e8f0; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #475569;">
+                            {{ session.get('username', 'U')[0]|upper }}
+                        </div>
+                        <div style="font-size: 0.875rem; font-weight: 500; color: #1e293b;">{{ session.get('username') }}</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="content-area">
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show border-0 shadow-sm mb-4" style="border-radius: 8px;">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Block Content -->
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+        
+        document.addEventListener("DOMContentLoaded", function () {
+            const alerts = document.querySelectorAll(".alert");
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                    bsAlert.close();
+                }, 3000);
+            });
+        });
+    </script>
+
+    <!-- Toast Container for Notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        <div id="liveToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">
+                    Success Message
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
