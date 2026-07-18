@@ -184,6 +184,7 @@ def update_decision_status(
 from schemas import DiscussionCreate, DiscussionReplyCreate, DiscussionUpdate, DiscussionResponse
 from crud_discussion import (
     add_comment,
+    add_meeting_note,
     delete_comment,
     edit_comment,
     get_comment_or_none,
@@ -294,6 +295,63 @@ async def add_discussion_comment(
         user_id=current_user.id,
         message=discussion.message,
         attachment_url=attachment_url,
+    )
+
+
+@app.post(
+    "/discussion/meeting-note",
+    response_model=DiscussionResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "decision_id": {"type": "integer"},
+                            "message": {"type": "string"},
+                            "attachment_url": {"type": "string"}
+                        },
+                        "required": ["decision_id", "message"]
+                    }
+                },
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "decision_id": {"type": "integer"},
+                            "message": {"type": "string"},
+                            "attachment": {"type": "string", "format": "binary"},
+                            "attachment_url": {"type": "string"}
+                        },
+                        "required": ["decision_id", "message"]
+                    }
+                }
+            }
+        }
+    }
+)
+async def add_discussion_meeting_note(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    payload, attachment = await _parse_discussion_request(request)
+    payload = _read_discussion_payload(payload, ["decision_id", "message"])
+    decision_id = int(str(payload["decision_id"]))
+    message = str(payload["message"])
+    attachment_url = payload.get("attachment_url")
+
+    if not get_decision_or_none(db, decision_id):
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    saved_attachment_url = _save_discussion_attachment(attachment) or attachment_url
+    return add_meeting_note(
+        db,
+        decision_id=decision_id,
+        user_id=current_user.id,
+        message=message,
+        attachment_url=saved_attachment_url,
     )
 
 

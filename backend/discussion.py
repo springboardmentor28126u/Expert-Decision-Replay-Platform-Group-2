@@ -12,6 +12,7 @@ from database import Base
 class DiscussionMessageType(str, enum.Enum):
     comment = "comment"
     reply = "reply"
+    meeting_note = "meeting_note"
 
 
 class DiscussionMessage(Base):

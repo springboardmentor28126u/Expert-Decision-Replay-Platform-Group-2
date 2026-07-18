@@ -63,6 +63,35 @@ def add_comment(
     return comment
 
 
+def add_meeting_note(
+    db: Session,
+    *,
+    decision_id: int,
+    user_id: int,
+    message: str,
+    attachment_url: str | None = None,
+) -> DiscussionMessage:
+    meeting_note = DiscussionMessage(
+        decision_id=decision_id,
+        user_id=user_id,
+        message=message,
+        message_type=DiscussionMessageType.meeting_note,
+        attachment_url=attachment_url,
+    )
+    db.add(meeting_note)
+    db.flush()
+    log_discussion_activity(
+        db,
+        user_id=user_id,
+        action="create",
+        discussion_id=meeting_note.id,
+        details=f"Created meeting note for decision {decision_id}",
+    )
+    db.commit()
+    db.refresh(meeting_note)
+    return meeting_note
+
+
 def reply_to_comment(
     db: Session,
     *,
