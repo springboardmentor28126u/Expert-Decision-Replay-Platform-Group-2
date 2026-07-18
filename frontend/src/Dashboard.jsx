@@ -20,10 +20,11 @@ function Dashboard({ token, onLogout }) {
         setProfile(res.data);
       } catch (err) {
         console.log("Failed to load profile", err);
+        onLogout();
       }
     };
     fetchProfile();
-  }, [token]);
+  }, [token, onLogout]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -34,7 +35,7 @@ function Dashboard({ token, onLogout }) {
         });
         setUsers(res.data);
       } catch (err) {
-        console.log("Not authorized or failed to load users");
+        console.log("Not authorized or failed to load users", err);
       }
     };
     fetchUsers();

@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const isClosed = decision.status === "approved" || decision.status === "rejected";
   
   // Form states for posting a new comment/meeting note
   const [newMessageType, setNewMessageType] = useState("comment"); // "comment" or "meeting_note"
@@ -23,7 +25,9 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [editFile, setEditFile] = useState(null);
 
   // Fetch the discussion thread for this decision
-  const fetchThread = async () => {
+  const fetchThread = useCallback(async () => {
+    if (!decision?.id) return;
+    setLoading(true);
     try {
       const res = await axios.get(`http://127.0.0.1:8000/discussion/decision/${decision.id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -36,14 +40,11 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [decision?.id, token]);
 
   useEffect(() => {
-    if (decision?.id) {
-      setLoading(true);
-      fetchThread();
-    }
-  }, [decision?.id]);
+    fetchThread();
+  }, [fetchThread]);
 
   // Handle decision status update (manager/admin only)
   const handleStatusChange = async (e) => {
@@ -327,41 +328,43 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
                 </div>
               )}
 
-              <div className="message-actions">
-                <button
-                  className="message-action-btn"
-                  onClick={() => {
-                    setReplyToId(replyToId === msg.id ? null : msg.id);
-                    setReplyText("");
-                    setReplyFile(null);
-                  }}
-                >
-                  💬 Reply
-                </button>
-                {isOwner && (
+              {!isClosed && (
+                <div className="message-actions">
                   <button
                     className="message-action-btn"
                     onClick={() => {
-                      setEditingId(msg.id);
-                      setEditText(msg.message);
-                      setEditFile(null);
+                      setReplyToId(replyToId === msg.id ? null : msg.id);
+                      setReplyText("");
+                      setReplyFile(null);
                     }}
                   >
-                    ✏️ Edit
+                    💬 Reply
                   </button>
-                )}
-                {canDelete && (
-                  <button className="message-action-btn delete" onClick={() => handleDelete(msg.id)}>
-                    🗑️ Delete
-                  </button>
-                )}
-              </div>
+                  {isOwner && (
+                    <button
+                      className="message-action-btn"
+                      onClick={() => {
+                        setEditingId(msg.id);
+                        setEditText(msg.message);
+                        setEditFile(null);
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button className="message-action-btn delete" onClick={() => handleDelete(msg.id)}>
+                      🗑️ Delete
+                    </button>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
 
         {/* Inline Reply Form */}
-        {replyToId === msg.id && (
+        {replyToId === msg.id && !isClosed && (
           <form onSubmit={(e) => handlePostReply(e, msg.id)} className="reply-form-wrapper">
             <textarea
               className="form-textarea"
@@ -484,75 +487,81 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
         <h2 className="discussion-title">Discussion & Meeting Notes</h2>
 
         {/* Post New Comment / Meeting Note Form */}
-        <div className="comment-form-card">
-          <form onSubmit={handlePostMessage}>
-            <div className="form-tabs">
-              <button
-                type="button"
-                className={`form-tab-btn ${newMessageType === "comment" ? "active" : ""}`}
-                onClick={() => setNewMessageType("comment")}
-              >
-                💬 Add Comment
-              </button>
-              <button
-                type="button"
-                className={`form-tab-btn ${newMessageType === "meeting_note" ? "active" : ""}`}
-                onClick={() => setNewMessageType("meeting_note")}
-              >
-                📝 Add Meeting Note
-              </button>
-            </div>
+        {isClosed ? (
+          <div className="discussion-closed-notice">
+            🔒 This decision has been {decision.status}. Comments and replies are closed.
+          </div>
+        ) : (
+          <div className="comment-form-card">
+            <form onSubmit={handlePostMessage}>
+              <div className="form-tabs">
+                <button
+                  type="button"
+                  className={`form-tab-btn ${newMessageType === "comment" ? "active" : ""}`}
+                  onClick={() => setNewMessageType("comment")}
+                >
+                  💬 Add Comment
+                </button>
+                <button
+                  type="button"
+                  className={`form-tab-btn ${newMessageType === "meeting_note" ? "active" : ""}`}
+                  onClick={() => setNewMessageType("meeting_note")}
+                >
+                  📝 Add Meeting Note
+                </button>
+              </div>
 
-            <textarea
-              className="form-textarea"
-              placeholder={
-                newMessageType === "meeting_note"
-                  ? "Write minutes of the meeting, action items, or formal notes..."
-                  : "Share feedback, ask questions, or contribute to this decision..."
-              }
-              value={newMessageText}
-              onChange={(e) => setNewMessageText(e.target.value)}
-              rows={4}
-              required
-            />
+              <textarea
+                className="form-textarea"
+                placeholder={
+                  newMessageType === "meeting_note"
+                    ? "Write minutes of the meeting, action items, or formal notes..."
+                    : "Share feedback, ask questions, or contribute to this decision..."
+                }
+                value={newMessageText}
+                onChange={(e) => setNewMessageText(e.target.value)}
+                rows={4}
+                required
+              />
 
-            <div className="form-file-input-wrapper">
-              <label className="form-file-label">
-                📎 Attach File (PDF, DOCX, JPG, PNG)
-                <input
-                  type="file"
-                  className="form-file-input"
-                  onChange={(e) => setSelectedFile(e.target.files[0])}
-                />
-              </label>
-              {selectedFile && (
-                <div className="form-selected-file">
-                  📄 {selectedFile.name}
-                  <button
-                    type="button"
-                    className="message-action-btn delete"
-                    onClick={() => setSelectedFile(null)}
-                    style={{ border: "none", background: "none", cursor: "pointer", marginLeft: "4px" }}
-                  >
-                    (remove)
-                  </button>
-                </div>
-              )}
-            </div>
+              <div className="form-file-input-wrapper">
+                <label className="form-file-label">
+                  📎 Attach File (PDF, DOCX, JPG, PNG)
+                  <input
+                    type="file"
+                    className="form-file-input"
+                    onChange={(e) => setSelectedFile(e.target.files[0])}
+                  />
+                </label>
+                {selectedFile && (
+                  <div className="form-selected-file">
+                    📄 {selectedFile.name}
+                    <button
+                      type="button"
+                      className="message-action-btn delete"
+                      onClick={() => setSelectedFile(null)}
+                      style={{ border: "none", background: "none", cursor: "pointer", marginLeft: "4px" }}
+                    >
+                      (remove)
+                    </button>
+                  </div>
+                )}
+              </div>
 
-            {formError && <div className="auth-message error" style={{ marginBottom: "12px" }}>{formError}</div>}
+              {formError && <div className="auth-message error" style={{ marginBottom: "12px" }}>{formError}</div>}
 
-            <div className="form-actions-row">
-              <button type="submit" className="form-btn primary" disabled={submitting}>
-                {submitting
-                  ? "Posting..."
-                  : newMessageType === "meeting_note"
-                  ? "Post Meeting Note"
-                  : "Post Comment"}
-              </button>
-            </div>
-          </form>
-        </div>
+              <div className="form-actions-row">
+                <button type="submit" className="form-btn primary" disabled={submitting}>
+                  {submitting
+                    ? "Posting..."
+                    : newMessageType === "meeting_note"
+                    ? "Post Meeting Note"
+                    : "Post Comment"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {loading ? (
           <p className="dash-card-note">Loading discussion stream...</p>
