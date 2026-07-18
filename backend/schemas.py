@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from models import UserRole
+from models import UserRole, DecisionStatus, RiskLevel, FeasibilityLevel
 
 # Data expected when a new user registers
 class UserCreate(BaseModel):
@@ -33,8 +33,6 @@ class Token(BaseModel):
 class RoleUpdate(BaseModel):
     role: UserRole
 
-from models import DecisionStatus
-
 class DecisionCreate(BaseModel):
     title: str
     problem_statement: str
@@ -55,3 +53,38 @@ class DecisionResponse(BaseModel):
 
 class DecisionStatusUpdate(BaseModel):
     status: DecisionStatus
+
+
+class AlternativeCreate(BaseModel):
+    decision_id: int
+    title: str
+    description: str | None = None
+    pros: str | None = None
+    cons: str | None = None
+    cost: float | None = None
+    risk_level: RiskLevel
+    feasibility: FeasibilityLevel
+
+class AlternativeResponse(BaseModel):
+    id: int
+    decision_id: int
+    title: str
+    description: str | None
+    pros: str | None
+    cons: str | None
+    cost: float | None
+    risk_level: RiskLevel
+    feasibility: FeasibilityLevel
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AlternativeUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    pros: str | None = None
+    cons: str | None = None
+    cost: float | None = None
+    risk_level: RiskLevel | None = None
+    feasibility: FeasibilityLevel | None = None

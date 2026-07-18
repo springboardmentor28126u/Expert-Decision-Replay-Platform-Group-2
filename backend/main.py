@@ -170,3 +170,146 @@ def update_decision_status(
     db.commit()
     db.refresh(decision)
     return decision
+
+from schemas import AlternativeCreate, AlternativeResponse, AlternativeUpdate
+from models import Alternative
+
+@app.post("/alternatives", response_model=AlternativeResponse)
+def create_alternative(
+    alternative: AlternativeCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == alternative.decision_id)
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(
+            status_code=404,
+            detail="Decision not found"
+        )
+
+    new_alternative = Alternative(
+        decision_id=alternative.decision_id,
+        title=alternative.title,
+        description=alternative.description,
+        pros=alternative.pros,
+        cons=alternative.cons,
+        cost=alternative.cost,
+        risk_level=alternative.risk_level,
+        feasibility=alternative.feasibility,
+    )
+
+    db.add(new_alternative)
+    db.commit()
+    db.refresh(new_alternative)
+
+    return new_alternative
+
+@app.get(
+    "/decisions/{decision_id}/alternatives",
+    response_model=ListType[AlternativeResponse],
+)
+def list_alternatives(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(
+            status_code=404,
+            detail="Decision not found",
+        )
+
+    alternatives = db.execute(
+        select(Alternative).where(
+            Alternative.decision_id == decision_id
+        )
+    ).scalars().all()
+
+    return alternatives
+
+@app.get(
+    "/alternatives/{alternative_id}",
+    response_model=AlternativeResponse,
+)
+def get_alternative(
+    alternative_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    alternative = db.execute(
+        select(Alternative).where(
+            Alternative.id == alternative_id
+        )
+    ).scalar_one_or_none()
+
+    if not alternative:
+        raise HTTPException(
+            status_code=404,
+            detail="Alternative not found",
+        )
+
+    return alternative
+
+@app.put(
+    "/alternatives/{alternative_id}",
+    response_model=AlternativeResponse,
+)
+def update_alternative(
+    alternative_id: int,
+    alternative_update: AlternativeUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    alternative = db.execute(
+        select(Alternative).where(
+            Alternative.id == alternative_id
+        )
+    ).scalar_one_or_none()
+
+    if not alternative:
+        raise HTTPException(
+            status_code=404,
+            detail="Alternative not found",
+        )
+
+    update_data = alternative_update.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(alternative, key, value)
+
+    db.commit()
+    db.refresh(alternative)
+
+    return alternative
+
+@app.delete("/alternatives/{alternative_id}")
+def delete_alternative(
+    alternative_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    alternative = db.execute(
+        select(Alternative).where(
+            Alternative.id == alternative_id
+        )
+    ).scalar_one_or_none()
+
+    if not alternative:
+        raise HTTPException(
+            status_code=404,
+            detail="Alternative not found"
+        )
+
+    db.delete(alternative)
+    db.commit()
+
+    return {
+        "message": "Alternative deleted successfully"
+    }

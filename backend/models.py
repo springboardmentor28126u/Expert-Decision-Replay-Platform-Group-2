@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Float
 from sqlalchemy.sql import func
 from database import Base
 import enum
@@ -31,6 +31,16 @@ class DecisionStatus(str, enum.Enum):
     rejected = "rejected"
     archived = "archived"
 
+class RiskLevel(str, enum.Enum):
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+
+class FeasibilityLevel(str, enum.Enum):
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+
 class Decision(Base):
     __tablename__ = "decisions"
 
@@ -44,3 +54,18 @@ class Decision(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     creator = relationship("User")
+
+
+class Alternative(Base):
+    __tablename__ = "alternatives"
+    id = Column(Integer, primary_key=True, index=True)
+    decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    pros = Column(Text)
+    cons = Column(Text)
+    cost = Column(Float)
+    risk_level = Column(Enum(RiskLevel), nullable=False)
+    feasibility = Column(Enum(FeasibilityLevel), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    decision = relationship("Decision")
