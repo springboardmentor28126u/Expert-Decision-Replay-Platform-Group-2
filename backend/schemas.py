@@ -86,6 +86,7 @@ class DiscussionResponse(BaseModel):
     attachment_url: str | None
     created_at: datetime
     updated_at: datetime | None
+    user: UserResponse
 
     class Config:
         from_attributes = True

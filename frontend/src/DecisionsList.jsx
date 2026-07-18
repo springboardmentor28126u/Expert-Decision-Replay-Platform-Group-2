@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-function DecisionsList({ token, refreshKey }) {
+function DecisionsList({ token, refreshKey, onSelectDecision }) {
   const [decisions, setDecisions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,8 +48,12 @@ function DecisionsList({ token, refreshKey }) {
       </thead>
       <tbody>
         {decisions.map((d) => (
-          <tr key={d.id}>
-            <td>{d.title}</td>
+          <tr key={d.id} className="dash-table-row">
+            <td>
+              <span className="dash-link" onClick={() => onSelectDecision && onSelectDecision(d)}>
+                {d.title}
+              </span>
+            </td>
             <td>{d.category || "—"}</td>
             <td>
               <span
