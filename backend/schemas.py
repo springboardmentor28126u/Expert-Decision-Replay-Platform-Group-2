@@ -89,3 +89,8 @@ class AlternativeUpdate(BaseModel):
     cost: float | None = None
     risk_level: RiskLevel | None = None
     feasibility: FeasibilityLevel | None = None
+    
+class AlternativeComparisonResponse(BaseModel):
+    decision_id: int
+    decision_title: str
+    alternatives: list[AlternativeResponse]

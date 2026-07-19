@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -171,7 +171,9 @@ def update_decision_status(
     db.refresh(decision)
     return decision
 
-from schemas import AlternativeCreate, AlternativeResponse, AlternativeUpdate
+# ALTERNATIVES ENDPOINTS
+
+from schemas import AlternativeCreate, AlternativeResponse, AlternativeUpdate, AlternativeComparisonResponse
 from models import Alternative
 
 @app.post("/alternatives", response_model=AlternativeResponse)
@@ -313,4 +315,37 @@ def delete_alternative(
 
     return {
         "message": "Alternative deleted successfully"
+    }
+    
+@app.get(
+    "/decisions/{decision_id}/compare",
+    response_model=AlternativeComparisonResponse,
+)
+def compare_alternatives(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(
+            Decision.id == decision_id
+        )
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(
+            status_code=404,
+            detail="Decision not found"
+        )
+
+    alternatives = db.execute(
+        select(Alternative).where(
+            Alternative.decision_id == decision_id
+        )
+    ).scalars().all()
+
+    return {
+        "decision_id": decision.id,
+        "decision_title": decision.title,
+        "alternatives": alternatives,
     }
