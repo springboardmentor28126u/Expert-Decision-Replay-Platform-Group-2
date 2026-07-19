@@ -104,3 +104,50 @@ class DecisionVersionOut(BaseModel):
 def get_decision_history(decision_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     versions = db.query(DecisionVersion).filter(DecisionVersion.decision_id == decision_id).order_by(DecisionVersion.changed_at.desc()).all()
     return versions
+import os
+import shutil
+from fastapi import UploadFile, File
+from app.models.document import Document
+
+UPLOAD_DIR = "uploads"
+
+class DocumentOut(BaseModel):
+    id: int
+    decision_id: int
+    filename: str
+    uploaded_by: int
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.post("/{decision_id}/documents", response_model=DocumentOut)
+def upload_document(decision_id: int, file: UploadFile = File(...), current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    user = db.query(User).filter(User.email == current_user["email"]).first()
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    file_path = os.path.join(UPLOAD_DIR, f"{decision_id}_{file.filename}")
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    new_doc = Document(
+        decision_id=decision_id,
+        filename=file.filename,
+        filepath=file_path,
+        uploaded_by=user.id
+    )
+    db.add(new_doc)
+    db.commit()
+    db.refresh(new_doc)
+    return new_doc
+
+
+@router.get("/{decision_id}/documents", response_model=List[DocumentOut])
+def list_documents(decision_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(Document).filter(Document.decision_id == decision_id).all()
