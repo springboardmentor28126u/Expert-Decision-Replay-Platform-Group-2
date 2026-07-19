@@ -40,11 +40,26 @@ def get_decision(decision_id: int, current_user=Depends(get_current_user), db: S
     return decision
 
 
+from app.models.decision_version import DecisionVersion
+
 @router.put("/{decision_id}", response_model=DecisionOut)
 def update_decision(decision_id: int, updates: DecisionUpdate, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     decision = db.query(Decision).filter(Decision.id == decision_id).first()
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
+
+    user = db.query(User).filter(User.email == current_user["email"]).first()
+
+    # Save current state as a version BEFORE making changes
+    version = DecisionVersion(
+        decision_id=decision.id,
+        title=decision.title,
+        problem_statement=decision.problem_statement,
+        category=decision.category,
+        status=decision.status.value,
+        changed_by=user.id
+    )
+    db.add(version)
 
     if updates.title is not None:
         decision.title = updates.title
@@ -59,7 +74,6 @@ def update_decision(decision_id: int, updates: DecisionUpdate, current_user=Depe
     db.refresh(decision)
     return decision
 
-
 @router.delete("/{decision_id}")
 def delete_decision(decision_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     decision = db.query(Decision).filter(Decision.id == decision_id).first()
@@ -69,3 +83,24 @@ def delete_decision(decision_id: int, current_user=Depends(get_current_user), db
     db.delete(decision)
     db.commit()
     return {"message": "Decision deleted successfully"}
+from pydantic import BaseModel
+from datetime import datetime
+
+class DecisionVersionOut(BaseModel):
+    id: int
+    decision_id: int
+    title: str
+    problem_statement: str
+    category: str | None
+    status: str
+    changed_by: int
+    changed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/{decision_id}/history", response_model=List[DecisionVersionOut])
+def get_decision_history(decision_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    versions = db.query(DecisionVersion).filter(DecisionVersion.decision_id == decision_id).order_by(DecisionVersion.changed_at.desc()).all()
+    return versions

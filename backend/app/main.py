@@ -5,6 +5,7 @@ from app.models import user, team
 from app.routers import auth, team as team_router
 from app.models import user, team, decision
 from app.routers import auth, team as team_router, decision as decision_router
+from app.models import user, team, decision, decision_version
 
 Base.metadata.create_all(bind=engine)
 
