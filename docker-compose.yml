@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - uploads_volume:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://neondb_owner:npg_WbIdqjamz0t7@ep-withered-tree-aoa2m33w-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+      - JWT_SECRET_KEY=expert-decision-replay-secret-key-change-in-production
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - APP_NAME=Expert Decision Replay Platform
+      - DEBUG=true
+      - UPLOAD_DIR=uploads
+      - FRONTEND_URL=http://localhost:5173
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
+volumes:
+  uploads_volume:
