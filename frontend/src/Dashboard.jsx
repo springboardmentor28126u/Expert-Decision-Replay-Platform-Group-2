@@ -66,7 +66,7 @@ function Dashboard({ token, onLogout }) {
           <div className="dash-section">
           <h2 className="dash-section-title">Decisions</h2>
           <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
-          <DecisionsList token={token} refreshKey={refreshKey} />
+          <DecisionsList token={token} refreshKey={refreshKey} role={profile.role} />
         </div>
 
           <div className="dash-card">
