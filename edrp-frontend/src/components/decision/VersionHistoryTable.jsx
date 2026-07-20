@@ -7,95 +7,111 @@ function VersionHistoryTable({ versions }) {
             <table className="history-table">
 
                 <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Version</th>
-                        <th>Updated By</th>
-                        <th>Updated Date</th>
-                        <th>Change Summary</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
 
+                    <tr>
+
+                        <th>ID</th>
+
+                        <th>Version</th>
+
+                        <th>Title</th>
+
+                        <th>Updated By</th>
+
+                        <th>Updated Date</th>
+
+                        <th>Status</th>
+
+                    </tr>
+
+                </thead>
 
                 <tbody>
 
-                    {versions.length > 0 ? (
+                    {
 
-                        versions.map((item) => (
+                        versions.length > 0 ? (
 
-                            <tr key={item.id}>
+                            versions.map((item) => (
 
-                                <td>
-                                    {item.id}
-                                </td>
+                                <tr key={item.id}>
 
+                                    <td>
 
-                                <td>
-                                    <strong>
-                                        {item.version}
-                                    </strong>
-                                </td>
+                                        {item.id}
 
+                                    </td>
 
-                                <td>
-                                    {item.updatedBy}
-                                </td>
+                                    <td>
 
+                                        <strong>
 
-                                <td>
-                                    {item.updatedDate}
-                                </td>
+                                            v{item.version_number}
 
+                                        </strong>
 
-                                <td>
-                                    {item.summary}
-                                </td>
+                                    </td>
 
+                                    <td>
 
-                                <td>
+                                        {item.title}
 
-                                    <span
-                                        className={`status ${item.status.toLowerCase()}`}
-                                    >
-                                        {item.status}
-                                    </span>
+                                    </td>
 
-                                </td>
+                                    <td>
 
+                                        {item.updated_by}
 
-                                <td>
+                                    </td>
 
-                                    <button className="view-btn">
-                                        View
-                                    </button>
+                                    <td>
 
+                                        {
 
-                                    <button className="restore-btn">
-                                        Restore
-                                    </button>
+                                            item.updated_at
+                                                ? new Date(
+                                                      item.updated_at
+                                                  ).toLocaleString()
+                                                : "-"
+
+                                        }
+
+                                    </td>
+
+                                    <td>
+
+                                        <span
+                                            className={`status ${item.status}`}
+                                        >
+
+                                            {item.status}
+
+                                        </span>
+
+                                    </td>
+
+                                </tr>
+
+                            ))
+
+                        ) : (
+
+                            <tr>
+
+                                <td
+                                    colSpan="6"
+                                    className="no-data"
+                                >
+
+                                    No Version History Found
 
                                 </td>
 
                             </tr>
 
-                        ))
+                        )
 
-                    ) : (
-
-                        <tr>
-
-                            <td
-                                colSpan="7"
-                                className="no-data"
-                            >
-                                No Version History Found
-                            </td>
-
-                        </tr>
-
-                    )}
+                    }
 
                 </tbody>
 

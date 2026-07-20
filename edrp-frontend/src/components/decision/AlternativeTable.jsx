@@ -1,16 +1,34 @@
 import { Link } from "react-router-dom";
+import api from "../../services/api";
 
-function AlternativeTable({ alternatives }) {
+function AlternativeTable({ alternatives, onDeleted }) {
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
 
-        if (window.confirm("Are you sure you want to delete this alternative?")) {
+        const confirmDelete = window.confirm(
+            "Are you sure you want to delete this alternative?"
+        );
 
-            // Backend API
-            // DELETE /alternatives/{id}
+        if (!confirmDelete) return;
 
-            console.log("Delete Alternative:", id);
+        try {
+
+            await api.delete(`/alternatives/${id}`);
+
+            alert("Alternative deleted successfully.");
+
+            if (onDeleted) {
+                onDeleted();
+            }
+
+        } catch (error) {
+
+            console.error("Delete Error:", error);
+
+            alert("Failed to delete alternative.");
+
         }
+
     };
 
     return (
@@ -20,9 +38,10 @@ function AlternativeTable({ alternatives }) {
             <table className="alternative-table">
 
                 <thead>
+
                     <tr>
                         <th>ID</th>
-                        <th>Alternative</th>
+                        <th>Title</th>
                         <th>Description</th>
                         <th>Pros</th>
                         <th>Cons</th>
@@ -30,11 +49,14 @@ function AlternativeTable({ alternatives }) {
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
+
                 </thead>
 
                 <tbody>
 
-                    {alternatives.length > 0 ? (
+                    {
+
+                        alternatives.length > 0 ?
 
                         alternatives.map((item) => (
 
@@ -43,27 +65,33 @@ function AlternativeTable({ alternatives }) {
                                 <td>{item.id}</td>
 
                                 <td>
-                                    <strong>{item.name}</strong>
+                                    <strong>
+                                        {item.title || "-"}
+                                    </strong>
                                 </td>
 
                                 <td>{item.description}</td>
 
-                                <td>{item.pros}</td>
+                                <td>{item.pros || "-"}</td>
 
-                                <td>{item.cons}</td>
+                                <td>{item.cons || "-"}</td>
 
-                                <td>
-                                    <span className="score">
-                                        {item.score}/10
-                                    </span>
-                                </td>
+                                <td>{item.score ?? "-"}</td>
 
                                 <td>
 
                                     <span
-                                        className={`status ${item.status.toLowerCase()}`}
+                                        className={
+                                            item.is_selected
+                                                ? "status selected"
+                                                : "status pending"
+                                        }
                                     >
-                                        {item.status}
+                                        {
+                                            item.is_selected
+                                                ? "Selected"
+                                                : "Not Selected"
+                                        }
                                     </span>
 
                                 </td>
@@ -97,7 +125,7 @@ function AlternativeTable({ alternatives }) {
 
                         ))
 
-                    ) : (
+                        :
 
                         <tr>
 
@@ -110,7 +138,7 @@ function AlternativeTable({ alternatives }) {
 
                         </tr>
 
-                    )}
+                    }
 
                 </tbody>
 

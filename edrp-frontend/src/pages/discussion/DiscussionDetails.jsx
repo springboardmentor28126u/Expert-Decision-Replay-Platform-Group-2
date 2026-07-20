@@ -1,122 +1,201 @@
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import dummyUser from "../../data/dummyUser";
 
 import CommentList from "../../components/discussion/CommentList";
-import MeetingNoteList from "../../components/discussion/MeetingNoteList";
+import MeetingNotes from "../../components/discussion/MeetingNotes";
 import RationaleList from "../../components/discussion/RationaleList";
 import DiscussionAttachmentList from "../../components/discussion/DiscussionAttachmentList";
 
+import api from "../../services/api";
+
 import "../../styles/discussion.css";
 
-function DiscussionDetails() {
 
-    const user = dummyUser;
+function DiscussionDetails(){
 
-    const discussion = {
-        id: 1,
-        title: "Cloud Migration Discussion",
-        decision: "Cloud Migration",
-        createdBy: "Raj",
-        createdDate: "15 Jul 2026",
-        status: "Open",
-        description:
-            "Discussion regarding migration of on-premise infrastructure to cloud."
+    const { decisionId, id } = useParams();
+
+    const [user,setUser] = useState(null);
+    const [discussion,setDiscussion] = useState(null);
+    const [loading,setLoading] = useState(true);
+
+
+
+    useEffect(()=>{
+
+        loadData();
+
+    },[id]);
+
+
+
+    const loadData = async()=>{
+
+        try{
+
+
+            const [userRes, discussionRes] = await Promise.all([
+
+                api.get("/users/me"),
+
+                api.get(`/discussion/${id}`)
+
+            ]);
+
+
+
+            setUser(userRes.data);
+
+            setDiscussion(discussionRes.data);
+
+
+        }
+        catch(error){
+
+            console.log(error);
+
+        }
+        finally{
+
+            setLoading(false);
+
+        }
+
     };
 
-    return (
+
+
+    if(loading){
+
+        return <h2>Loading...</h2>;
+
+    }
+
+
+
+    if(!discussion || !user){
+
+        return <h2>Discussion Not Found</h2>;
+
+    }
+
+
+
+    return(
 
         <DashboardLayout user={user}>
 
+
             <div className="discussion-page">
 
-                <div className="discussion-header">
 
-                    <div>
+                <h1>Discussion Details</h1>
 
-                        <h1>Discussion Details</h1>
 
-                        <p>
-                            View discussion information and collaboration history.
-                        </p>
-
-                    </div>
-
-                </div>
-
-                {/* Discussion Information */}
 
                 <div className="dashboard-section">
+
 
                     <h2>Discussion Information</h2>
 
+
                     <div className="profile-card">
 
-                        <p>
-                            <strong>Title :</strong> {discussion.title}
-                        </p>
 
                         <p>
-                            <strong>Decision :</strong> {discussion.decision}
+                            <strong>Title :</strong>
+                            {discussion.title}
                         </p>
 
-                        <p>
-                            <strong>Created By :</strong> {discussion.createdBy}
-                        </p>
 
                         <p>
-                            <strong>Created Date :</strong> {discussion.createdDate}
+                            <strong>Decision ID :</strong>
+                            {discussion.decision_id}
                         </p>
 
-                        <p>
-                            <strong>Status :</strong> {discussion.status}
-                        </p>
 
                         <p>
-                            <strong>Description :</strong> {discussion.description}
+                            <strong>Created By :</strong>
+                            {discussion.created_by}
                         </p>
+
+
+                        <p>
+                            <strong>Created At :</strong>
+
+                            {
+                            new Date(
+                            discussion.created_at
+                            ).toLocaleString()
+                            }
+
+                        </p>
+
 
                     </div>
 
+
                 </div>
 
-                {/* Comments */}
+
 
                 <div className="dashboard-section">
 
-                    <CommentList />
+                    <CommentList
+                    discussionId={discussion.id}
+                    />
 
                 </div>
 
-                {/* Meeting Notes */}
+
 
                 <div className="dashboard-section">
 
-                    <MeetingNoteList />
+                    <MeetingNotes
+                    discussionId={discussion.id}
+                    />
 
                 </div>
 
-                {/* Decision Rationale */}
+
 
                 <div className="dashboard-section">
 
-                    <RationaleList />
+                    <RationaleList
+                    decisionId={discussion.decision_id}
+                    />
 
                 </div>
 
-                {/* Attachments */}
+
 
                 <div className="dashboard-section">
 
-                    <DiscussionAttachmentList />
+                    <DiscussionAttachmentList
+                    discussionId={discussion.id}
+                    />
 
                 </div>
+              
+                <Link
+                    to={`/decisions/${discussion.decision_id}/discussion`}
+                    className="approve-btn"
+                >
+                    Back to Discussions
+                </Link>
+
 
             </div>
 
+
         </DashboardLayout>
+
 
     );
 
+
 }
+
 
 export default DiscussionDetails;

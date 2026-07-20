@@ -4,108 +4,120 @@ import api from "../services/api";
 import "../styles/login.css";
 
 function Login() {
-  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+    const navigate = useNavigate();
 
-  const [error, setError] = useState("");
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const [formData, setFormData] = useState({
+        email: "",
+        password: "",
     });
-  };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-  //   setError("");
+    const handleChange = (e) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value,
+        });
+    };
 
-  //   try {
-  //     const data = new URLSearchParams();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-  //     data.append("username", formData.email);
-  //     data.append("password", formData.password);
+        setError("");
+        setLoading(true);
 
-  //     const response = await api.post("/login", data);
+        try {
 
-  //     localStorage.setItem(
-  //       "access_token",
-  //       response.data.access_token
-  //     );
+            const form = new URLSearchParams();
 
-  //     navigate("/dashboard");
-  //   } catch (err) {
-  //     setError(
-  //       err.response?.data?.detail || "Invalid Email or Password"
-  //     );
-  //   }
-  // };
-  const handleSubmit = (e) => {
-    e.preventDefault();
+            form.append("username", formData.email);
+            form.append("password", formData.password);
 
-    setError("");
+            const response = await api.post("/login", form, {
+                headers: {
+                    "Content-Type":
+                        "application/x-www-form-urlencoded",
+                },
+            });
 
-    localStorage.setItem("access_token", "dummy-token");
+            localStorage.setItem(
+                "access_token",
+                response.data.access_token
+            );
 
-    navigate("/dashboard");
-};
-  return (
-    <div className="login-page">
+            const user = await api.get("/users/me");
 
-      <div className="login-card">
+            localStorage.setItem(
+                "user",
+                JSON.stringify(user.data)
+            );
 
-        <h1>EDRP</h1>
+            navigate("/dashboard");
 
-        <p className="subtitle">
-          Expert Decision Replay Platform
-        </p>
+        } catch (err) {
 
-        <h2>Login</h2>
+            setError(
+                err.response?.data?.detail ||
+                "Invalid Email or Password"
+            );
 
-        {error && (
-          <p className="error">{error}</p>
-        )}
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        <form onSubmit={handleSubmit}>
+    return (
+        <div className="login-page">
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Enter Email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
+            <div className="login-card">
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Enter Password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
+                <h1>EDRP</h1>
 
-          <button type="submit">
-            Login
-          </button>
+                <p className="subtitle">
+                    Expert Decision Replay Platform
+                </p>
 
-        </form>
+                <h2>Login</h2>
 
-        <p className="register-link">
-          Don't have an account?
-          <Link to="/register"> Register</Link>
-        </p>
+                {error && <p className="error">{error}</p>}
 
-      </div>
+                <form onSubmit={handleSubmit}>
 
-    </div>
-  );
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                    />
+
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                    />
+
+                    <button type="submit" disabled={loading}>
+                        {loading ? "Logging in..." : "Login"}
+                    </button>
+
+                </form>
+
+                <p className="register-link">
+                    Don't have an account?
+                    <Link to="/register"> Register</Link>
+                </p>
+
+            </div>
+
+        </div>
+    );
 }
 
 export default Login;

@@ -1,64 +1,119 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DecisionForm from "../../components/decision/DecisionForm";
 
-import dummyCategories from "../../data/dummyCategories";
-import dummyUser from "../../data/dummyUser";
+import api from "../../services/api";
 
 import "../../styles/decision.css";
 
-
 function CreateDecision() {
 
-  const user = dummyUser;
+    const navigate = useNavigate();
 
-  const navigate = useNavigate();
+    const [user, setUser] = useState(null);
+    const [categories, setCategories] = useState([]);
 
+    useEffect(() => {
 
-  const handleCreate = (formData) => {
+        loadUser();
+        loadCategories();
 
-    console.log("New Decision:", formData);
+    }, []);
 
-    alert("Decision Created Successfully!");
+    const loadUser = async () => {
 
-    // Backend connect hone ke baad
-    // await createDecision(formData);
+        try {
 
-    navigate("/decisions");
+            const response = await api.get("/users/me");
 
-  };
+            setUser(response.data);
 
+        } catch (err) {
 
-  return (
+            console.error(err);
 
-    <DashboardLayout user={user}>
+        }
 
-      <div className="page-header">
+    };
 
-        <h2>Create Decision</h2>
+    const loadCategories = async () => {
 
-      </div>
+        try {
 
+            const response = await api.get("/categories");
 
-      <DecisionForm
+            setCategories(response.data);
 
-        initialData={{}}
+        } catch (err) {
 
-        categories={dummyCategories}
+            console.error(err);
 
-        onSubmit={handleCreate}
+        }
 
-        buttonText="Create Decision"
+    };
 
-      />
+    const handleCreate = async (formData) => {
 
+        try {
 
-    </DashboardLayout>
+            const payload = {
 
-  );
+                title: formData.title,
+                description: formData.description,
+                status: formData.status.toLowerCase().replace(" ", "_"),
+                owner_id: user.id,
+                category_id: Number(formData.category_id),
+
+            };
+
+            await api.post("/decisions", payload);
+
+            alert("Decision Created Successfully!");
+
+            navigate("/decisions");
+
+        } catch (err) {
+
+            console.error(err);
+
+            alert(
+                err.response?.data?.detail ||
+                "Failed to create decision."
+            );
+
+        }
+
+    };
+
+    if (!user) {
+
+        return <h2>Loading...</h2>;
+
+    }
+
+    return (
+
+        <DashboardLayout user={user}>
+
+            <div className="page-header">
+
+                <h2>Create Decision</h2>
+
+            </div>
+
+            <DecisionForm
+                initialData={{}}
+                categories={categories}
+                onSubmit={handleCreate}
+                buttonText="Create Decision"
+            />
+
+        </DashboardLayout>
+
+    );
 
 }
-
 
 export default CreateDecision;

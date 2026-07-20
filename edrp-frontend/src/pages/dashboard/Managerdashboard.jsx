@@ -1,191 +1,319 @@
-
+import { useEffect, useState } from "react";
 
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "../../styles/dashboard.css";
 
-function ManagerDashboard({ user }) {
+import api from "../../services/api";
 
-    const statistics = [
 
-        {
-            title: "Total Team Members",
-            value: 0
-        },
+function ManagerDashboard(){
 
-        {
-            title: "Total Teams",
-            value: 0
-        },
+    const [user,setUser]=useState(null);
 
-        {
-            title: "Assigned Team",
-            value: "-"
-        },
+    const [teams,setTeams]=useState([]);
 
-        {
-            title: "Active Users",
-            value: 0
+    const [decisions,setDecisions]=useState([]);
+
+    const [loading,setLoading]=useState(true);
+
+
+
+    useEffect(()=>{
+
+        loadData();
+
+    },[]);
+
+
+
+    const loadData=async()=>{
+
+        try{
+
+
+            const userRes=await api.get("/users/me");
+
+            const teamRes=await api.get("/teams");
+
+            const decisionRes=await api.get("/decisions/");
+
+
+
+            setUser(userRes.data);
+
+            setTeams(teamRes.data);
+
+            setDecisions(decisionRes.data);
+
+
+        }
+        catch(error){
+
+            console.log(error);
+
+        }
+        finally{
+
+            setLoading(false);
+
         }
 
-    ];
-
-
-    return (
-
-        <DashboardLayout user={user}>
-
-            <div className="dashboard-page">
-
-                <div className="page-header">
-
-                    <h1>
-                        Manager Dashboard
-                    </h1>
-
-                    <p>
-                        Welcome back, {user.name}
-                    </p>
-
-                </div>
-
-
-
-                <div className="stats-grid">
-
-                    {
-                        statistics.map((item, index) => (
-
-                            <div
-                                className="stat-card"
-                                key={index}
-                            >
-
-                                <h3>
-                                    {item.title}
-                                </h3>
-
-                                <h2>
-                                    {item.value}
-                                </h2>
-
-                            </div>
-
-                        ))
-                    }
-
-                </div>
-
-             
+    };
 
 
 
 
-                {/* Team Decisions */}
+    if(loading)
+        return <h2>Loading...</h2>;
 
 
-                <div className="dashboard-section">
 
-                    <h2>
-                        Team Members
-                    </h2>
 
-                    <table className="decision-table">
+    return(
 
-                        <thead>
+    <DashboardLayout user={user}>
 
-                            <tr>
 
-                                <th>Name</th>
+    <div className="dashboard-page">
 
-                                <th>Email</th>
 
-                                <th>Role</th>
+        <div className="page-header">
 
-                            </tr>
+            <h1>
+                Manager Dashboard
+            </h1>
 
-                        </thead>
+            <p>
+                Welcome back, {user.name}
+            </p>
 
-                        <tbody>
+        </div>
 
-                            <tr>
 
-                                <td>Raj</td>
 
-                                <td>raj@gmail.com</td>
 
-                                <td>Manager</td>
+        {/* Statistics */}
 
-                            </tr>
+        <div className="stats-grid">
 
-                            <tr>
 
-                                <td>Anjali</td>
+            <div className="stat-card">
 
-                                <td>anjali@gmail.com</td>
+                <h3>
+                    Total Decisions
+                </h3>
 
-                                <td>Employee</td>
-
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-        
-        
-        <div className="dashboard-section">
-
-            <h2>
-                Quick Actions
-            </h2>
-
-            <div className="approval-list">
-
-                <div className="approval-card">
-
-                    <h3>
-                        View Users
-                    </h3>
-
-                    <p>
-                        Manage all team members.
-                    </p>
-
-                    <button className="approve-btn">
-                        View Users
-                    </button>
-
-                </div>
-
-                <div className="approval-card">
-
-                    <h3>
-                        View Teams
-                    </h3>
-
-                    <p>
-                        Check assigned teams.
-                    </p>
-
-                    <button className="approve-btn">
-                        View Teams
-                    </button>
-
-                </div>
+                <h2>
+                    {decisions.length}
+                </h2>
 
             </div>
 
-        </div>
-                
+
+
+            <div className="stat-card">
+
+                <h3>
+                    Total Teams
+                </h3>
+
+                <h2>
+                    {teams.length}
+                </h2>
+
+            </div>
+
 
         </div>
 
-        </DashboardLayout>
+
+
+
+
+        {/* Team Section */}
+
+
+        <div className="dashboard-section">
+
+
+            <h2>
+                Teams
+            </h2>
+
+
+
+            <table className="decision-table">
+
+
+            <thead>
+
+            <tr>
+
+                <th>
+                    Team ID
+                </th>
+
+
+                <th>
+                    Team Name
+                </th>
+
+
+                <th>
+                    Manager ID
+                </th>
+
+
+            </tr>
+
+
+            </thead>
+
+
+
+            <tbody>
+
+
+            {
+                teams.length>0 ?
+
+                teams.map((team)=>(
+
+                <tr key={team.id}>
+
+
+                    <td>
+                        {team.id}
+                    </td>
+
+
+                    <td>
+                        {team.name}
+                    </td>
+
+
+                    <td>
+                        {team.manager_id || "-"}
+                    </td>
+
+
+                </tr>
+
+
+                ))
+
+                :
+
+                <tr>
+
+                    <td colSpan="3">
+                        No Teams Found
+                    </td>
+
+                </tr>
+
+
+            }
+
+
+            </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+
+
+
+
+        {/* Decisions */}
+
+
+        <div className="dashboard-section">
+
+
+            <h2>
+                Decision Management
+            </h2>
+
+
+
+            <table className="decision-table">
+
+
+            <thead>
+
+            <tr>
+
+                <th>
+                    Title
+                </th>
+
+                <th>
+                    Status
+                </th>
+
+
+            </tr>
+
+            </thead>
+
+
+
+            <tbody>
+
+
+            {
+
+            decisions.map((decision)=>(
+
+
+                <tr key={decision.id}>
+
+
+                    <td>
+                        {decision.title}
+                    </td>
+
+
+                    <td>
+                        {decision.status}
+                    </td>
+
+
+                </tr>
+
+
+            ))
+
+            }
+
+
+
+            </tbody>
+
+
+            </table>
+
+
+
+        </div>
+
+
+
+
+    </div>
+
+
+    </DashboardLayout>
 
     );
 
+
 }
+
 
 export default ManagerDashboard;

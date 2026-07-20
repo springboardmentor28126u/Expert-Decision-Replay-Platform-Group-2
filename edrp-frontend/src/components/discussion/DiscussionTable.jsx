@@ -11,19 +11,22 @@ function DiscussionTable({ discussions }) {
                 <thead>
 
                     <tr>
+
                         <th>ID</th>
-                        <th>Discussion Title</th>
+                        <th>Title</th>
                         <th>Created By</th>
-                        <th>Created Date</th>
-                        <th>Status</th>
+                        <th>Created At</th>
                         <th>Actions</th>
+
                     </tr>
 
                 </thead>
 
                 <tbody>
 
-                    {discussions.length > 0 ? (
+                    {
+
+                        discussions.length > 0 ?
 
                         discussions.map((discussion) => (
 
@@ -32,29 +35,41 @@ function DiscussionTable({ discussions }) {
                                 <td>{discussion.id}</td>
 
                                 <td>
-                                    <strong>{discussion.title}</strong>
-                                </td>
 
-                                <td>{discussion.createdBy}</td>
+                                    <strong>
 
-                                <td>{discussion.createdDate}</td>
+                                        {discussion.title}
 
-                                <td>
-                                    <span
-                                        className={`status ${discussion.status.toLowerCase()}`}
-                                    >
-                                        {discussion.status}
-                                    </span>
+                                    </strong>
+
                                 </td>
 
                                 <td>
 
-                                    <Link
-                                        to={`/discussions/${discussion.id}`}
-                                        className="view-btn"
-                                    >
-                                        View
-                                    </Link>
+                                    {discussion.created_by}
+
+                                </td>
+
+                                <td>
+
+                                    {
+
+                                        new Date(
+                                            discussion.created_at
+                                        ).toLocaleString()
+
+                                    }
+
+                                </td>
+
+                                <td>
+
+                                   <Link
+                                    to={`/decisions/${discussion.decision_id}/discussion/${discussion.id}`}
+                                    className="view-btn"
+                                >
+                                    View
+                                </Link>
 
                                 </td>
 
@@ -62,12 +77,12 @@ function DiscussionTable({ discussions }) {
 
                         ))
 
-                    ) : (
+                        :
 
                         <tr>
 
                             <td
-                                colSpan="6"
+                                colSpan="5"
                                 className="no-data"
                             >
                                 No Discussions Found
@@ -75,7 +90,7 @@ function DiscussionTable({ discussions }) {
 
                         </tr>
 
-                    )}
+                    }
 
                 </tbody>
 

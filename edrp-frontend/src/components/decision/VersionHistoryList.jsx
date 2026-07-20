@@ -1,29 +1,48 @@
-
+import { useEffect, useState } from "react";
+import api from "../../services/api";
 import VersionHistoryTable from "./VersionHistoryTable";
 
 function VersionHistoryList({ decisionId }) {
 
-    const versions = [
-        {
-            id: 1,
-            version: "v1.0",
-            updatedBy: "Raj",
-            updatedDate: "10 Jul 2026",
-            summary: "Initial Decision Created",
-            status: "Published"
-        },
-        {
-            id: 2,
-            version: "v1.1",
-            updatedBy: "Anjali",
-            updatedDate: "12 Jul 2026",
-            summary: "Added Cloud Cost Analysis",
-            status: "Draft"
-        }
-    ];
+    const [versions, setVersions] = useState([]);
+    const [loading, setLoading] = useState(true);
 
+    useEffect(() => {
+
+        loadVersions();
+
+    }, [decisionId]);
+
+    const loadVersions = async () => {
+
+        try {
+
+            const response = await api.get(
+                `/decisions/${decisionId}/versions`
+            );
+
+            setVersions(response.data);
+
+        } catch (err) {
+
+            console.error(err);
+
+        } finally {
+
+            setLoading(false);
+
+        }
+
+    };
+
+    if (loading) {
+
+        return <h3>Loading Version History...</h3>;
+
+    }
 
     return (
+
         <div>
 
             <VersionHistoryTable
@@ -31,7 +50,9 @@ function VersionHistoryList({ decisionId }) {
             />
 
         </div>
+
     );
+
 }
 
 export default VersionHistoryList;

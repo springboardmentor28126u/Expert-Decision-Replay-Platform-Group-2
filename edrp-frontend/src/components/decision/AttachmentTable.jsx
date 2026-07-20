@@ -1,22 +1,39 @@
-function AttachmentTable({ attachments }) {
+import api from "../../services/api";
+
+function AttachmentTable({ attachments, onDeleted }) {
 
     const handleDownload = (id) => {
 
-        // Backend API
-        // GET /attachments/{id}
-
-        console.log("Download Attachment:", id);
+        window.open(
+            `http://127.0.0.1:8000/attachments/${id}`,
+            "_blank"
+        );
 
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
 
-        if (window.confirm("Are you sure you want to delete this attachment?")) {
+        const confirmDelete = window.confirm(
+            "Are you sure you want to delete this attachment?"
+        );
 
-            // Backend API
-            // DELETE /attachments/{id}
+        if (!confirmDelete) return;
 
-            console.log("Delete Attachment:", id);
+        try {
+
+            await api.delete(`/attachments/${id}`);
+
+            alert("Attachment deleted successfully.");
+
+            if (onDeleted) {
+                onDeleted();
+            }
+
+        } catch (error) {
+
+            console.error("Delete Error:", error);
+
+            alert("Failed to delete attachment.");
 
         }
 
@@ -35,8 +52,7 @@ function AttachmentTable({ attachments }) {
                         <th>ID</th>
                         <th>File Name</th>
                         <th>File Type</th>
-                        <th>Uploaded By</th>
-                        <th>Upload Date</th>
+                        <th>Uploaded At</th>
                         <th>Actions</th>
 
                     </tr>
@@ -47,64 +63,80 @@ function AttachmentTable({ attachments }) {
 
                     {
 
-                        attachments.length > 0 ? (
+                        attachments.length > 0 ?
 
-                            attachments.map((item) => (
+                        attachments.map((item) => (
 
-                                <tr key={item.id}>
+                            <tr key={item.id}>
 
-                                    <td>{item.id}</td>
+                                <td>{item.id}</td>
 
-                                    <td>
+                                <td>
 
-                                        <strong>
-                                            {item.fileName}
-                                        </strong>
+                                    <strong>
 
-                                    </td>
+                                        {item.file_name}
 
-                                    <td>{item.fileType}</td>
+                                    </strong>
 
-                                    <td>{item.uploadedBy}</td>
+                                </td>
 
-                                    <td>{item.uploadDate}</td>
+                                <td>
 
-                                    <td>
+                                    {item.file_type}
 
-                                        <button
-                                            className="view-btn"
-                                            onClick={() => handleDownload(item.id)}
-                                        >
-                                            Download
-                                        </button>
+                                </td>
 
-                                        <button
-                                            className="delete-btn"
-                                            onClick={() => handleDelete(item.id)}
-                                        >
-                                            Delete
-                                        </button>
+                                <td>
 
-                                    </td>
+                                    {
 
-                                </tr>
+                                        new Date(
+                                            item.uploaded_at
+                                        ).toLocaleString()
 
-                            ))
+                                    }
 
-                        ) : (
+                                </td>
 
-                            <tr>
+                                <td>
 
-                                <td
-                                    colSpan="6"
-                                    className="no-data"
-                                >
-                                    No Attachments Found
+                                    <button
+                                        className="view-btn"
+                                        onClick={() =>
+                                            handleDownload(item.id)
+                                        }
+                                    >
+                                        Download
+                                    </button>
+
+                                    <button
+                                        className="delete-btn"
+                                        onClick={() =>
+                                            handleDelete(item.id)
+                                        }
+                                    >
+                                        Delete
+                                    </button>
+
                                 </td>
 
                             </tr>
 
-                        )
+                        ))
+
+                        :
+
+                        <tr>
+
+                            <td
+                                colSpan="5"
+                                className="no-data"
+                            >
+                                No Attachments Found
+                            </td>
+
+                        </tr>
 
                     }
 

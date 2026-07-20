@@ -1,23 +1,23 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 
-function MeetingNoteList({ discussionId }) {
+function RationaleList({ decisionId }) {
 
-    const [meetingNotes, setMeetingNotes] = useState([]);
+    const [rationales, setRationales] = useState([]);
 
     useEffect(() => {
-        loadMeetingNotes();
-    }, [discussionId]);
+        loadRationales();
+    }, [decisionId]);
 
-    const loadMeetingNotes = async () => {
+    const loadRationales = async () => {
 
         try {
 
             const response = await api.get(
-                `/discussion/${discussionId}/meeting-notes`
+                `/decisions/${decisionId}/rationale`
             );
 
-            setMeetingNotes(response.data);
+            setRationales(response.data);
 
         } catch (error) {
 
@@ -27,28 +27,28 @@ function MeetingNoteList({ discussionId }) {
 
     };
 
-    const handleAddMeetingNote = async () => {
+    const handleAddRationale = async () => {
 
-        const note = prompt("Enter Meeting Note");
+        const rationale = prompt("Enter Decision Rationale");
 
-        if (!note) return;
+        if (!rationale) return;
 
         try {
 
             await api.post(
-                `/discussion/${discussionId}/meeting-notes`,
+                `/decisions/${decisionId}/rationale`,
                 {
-                    note
+                    rationale
                 }
             );
 
-            await loadMeetingNotes();
+           await loadRationales();
 
         } catch (error) {
 
             console.error(error);
 
-            alert("Failed to add meeting note");
+            alert("Failed to add rationale");
 
         }
 
@@ -60,13 +60,13 @@ function MeetingNoteList({ discussionId }) {
 
             <div className="section-header">
 
-                <h2>Meeting Notes</h2>
+                <h2>Decision Rationale</h2>
 
                 <button
                     className="approve-btn"
-                    onClick={handleAddMeetingNote}
+                    onClick={handleAddRationale}
                 >
-                    + Add Meeting Note
+                    + Add Rationale
                 </button>
 
             </div>
@@ -75,16 +75,16 @@ function MeetingNoteList({ discussionId }) {
 
                 {
 
-                    meetingNotes.length > 0 ?
+                    rationales.length > 0 ?
 
-                    meetingNotes.map((item) => (
+                    rationales.map((item) => (
 
                         <div
                             key={item.id}
                             className="discussion-item"
                         >
 
-                            <p>{item.note}</p>
+                            <p>{item.rationale}</p>
 
                             <p>
 
@@ -114,7 +114,7 @@ function MeetingNoteList({ discussionId }) {
 
                     :
 
-                    <p>No Meeting Notes Found</p>
+                    <p>No Rationale Found</p>
 
                 }
 
@@ -126,4 +126,4 @@ function MeetingNoteList({ discussionId }) {
 
 }
 
-export default MeetingNoteList;
+export default RationaleList;

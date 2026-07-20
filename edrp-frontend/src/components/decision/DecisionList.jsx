@@ -1,50 +1,152 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import api from "../../services/api";
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import DecisionTable from "../../components/decision/DecisionTable";
 import DecisionCard from "../../components/decision/DecisionCard";
-import dummyDecisions from "../../data/dummyDecisions";
+
 import "../../styles/decision.css";
 
 function DecisionList() {
 
-  // Later replace with API response
-  const decisions = dummyDecisions;
+    const navigate = useNavigate();
 
-  return (
-    
-    <DashboardLayout user={user}>
+    const [user, setUser] = useState(null);
+    const [decisions, setDecisions] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-      <div className="page-header">
+    useEffect(() => {
+        loadData();
+    }, []);
 
-        <h2>Decision Management</h2>
+    const loadData = async () => {
 
-        <Link to="/decisions/create">
-          <button className="primary-btn">
-            + Create Decision
-          </button>
-        </Link>
+        try {
 
-      </div>
+            const userResponse = await api.get("/users/me");
+            setUser(userResponse.data);
 
-      {/* Desktop */}
+            const decisionResponse = await api.get("/decisions");
+            setDecisions(decisionResponse.data);
 
-      <div className="desktop-view">
-        <DecisionTable decisions={decisions} />
-      </div>
+        } catch (err) {
 
-      {/* Mobile */}
+            console.error(err);
 
-      <div className="mobile-view">
-        {decisions.map((decision) => (
-          <DecisionCard
-            key={decision.id}
-            decision={decision}
-          />
-        ))}
-      </div>
+            if (err.response?.status === 401) {
 
-    </DashboardLayout>
-  );
+                localStorage.removeItem("access_token");
+                navigate("/login");
+
+            }
+
+        } finally {
+
+            setLoading(false);
+
+        }
+
+    };
+
+    const deleteDecision = async (id) => {
+
+        const confirmDelete = window.confirm(
+            "Are you sure you want to delete this decision?"
+        );
+
+        if (!confirmDelete) return;
+
+        try {
+
+            await api.delete(`/decisions/${id}`);
+
+            alert("Decision deleted successfully.");
+
+            loadData();
+
+        } catch (err) {
+
+            console.error(err);
+
+            alert(
+                err.response?.data?.detail ||
+                "Unable to delete decision."
+            );
+
+        }
+
+    };
+
+    if (loading) {
+
+        return <h2>Loading...</h2>;
+
+    }
+
+    return (
+
+        <DashboardLayout user={user}>
+
+            <div className="page-header">
+
+                <h2>
+                    Decision Management
+                </h2>
+
+                <Link to="/decisions/create">
+
+                    <button className="primary-btn">
+
+                        + Create Decision
+
+                    </button>
+
+                </Link>
+
+            </div>
+
+            {/* Desktop */}
+
+            <div className="desktop-view">
+
+                <DecisionTable
+
+                    decisions={decisions}
+
+                    onDelete={deleteDecision}
+
+                />
+
+            </div>
+
+            {/* Mobile */}
+
+            <div className="mobile-view">
+
+                {
+
+                    decisions.map((decision) => (
+
+                        <DecisionCard
+
+                            key={decision.id}
+
+                            decision={decision}
+
+                        />
+
+                    ))
+
+                }
+
+            </div>
+
+        </DashboardLayout>
+
+    );
+
 }
 
 export default DecisionList;

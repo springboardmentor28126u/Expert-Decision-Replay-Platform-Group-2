@@ -1,163 +1,184 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import dummyUser from "../../data/dummyUser";
+import api from "../../services/api";
 
 import "../../styles/discussion.css";
 
-function CreateDiscussion() {
+
+function CreateDiscussion(){
+
+
+    const { decisionId } = useParams();
 
     const navigate = useNavigate();
-    const user = dummyUser;
 
-    const [formData, setFormData] = useState({
-        title: "",
-        decision: "",
-        description: ""
-    });
 
-    const handleChange = (e) => {
+    const [user,setUser] = useState(null);
 
-        setFormData({
+    const [title,setTitle] = useState("");
 
-            ...formData,
+    const [loading,setLoading] = useState(true);
 
-            [e.target.name]: e.target.value
 
-        });
+
+    useEffect(()=>{
+
+        loadUser();
+
+    },[]);
+
+
+
+    const loadUser = async()=>{
+
+        try{
+
+            const response = await api.get("/users/me");
+
+            setUser(response.data);
+
+        }
+        catch(error){
+
+            console.log(error);
+
+        }
+        finally{
+
+            setLoading(false);
+
+        }
 
     };
 
-    const handleSubmit = (e) => {
+
+
+    const handleSubmit = async(e)=>{
+
 
         e.preventDefault();
 
-        console.log("Discussion Created:", formData);
 
-        alert("Discussion created successfully!");
+        try{
 
-        navigate("/discussions");
+
+            await api.post(
+
+                `/decisions/${decisionId}/discussion`,
+
+                {
+                    title:title
+                }
+
+            );
+
+
+            alert("Discussion created successfully");
+
+
+            navigate(
+                `/decisions/${decisionId}/discussion`
+            );
+
+
+        }
+        catch(error){
+
+            console.log(error);
+
+            alert("Failed to create discussion");
+
+        }
+
 
     };
 
-    return (
+
+
+    if(loading){
+
+        return <h2>Loading...</h2>;
+
+    }
+
+
+
+    return(
+
 
         <DashboardLayout user={user}>
 
+
             <div className="discussion-page">
+
 
                 <div className="discussion-header">
 
-                    <div>
-
-                        <h1>Create Discussion</h1>
-
-                        <p>
-                            Start a new discussion for a decision.
-                        </p>
-
-                    </div>
+                    <h1>Create Discussion</h1>
 
                 </div>
 
 
-                <form
-                    className="profile-card"
-                    onSubmit={handleSubmit}
-                >
 
-                    <div className="form-group">
+                <div className="profile-card">
 
-                        <label>Discussion Title</label>
+
+                    <form onSubmit={handleSubmit}>
+
+
+                        <label>
+                            Discussion Title
+                        </label>
+
 
                         <input
+
                             type="text"
-                            name="title"
-                            value={formData.title}
-                            onChange={handleChange}
+
+                            value={title}
+
+                            onChange={(e)=>
+                                setTitle(e.target.value)
+                            }
+
                             placeholder="Enter discussion title"
+
                             required
+
                         />
 
-                    </div>
 
+                        <br/><br/>
 
-                    <div className="form-group">
-
-                        <label>Related Decision</label>
-
-                        <select
-                            name="decision"
-                            value={formData.decision}
-                            onChange={handleChange}
-                            required
-                        >
-
-                            <option value="">
-                                Select Decision
-                            </option>
-
-                            <option value="Cloud Migration">
-                                Cloud Migration
-                            </option>
-
-                            <option value="Database Upgrade">
-                                Database Upgrade
-                            </option>
-
-                            <option value="Security Enhancement">
-                                Security Enhancement
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <div className="form-group">
-
-                        <label>Description</label>
-
-                        <textarea
-                            name="description"
-                            rows="5"
-                            value={formData.description}
-                            onChange={handleChange}
-                            placeholder="Enter discussion details..."
-                            required
-                        />
-
-                    </div>
-
-
-                    <div className="form-buttons">
 
                         <button
-                            type="submit"
                             className="approve-btn"
+                            type="submit"
                         >
+
                             Create Discussion
+
                         </button>
 
-                        <button
-                            type="button"
-                            className="reject-btn"
-                            onClick={() => navigate("/discussions")}
-                        >
-                            Cancel
-                        </button>
 
-                    </div>
+                    </form>
 
-                </form>
+
+                </div>
+
 
             </div>
 
+
         </DashboardLayout>
+
 
     );
 
+
 }
+
 
 export default CreateDiscussion;

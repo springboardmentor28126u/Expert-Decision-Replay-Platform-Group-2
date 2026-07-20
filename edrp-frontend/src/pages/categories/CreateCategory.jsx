@@ -1,16 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "../../styles/category.css";
+
+import api from "../../services/api";
+
 
 function CreateCategory() {
 
     const navigate = useNavigate();
 
+
     const [formData, setFormData] = useState({
         name: "",
         description: ""
     });
+
+
 
     const handleChange = (e) => {
 
@@ -21,26 +28,58 @@ function CreateCategory() {
 
     };
 
-    const handleSubmit = (e) => {
+
+
+    const handleSubmit = async (e) => {
 
         e.preventDefault();
 
-        console.log("Category Created:", formData);
 
-        // Backend API
-        // POST /categories
+        try {
 
-        alert("Category created successfully!");
+            const response = await api.post(
+                "/categories/",
+                formData
+            );
 
-        navigate("/categories");
+
+            console.log(
+                "Category Created:",
+                response.data
+            );
+
+
+            alert("Category created successfully!");
+
+
+            navigate("/categories");
+
+
+        } catch (error) {
+
+
+            console.error(
+                "Create Category Error:",
+                error
+            );
+
+
+            alert("Failed to create category");
+
+
+        }
 
     };
+
+
 
     return (
 
         <DashboardLayout>
 
+
             <div className="category-page">
+
 
                 <div className="page-header">
 
@@ -56,10 +95,13 @@ function CreateCategory() {
 
                 </div>
 
+
+
                 <form
                     className="category-form"
                     onSubmit={handleSubmit}
                 >
+
 
                     <div className="form-group">
 
@@ -67,16 +109,27 @@ function CreateCategory() {
                             Category Name
                         </label>
 
+
                         <input
+
                             type="text"
+
                             name="name"
+
                             placeholder="Enter category name"
+
                             value={formData.name}
+
                             onChange={handleChange}
+
                             required
+
                         />
 
                     </div>
+
+
+
 
                     <div className="form-group">
 
@@ -84,18 +137,29 @@ function CreateCategory() {
                             Description
                         </label>
 
+
                         <textarea
+
                             name="description"
+
                             placeholder="Enter description"
+
                             rows="5"
+
                             value={formData.description}
+
                             onChange={handleChange}
+
                             required
+
                         />
 
                     </div>
 
+
+
                     <div className="form-buttons">
+
 
                         <button
                             type="submit"
@@ -104,24 +168,35 @@ function CreateCategory() {
                             Save Category
                         </button>
 
+
+
                         <button
+
                             type="button"
+
                             className="reject-btn"
+
                             onClick={() => navigate("/categories")}
+
                         >
                             Cancel
                         </button>
 
+
                     </div>
+
 
                 </form>
 
+
             </div>
+
 
         </DashboardLayout>
 
     );
 
 }
+
 
 export default CreateCategory;

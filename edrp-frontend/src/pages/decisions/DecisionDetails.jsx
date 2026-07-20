@@ -1,30 +1,65 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
-import "../../styles/dashboard.css";
-
-import dummyUser from "../../data/dummyUser";
-
 import AlternativeList from "../../components/AlternativeList";
 import KnowledgeList from "../../components/KnowledgeList";
 import AttachmentList from "../../components/AttachmentList";
-import VersionHistory from "./VersionHistory";
-// import VersionHistory from "../../components/VersionHistory";
 import VersionHistoryList from "../../components/decision/VersionHistoryList";
+
+import api from "../../services/api";
+
+import "../../styles/dashboard.css";
+
 function DecisionDetails() {
 
-    const user = dummyUser;
+    const { id } = useParams();
 
-    const decision = {
-        id: 1,
-        title: "Cloud Migration",
-        description:
-            "Migrate company infrastructure from on-premise servers to cloud platform.",
-        status: "Draft",
-        category: "Technology",
-        owner: "Raj",
-        created_at: "13 July 2026",
-        updated_at: "13 July 2026"
+    const [user, setUser] = useState(null);
+    const [decision, setDecision] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+
+        loadData();
+
+    }, [id]);
+
+    const loadData = async () => {
+
+        try {
+
+            const [userRes, decisionRes] = await Promise.all([
+                api.get("/users/me"),
+                api.get(`/decisions/${id}`)
+            ]);
+
+            setUser(userRes.data);
+            setDecision(decisionRes.data);
+
+        } catch (err) {
+
+            console.error(err);
+
+        } finally {
+
+            setLoading(false);
+
+        }
+
     };
+
+    if (loading) {
+
+        return <h2>Loading...</h2>;
+
+    }
+
+    if (!decision || !user) {
+
+        return <h2>Decision Not Found</h2>;
+
+    }
 
     const isAdmin = user.role === "Administrator";
     const isManager = user.role === "Manager";
@@ -36,10 +71,10 @@ function DecisionDetails() {
             <div className="dashboard-page">
 
                 <div className="page-header">
-                    <h1>Decision Details</h1>
-                </div>
 
-                {/* Decision Information */}
+                    <h1>Decision Details</h1>
+
+                </div>
 
                 <div className="dashboard-section">
 
@@ -53,52 +88,55 @@ function DecisionDetails() {
 
                         <p><strong>Status :</strong> {decision.status}</p>
 
-                        <p><strong>Category :</strong> {decision.category}</p>
+                        <p><strong>Owner ID :</strong> {decision.owner_id}</p>
 
-                        <p><strong>Owner :</strong> {decision.owner}</p>
+                        <p>
+                            <strong>Created :</strong>{" "}
+                            {decision.created_at
+                                ? new Date(decision.created_at).toLocaleString()
+                                : "-"}
+                        </p>
 
-                        <p><strong>Created :</strong> {decision.created_at}</p>
-
-                        <p><strong>Updated :</strong> {decision.updated_at}</p>
+                        <p>
+                            <strong>Updated :</strong>{" "}
+                            {decision.updated_at
+                                ? new Date(decision.updated_at).toLocaleString()
+                                : "-"}
+                        </p>
 
                     </div>
 
                 </div>
 
-                {/* Alternatives */}
-
                 <div className="dashboard-section">
 
-                <AlternativeList decisionId={decision.id} /> 
+                    <AlternativeList decisionId={decision.id} />
 
-                <Link
-                    to={`/decisions/${decision.id}/alternatives`}
-                    className="approve-btn"
-                >
-                    View All Alternatives
-                </Link>
-
-            </div>
-                {/* Knowledge */}
-
-                <div className="dashboard-section">
-
-                <KnowledgeList decisionId={decision.id} />
-
-                <Link
-                    to={`/decisions/${decision.id}/knowledge`}
-                    className="approve-btn"
-                >
-                    View Knowledge
-                </Link>
+                    <Link
+                        to={`/decisions/${decision.id}/alternatives`}
+                        className="approve-btn"
+                    >
+                        View All Alternatives
+                    </Link>
 
                 </div>
 
-                {/* Attachments */}
+                <div className="dashboard-section">
+
+                    <KnowledgeList decisionId={decision.id} />
+
+                    <Link
+                        to={`/decisions/${decision.id}/knowledge`}
+                        className="approve-btn"
+                    >
+                        View Knowledge
+                    </Link>
+
+                </div>
 
                 <div className="dashboard-section">
 
-                <AttachmentList decisionId={decision.id} />
+                    <AttachmentList decisionId={decision.id} />
 
                     <Link
                         to={`/decisions/${decision.id}/attachments`}
@@ -108,18 +146,30 @@ function DecisionDetails() {
                     </Link>
 
                 </div>
-                {/* Version History */}
 
                 <div className="dashboard-section">
-                <VersionHistoryList decisionId={decision.id}/>                   
-                 <Link
+
+                    <VersionHistoryList decisionId={decision.id} />
+
+                    <Link
                         to={`/decisions/${decision.id}/history`}
                         className="approve-btn"
                     >
                         View Version History
                     </Link>
-
+                       
                 </div>
+                <div className="dashboard-section">
+
+                <Link
+                    to={`/decisions/${decision.id}/discussion`}
+                    className="approve-btn"
+                >
+                    View Discussions
+                </Link>
+
+            </div>
+
                 {(isAdmin || isManager) && (
 
                     <div className="dashboard-section">

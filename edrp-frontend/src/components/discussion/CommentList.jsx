@@ -1,19 +1,58 @@
-function CommentList() {
+import { useEffect, useState } from "react";
+import api from "../../services/api";
 
-    const comments = [
-        {
-            id: 1,
-            user: "Raj",
-            message: "AWS is the best option for scalability.",
-            date: "15 Jul 2026"
-        },
-        {
-            id: 2,
-            user: "Anjali",
-            message: "Azure should also be evaluated.",
-            date: "16 Jul 2026"
+function CommentList({ discussionId }) {
+
+    const [comments, setComments] = useState([]);
+
+    useEffect(() => {
+        loadComments();
+    }, [discussionId]);
+
+    const loadComments = async () => {
+
+        try {
+
+            const response = await api.get(
+                `/discussion/${discussionId}/comments`
+            );
+
+            setComments(response.data);
+
+        } catch (error) {
+
+            console.error(error);
+
         }
-    ];
+
+    };
+
+    const handleAddComment = async () => {
+
+        const message = prompt("Enter Comment");
+
+        if (!message) return;
+
+        try {
+
+            await api.post(
+                `/discussion/${discussionId}/comments`,
+                {
+                    message
+                }
+            );
+
+            loadComments();
+
+        } catch (error) {
+
+            console.error(error);
+
+            alert("Failed to add comment");
+
+        }
+
+    };
 
     return (
 
@@ -23,7 +62,10 @@ function CommentList() {
 
                 <h2>Comments</h2>
 
-                <button className="approve-btn">
+                <button
+                    className="approve-btn"
+                    onClick={handleAddComment}
+                >
                     + Add Comment
                 </button>
 
@@ -31,24 +73,44 @@ function CommentList() {
 
             <div className="profile-card">
 
-                {comments.map((comment) => (
+                {
 
-                    <div
-                        key={comment.id}
-                        className="discussion-item"
-                    >
+                    comments.length > 0 ?
 
-                        <h4>{comment.user}</h4>
+                    comments.map((comment) => (
 
-                        <p>{comment.message}</p>
+                        <div
+                            key={comment.id}
+                            className="discussion-item"
+                        >
 
-                        <small>{comment.date}</small>
+                            <h4>User ID : {comment.user_id}</h4>
 
-                        <hr />
+                            <p>{comment.message}</p>
 
-                    </div>
+                            <small>
 
-                ))}
+                                {
+
+                                    new Date(
+                                        comment.created_at
+                                    ).toLocaleString()
+
+                                }
+
+                            </small>
+
+                            <hr />
+
+                        </div>
+
+                    ))
+
+                    :
+
+                    <p>No Comments Found</p>
+
+                }
 
             </div>
 

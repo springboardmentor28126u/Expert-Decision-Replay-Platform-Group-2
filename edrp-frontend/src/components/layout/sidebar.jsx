@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import "../../styles/sidebar.css";
 
 function Sidebar({ role }) {
-
+    console.log("SIDEBAR LOADED");
+    console.log("ROLE:", role);
     const isAdmin = role === "Administrator";
     const isManager = role === "Manager";
     const isEmployee = role === "Employee";
@@ -60,7 +61,7 @@ function Sidebar({ role }) {
                             </li>
 
                             <li>
-                                <Link to="/admin/teams">
+                                <Link to="/teams">
                                     Teams
                                 </Link>
                             </li>
@@ -100,6 +101,7 @@ function Sidebar({ role }) {
                                     Categories
                                 </Link>
                             </li>
+                            
 
                             <li>
                                 <Link to="/reports">
@@ -108,6 +110,9 @@ function Sidebar({ role }) {
                             </li>
                         </>
                     )}
+                    
+                   
+                    
 
                 </ul>
 

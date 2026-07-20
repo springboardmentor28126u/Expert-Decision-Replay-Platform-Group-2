@@ -1,39 +1,79 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
+import api from "../../services/api";
+
 import "../../styles/dashboard.css";
-import dummyUser from "../../data/dummyUser";
 
 function DecisionList() {
 
-    const user = dummyUser;
+    const [user, setUser] = useState(null);
+    const [decisions, setDecisions] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const decisions = [
+    useEffect(() => {
 
-        {
-            id: 1,
-            title: "Cloud Migration",
-            status: "Draft",
-            owner: "Raj",
-            category: "Technology"
-        },
+        loadData();
 
-        {
-            id: 2,
-            title: "AI Chatbot",
-            status: "In Review",
-            owner: "Anjali",
-            category: "AI"
-        },
+    }, []);
 
-        {
-            id: 3,
-            title: "CRM Upgrade",
-            status: "Finalized",
-            owner: "Rahul",
-            category: "Software"
+    const loadData = async () => {
+
+        try {
+
+            const [userRes, decisionRes] = await Promise.all([
+                api.get("/users/me"),
+                api.get("/decisions")
+            ]);
+
+            setUser(userRes.data);
+            setDecisions(decisionRes.data);
+
+        } catch (err) {
+
+            console.error(err);
+
+        } finally {
+
+            setLoading(false);
+
         }
 
-    ];
+    };
+
+    const handleDelete = async (id) => {
+
+        if (!window.confirm("Delete this decision?")) return;
+
+        try {
+
+            await api.delete(`/decisions/${id}`);
+
+            setDecisions(
+                decisions.filter((item) => item.id !== id)
+            );
+
+            alert("Decision Deleted Successfully");
+
+        } catch (err) {
+
+            console.error(err);
+
+            alert(
+                err.response?.data?.detail ||
+                "Failed to delete decision."
+            );
+
+        }
+
+    };
+
+    if (loading) {
+
+        return <h2>Loading...</h2>;
+
+    }
 
     const isAdmin = user.role === "Administrator";
     const isManager = user.role === "Manager";
@@ -46,9 +86,7 @@ function DecisionList() {
 
                 <div className="page-header">
 
-                    <h1>
-                        Decision Management
-                    </h1>
+                    <h1>Decision Management</h1>
 
                     {(isAdmin || isManager) && (
 
@@ -72,8 +110,8 @@ function DecisionList() {
                             <th>ID</th>
                             <th>Title</th>
                             <th>Status</th>
-                            <th>Owner</th>
-                            <th>Category</th>
+                            <th>Owner ID</th>
+                            <th>Created</th>
                             <th>Actions</th>
 
                         </tr>
@@ -84,55 +122,83 @@ function DecisionList() {
 
                         {
 
-                            decisions.map((decision) => (
+                            decisions.length > 0 ? (
 
-                                <tr key={decision.id}>
+                                decisions.map((decision) => (
 
-                                    <td>{decision.id}</td>
+                                    <tr key={decision.id}>
 
-                                    <td>{decision.title}</td>
+                                        <td>{decision.id}</td>
 
-                                    <td>{decision.status}</td>
+                                        <td>{decision.title}</td>
 
-                                    <td>{decision.owner}</td>
+                                        <td>{decision.status}</td>
 
-                                    <td>{decision.category}</td>
+                                        <td>{decision.owner_id}</td>
 
-                                    <td>
+                                        <td>
+                                            {
+                                                decision.created_at
+                                                    ? new Date(
+                                                        decision.created_at
+                                                    ).toLocaleDateString()
+                                                    : "-"
+                                            }
+                                        </td>
 
-                                        <Link
-                                            to={`/decisions/${decision.id}`}
-                                            className="approve-btn"
-                                        >
-                                            View
-                                        </Link>
+                                        <td>
 
-                                        {(isAdmin || isManager) && (
-
-                                            <>
-
-                                               <Link
-                                                to={`/decisions/${decision.id}/edit`}
+                                            <Link
+                                                to={`/decisions/${decision.id}`}
                                                 className="approve-btn"
                                             >
-                                                Edit
+                                                View
                                             </Link>
 
-                                                <button
-                                                    className="reject-btn"
-                                                >
-                                                    Delete
-                                                </button>
+                                            {(isAdmin || isManager) && (
 
-                                            </>
+                                                <>
 
-                                        )}
+                                                    <Link
+                                                        to={`/decisions/${decision.id}/edit`}
+                                                        className="approve-btn"
+                                                    >
+                                                        Edit
+                                                    </Link>
 
+                                                    <button
+                                                        className="reject-btn"
+                                                        onClick={() =>
+                                                            handleDelete(decision.id)
+                                                        }
+                                                    >
+                                                        Delete
+                                                    </button>
+
+                                                </>
+
+                                            )}
+
+                                        </td>
+
+                                    </tr>
+
+                                ))
+
+                            ) : (
+
+                                <tr>
+
+                                    <td
+                                        colSpan="6"
+                                        style={{ textAlign: "center" }}
+                                    >
+                                        No Decisions Found
                                     </td>
 
                                 </tr>
 
-                            ))
+                            )
 
                         }
 

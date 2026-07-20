@@ -1,52 +1,82 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import DashboardLayout from "../../components/layout/DashboardLayout";
+
+import api from "../../services/api";
+import dummyUser from "../../data/dummyUser";
+
+import DashboardLayout from "../../components/layout/Dashboardlayout";
 import CategoryTable from "../../components/category/CategoryTable";
-import "../../styles/category.css";
+
 
 function CategoryList() {
 
+    const user = dummyUser;
+
+
+    const [categories, setCategories] = useState([]);
     const [search, setSearch] = useState("");
 
-    const categories = [
-        {
-            id: 1,
-            name: "Technology",
-            description: "Cloud and Infrastructure Decisions"
-        },
-        {
-            id: 2,
-            name: "Finance",
-            description: "Budget and Investment Decisions"
-        },
-        {
-            id: 3,
-            name: "Human Resource",
-            description: "Recruitment and Employee Policies"
+
+    useEffect(() => {
+
+        fetchCategories();
+
+    }, []);
+
+
+
+    const fetchCategories = async () => {
+
+        try {
+
+            const res = await api.get("/categories/");
+
+            setCategories(res.data);
+
+        } catch (error) {
+
+            console.error("Category Error:", error);
+
+            alert("Failed to load categories");
+
         }
-    ];
+
+    };
+
+
 
     const filteredCategories = categories.filter((item) =>
-        item.name.toLowerCase().includes(search.toLowerCase())
+
+        item.name
+        .toLowerCase()
+        .includes(search.toLowerCase())
+
     );
+
+
 
     return (
 
-        <DashboardLayout>
+        <DashboardLayout user={user}>
+
 
             <div className="category-page">
+
 
                 <div className="page-header">
 
                     <div>
 
-                        <h2>Categories</h2>
+                        <h2>
+                            Categories
+                        </h2>
 
                         <p>
                             Manage all decision categories.
                         </p>
 
                     </div>
+
 
                     <Link
                         to="/categories/create"
@@ -55,29 +85,42 @@ function CategoryList() {
                         + Add Category
                     </Link>
 
+
                 </div>
+
+
 
                 <div className="search-bar">
 
                     <input
+
                         type="text"
+
                         placeholder="Search category..."
+
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+
+                        onChange={(e)=>setSearch(e.target.value)}
+
                     />
 
                 </div>
+
+
 
                 <CategoryTable
                     categories={filteredCategories}
                 />
 
+
             </div>
+
 
         </DashboardLayout>
 
     );
 
 }
+
 
 export default CategoryList;

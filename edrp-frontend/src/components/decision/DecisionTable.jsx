@@ -1,55 +1,143 @@
 import { Link } from "react-router-dom";
 import StatusBadge from "../common/StatusBadge";
 
-function DecisionTable({ decisions }) {
-  return (
-    <div className="table-container">
-      <table className="decision-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Category</th>
-            <th>Owner</th>
-            <th>Status</th>
-            <th>Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
+function DecisionTable({ decisions, onDelete }) {
 
-        <tbody>
-          {decisions.map((decision) => (
-            <tr key={decision.id}>
-              <td>{decision.title}</td>
+    return (
 
-              <td>{decision.category_name}</td>
+        <div className="table-container">
 
-              <td>{decision.owner_name}</td>
+            <table className="decision-table">
 
-              <td>
-                <StatusBadge status={decision.status} />
-              </td>
+                <thead>
 
-              <td>{decision.updated_at}</td>
+                    <tr>
 
-              <td className="actions">
-                <Link to={`/decisions/${decision.id}`}>
-                  <button className="view-btn">View</button>
-                </Link>
+                        <th>Title</th>
 
-                <Link to={`/decisions/edit/${decision.id}`}>
-                  <button className="edit-btn">Edit</button>
-                </Link>
+                        <th>Status</th>
 
-                <button className="delete-btn">
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+                        <th>Owner ID</th>
+
+                        <th>Created</th>
+
+                        <th>Updated</th>
+
+                        <th>Actions</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {
+
+                        decisions.length > 0 ? (
+
+                            decisions.map((decision) => (
+
+                                <tr key={decision.id}>
+
+                                    <td>
+                                        {decision.title}
+                                    </td>
+
+                                    <td>
+                                        <StatusBadge
+                                            status={decision.status}
+                                        />
+                                    </td>
+
+                                    <td>
+                                        {decision.owner_id}
+                                    </td>
+
+                                    <td>
+                                        {
+                                            decision.created_at
+                                                ? new Date(
+                                                      decision.created_at
+                                                  ).toLocaleDateString()
+                                                : "-"
+                                        }
+                                    </td>
+
+                                    <td>
+                                        {
+                                            decision.updated_at
+                                                ? new Date(
+                                                      decision.updated_at
+                                                  ).toLocaleDateString()
+                                                : "-"
+                                        }
+                                    </td>
+
+                                    <td className="actions">
+
+                                        <Link
+                                            to={`/decisions/${decision.id}`}
+                                        >
+
+                                            <button className="view-btn">
+                                                View
+                                            </button>
+
+                                        </Link>
+
+                                        <Link
+                                            to={`/decisions/${decision.id}/edit`}
+                                        >
+
+                                            <button className="edit-btn">
+                                                Edit
+                                            </button>
+
+                                        </Link>
+
+                                        <button
+                                            className="delete-btn"
+                                            onClick={() =>
+                                                onDelete(decision.id)
+                                            }
+                                        >
+                                            Delete
+                                        </button>
+
+                                    </td>
+
+                                </tr>
+
+                            ))
+
+                        ) : (
+
+                            <tr>
+
+                                <td
+                                    colSpan="6"
+                                    style={{
+                                        textAlign: "center",
+                                        padding: "20px"
+                                    }}
+                                >
+                                    No Decisions Found
+                                </td>
+
+                            </tr>
+
+                        )
+
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    );
+
 }
 
 export default DecisionTable;

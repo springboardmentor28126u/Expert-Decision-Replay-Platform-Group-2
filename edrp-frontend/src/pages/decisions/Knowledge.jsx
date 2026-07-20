@@ -1,42 +1,98 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import KnowledgeTable from "../../components/decision/KnowledgeTable";
+import api from "../../services/api";
+
 import "../../styles/knowledge.css";
 
 function Knowledge() {
 
+    const { id } = useParams();
+
+    const [knowledge, setKnowledge] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
-    const knowledge = [
-        {
-            id: 1,
-            title: "Cloud Migration Report",
-            category: "Report",
-            uploadedBy: "Raj",
-            uploadDate: "15 Jul 2026",
-            status: "Approved"
-        },
-        {
-            id: 2,
-            title: "AWS Cost Analysis",
-            category: "Research",
-            uploadedBy: "Anjali",
-            uploadDate: "14 Jul 2026",
-            status: "Pending"
-        },
-        {
-            id: 3,
-            title: "Security Checklist",
-            category: "Document",
-            uploadedBy: "Admin",
-            uploadDate: "13 Jul 2026",
-            status: "Approved"
-        }
-    ];
+    useEffect(() => {
+        loadKnowledge();
+    }, [id]);
 
-    const filteredKnowledge = knowledge.filter(item =>
-        item.title.toLowerCase().includes(search.toLowerCase())
+    const loadKnowledge = async () => {
+
+        try {
+
+            const response = await api.get(
+                `/decisions/${id}/knowledge`
+            );
+
+            setKnowledge(response.data);
+
+        } catch (error) {
+
+            console.error("Knowledge Error:", error);
+
+        } finally {
+
+            setLoading(false);
+
+        }
+
+    };
+
+    const handleAddKnowledge = async () => {
+
+        const content = prompt("Enter Knowledge Content");
+
+        if (!content) return;
+
+        const source = prompt("Enter Source (Optional)");
+
+        try {
+
+            await api.post(
+                    `/decisions/${id}/knowledge`,
+                    {
+                        decision_id: Number(id),
+                        content,
+                        source
+                    }
+                );
+
+            alert("Knowledge Added Successfully");
+
+            loadKnowledge();
+
+        } catch (error) {
+
+            console.error(error);
+
+            alert("Failed To Add Knowledge");
+
+        }
+
+    };
+
+    const filteredKnowledge = knowledge.filter((item) =>
+        item.content
+            .toLowerCase()
+            .includes(search.toLowerCase())
     );
+
+    if (loading) {
+
+        return (
+
+            <DashboardLayout>
+
+                <h2>Loading Knowledge...</h2>
+
+            </DashboardLayout>
+
+        );
+
+    }
 
     return (
 
@@ -51,13 +107,18 @@ function Knowledge() {
                         <h2>Knowledge Repository</h2>
 
                         <p>
-                            Manage documents and references related to this decision.
+
+                            Manage decision knowledge and references.
+
                         </p>
 
                     </div>
 
-                    <button className="upload-btn">
-                        + Upload Knowledge
+                    <button
+                        className="upload-btn"
+                        onClick={handleAddKnowledge}
+                    >
+                        + Add Knowledge
                     </button>
 
                 </div>
@@ -66,14 +127,18 @@ function Knowledge() {
 
                     <input
                         type="text"
-                        placeholder="Search knowledge..."
+                        placeholder="Search Knowledge..."
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) =>
+                            setSearch(e.target.value)
+                        }
                     />
 
                 </div>
 
-                <KnowledgeTable knowledge={filteredKnowledge} />
+                <KnowledgeTable
+                    knowledge={filteredKnowledge}
+                />
 
             </div>
 
