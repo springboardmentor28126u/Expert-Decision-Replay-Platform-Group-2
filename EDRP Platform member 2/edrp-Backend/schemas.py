@@ -269,10 +269,10 @@ class DiscussionAttachmentOut(BaseModel):
     class Config:
         from_attributes = True
 
-class UserOut(BaseModel):
-    id: int
-    email: str
-    full_name: str | None
+# class UserOut(BaseModel):
+#     id: int
+#     email: str
+#     full_name: str | None
 
-    class Config:
-        from_attributes = True
+#     class Config:
+#         from_attributes = True
