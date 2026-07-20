@@ -83,7 +83,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
+  align-items: start; /* prevent grid items stretching to tallest item */
+  grid-auto-rows: min-content; /* let rows size to content */
   margin-bottom: 40px;
+}
+
+/* Make the main decisions section span full width so create + list view are full-size */
+.dash-grid > .dash-section {
+  grid-column: 1 / -1;
 }
 
 .dash-card {
@@ -91,6 +98,8 @@
   border: 1px solid #2E3646;
   border-radius: 10px;
   padding: 20px;
+  min-height: 0; /* ensure flexible height inside grid */
+  overflow: hidden; /* clip children so border-radius is respected and tables don't overflow */
 }
 
 .dash-card-label {
@@ -161,6 +170,48 @@
   padding: 12px 16px;
   font-size: 13px;
   border-bottom: 1px solid #2E3646;
+}
+
+/* Prevent alternatives UI overlap with table on small screens */
+.dash-alternatives-section {
+  margin-top: 20px;
+}
+
+.dash-alternatives-section .dash-card {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0 !important;
+}
+
+/* Alternatives panel layout and table overflow handling */
+.dash-alternatives-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dash-table {
+  width: 100%;
+  box-sizing: border-box;
+  border-collapse: collapse;
+  background: #1E2430;
+  border: 1px solid #2E3646;
+  border-radius: 10px;
+  overflow: auto; /* allow horizontal scroll when table is wider than container */
+}
+
+.dash-table thead,
+.dash-table tbody {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.dash-table th,
+.dash-table td {
+  white-space: nowrap; /* keep cells readable, allow scrolling */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dash-role-badge {
