@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from models import UserRole, DecisionStatus, RiskLevel, FeasibilityLevel
+from discussion import DiscussionMessageType
 
 # Data expected when a new user registers
 class UserCreate(BaseModel):
@@ -88,8 +89,43 @@ class AlternativeUpdate(BaseModel):
     cost: float | None = None
     risk_level: RiskLevel | None = None
     feasibility: FeasibilityLevel | None = None
-    
+
 class AlternativeComparisonResponse(BaseModel):
     decision_id: int
     decision_title: str
     alternatives: list[AlternativeResponse]
+
+
+class DiscussionCreate(BaseModel):
+    decision_id: int
+    message: str
+    message_type: DiscussionMessageType = DiscussionMessageType.comment
+    attachment_url: str | None = None
+
+
+class DiscussionReplyCreate(BaseModel):
+    parent_id: int
+    message: str
+    message_type: DiscussionMessageType = DiscussionMessageType.reply
+    attachment_url: str | None = None
+
+
+class DiscussionUpdate(BaseModel):
+    message: str | None = None
+    attachment_url: str | None = None
+
+
+class DiscussionResponse(BaseModel):
+    id: int
+    decision_id: int
+    user_id: int
+    parent_id: int | None
+    message: str
+    message_type: DiscussionMessageType
+    attachment_url: str | None
+    created_at: datetime
+    updated_at: datetime | None
+    user: UserResponse
+
+    class Config:
+        from_attributes = True

@@ -5,15 +5,15 @@ import Dashboard from "./Dashboard";
 
 function App() {
   const [showRegister, setShowRegister] = useState(false);
-  const [token, setToken] = useState(() => localStorage.getItem("edrp_token") || null);
+  const [token, setToken] = useState(() => localStorage.getItem("token") || null);
 
   const handleLoginSuccess = (newToken) => {
-    localStorage.setItem("edrp_token", newToken);
+    localStorage.setItem("token", newToken);
     setToken(newToken);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("edrp_token");
+    localStorage.removeItem("token");
     setToken(null);
   };
 

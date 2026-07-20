@@ -27,6 +27,7 @@ function CreateDecision({ token, onCreated }) {
       setCategory("");
       if (onCreated) onCreated(response.data);
     } catch (error) {
+      console.error("Error creating decision:", error);
       setIsError(true);
       setMessage("Something went wrong. Please try again.");
     }

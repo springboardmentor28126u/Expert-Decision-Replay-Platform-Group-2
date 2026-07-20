@@ -13,6 +13,7 @@ load_dotenv()
 
 from database import Base
 from models import User
+from discussion import DiscussionMessage
 
 target_metadata = Base.metadata
 
@@ -88,3 +89,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+

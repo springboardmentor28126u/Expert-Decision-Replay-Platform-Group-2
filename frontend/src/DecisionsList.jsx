@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import AlternativesPanel from "./AlternativesPanel";
 
-function DecisionsList({ token, refreshKey, role }) {
+function DecisionsList({ token, refreshKey, role, onSelectDecision }) {
   const [decisions, setDecisions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
@@ -51,10 +51,6 @@ function DecisionsList({ token, refreshKey, role }) {
       setDecisions((prev) =>
         prev.map((d) => (d.id === decisionId ? { ...d, status: nextStatus } : d))
       );
-      if (typeof refreshKey !== "undefined") {
-        // Trigger re-fetch in parent-driven flows
-        // (we keep it optional to avoid tight coupling)
-      }
     } catch (err) {
       setUpdateError(
         err?.response?.data?.detail ||
@@ -98,7 +94,11 @@ function DecisionsList({ token, refreshKey, role }) {
         <tbody>
           {decisions.map((d) => (
             <tr key={d.id}>
-              <td>{d.title}</td>
+              <td>
+                <span className="dash-link" onClick={() => onSelectDecision && onSelectDecision(d)}>
+                  {d.title}
+                </span>
+              </td>
               <td>{d.category || "—"}</td>
               <td>
                 <span
