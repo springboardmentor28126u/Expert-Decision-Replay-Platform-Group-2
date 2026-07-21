@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import api from "../../services/api";
 
 import EmployeeDashboard from "./EmployeeDashboard";
 import ReviewerDashboard from "./ReviewerDashboard";
@@ -7,28 +10,50 @@ import AdminDashboard from "./AdminDashboard";
 
 function Dashboard() {
 
+    const navigate = useNavigate();
+
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
 
-        // Temporary Dummy User
-        // Backend ready hone ke baad API se replace karenge
-
-        const dummyUser = {
-            id: 1,
-            name: "Raj Upadhyay",
-            email: "raj@gmail.com",
-            role: ""
-        };
-
-        setUser(dummyUser);
-        setLoading(false);
+        loadUser();
 
     }, []);
 
+    const loadUser = async () => {
+
+        try {
+
+            const res = await api.get("/users/me");
+
+            setUser(res.data);
+
+        } catch (err) {
+
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("user");
+
+            navigate("/login");
+
+        } finally {
+
+            setLoading(false);
+
+        }
+
+    };
+
     if (loading) {
+
         return <h2>Loading...</h2>;
+
+    }
+
+    if (!user) {
+
+        return <h2>No User Found</h2>;
+
     }
 
     switch (user.role) {
@@ -42,8 +67,12 @@ function Dashboard() {
         case "Reviewer":
             return <ReviewerDashboard user={user} />;
 
+        case "Employee":
+            return <EmployeeDashboard user={user} />;
+
         default:
             return <EmployeeDashboard user={user} />;
+
     }
 
 }

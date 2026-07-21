@@ -48,7 +48,6 @@ def create_decision(
     db.commit()
     db.refresh(db_decision)
     return db_decision
-
 @router.get("/", response_model=List[DecisionOut])
 def list_decisions(
     db: Session = Depends(get_db),
@@ -60,6 +59,17 @@ def list_decisions(
         query = query.filter(Decision.category_id == category_id)
     return query.all()
 
+# @router.get("/my", response_model=List[DecisionOut])
+# def my_decisions(
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user)
+# ):
+
+#     decisions = db.query(Decision).filter(
+#         Decision.owner_id == current_user.id
+#     ).all()
+
+#     return decisions
 @router.get("/{decision_id}", response_model=DecisionOut)
 def get_decision(
     decision_id: int,

@@ -4,100 +4,120 @@ import api from "../services/api";
 import "../styles/login.css";
 
 function Login() {
-  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+    const navigate = useNavigate();
 
-  const [error, setError] = useState("");
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+    const [formData, setFormData] = useState({
+        email: "",
+        password: "",
     });
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    setError("");
+    const handleChange = (e) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value,
+        });
+    };
 
-    try {
-      const data = new URLSearchParams();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-      data.append("username", formData.email);
-      data.append("password", formData.password);
+        setError("");
+        setLoading(true);
 
-      const response = await api.post("/login", data);
+        try {
 
-      localStorage.setItem(
-        "access_token",
-        response.data.access_token
-      );
+            const form = new URLSearchParams();
 
-      navigate("/dashboard");
-    } catch (err) {
-      setError(
-        err.response?.data?.detail || "Invalid Email or Password"
-      );
-    }
-  };
+            form.append("username", formData.email);
+            form.append("password", formData.password);
 
-  return (
-    <div className="login-page">
+            const response = await api.post("/login", form, {
+                headers: {
+                    "Content-Type":
+                        "application/x-www-form-urlencoded",
+                },
+            });
 
-      <div className="login-card">
+            localStorage.setItem(
+                "access_token",
+                response.data.access_token
+            );
 
-        <h1>EDRP</h1>
+            const user = await api.get("/users/me");
 
-        <p className="subtitle">
-          Expert Decision Replay Platform
-        </p>
+            localStorage.setItem(
+                "user",
+                JSON.stringify(user.data)
+            );
 
-        <h2>Login</h2>
+            navigate("/dashboard");
 
-        {error && (
-          <p className="error">{error}</p>
-        )}
+        } catch (err) {
 
-        <form onSubmit={handleSubmit}>
+            setError(
+                err.response?.data?.detail ||
+                "Invalid Email or Password"
+            );
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Enter Email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
+        } finally {
+            setLoading(false);
+        }
+    };
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Enter Password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
+    return (
+        <div className="login-page">
 
-          <button type="submit">
-            Login
-          </button>
+            <div className="login-card">
 
-        </form>
+                <h1>EDRP</h1>
 
-        <p className="register-link">
-          Don't have an account?
-          <Link to="/register"> Register</Link>
-        </p>
+                <p className="subtitle">
+                    Expert Decision Replay Platform
+                </p>
 
-      </div>
+                <h2>Login</h2>
 
-    </div>
-  );
+                {error && <p className="error">{error}</p>}
+
+                <form onSubmit={handleSubmit}>
+
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                    />
+
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                    />
+
+                    <button type="submit" disabled={loading}>
+                        {loading ? "Logging in..." : "Login"}
+                    </button>
+
+                </form>
+
+                <p className="register-link">
+                    Don't have an account?
+                    <Link to="/register"> Register</Link>
+                </p>
+
+            </div>
+
+        </div>
+    );
 }
 
 export default Login;

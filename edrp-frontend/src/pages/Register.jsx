@@ -4,62 +4,54 @@ import api from "../services/api";
 import "../styles/register.css";
 
 function Register() {
-
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
         name: "",
         email: "",
-        password: ""
+        password: "",
     });
 
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
-
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         });
-
     };
 
     const handleSubmit = async (e) => {
-
         e.preventDefault();
 
         setError("");
         setSuccess("");
+        setLoading(true);
 
         try {
-
             await api.post("/users", formData);
 
-            setSuccess("Registration Successful");
+            setSuccess("Registration Successful!");
 
             setTimeout(() => {
                 navigate("/login");
             }, 1500);
-
         } catch (err) {
-
             setError(
                 err.response?.data?.detail || "Registration Failed"
             );
-
+        } finally {
+            setLoading(false);
         }
-
     };
 
     return (
-
         <div className="register-page">
-
             <div className="register-card">
 
                 <h1>EDRP</h1>
-
                 <p className="subtitle">
                     Expert Decision Replay Platform
                 </p>
@@ -67,7 +59,6 @@ function Register() {
                 <h2>Create Account</h2>
 
                 {error && <p className="error">{error}</p>}
-
                 {success && <p className="success">{success}</p>}
 
                 <form onSubmit={handleSubmit}>
@@ -75,7 +66,7 @@ function Register() {
                     <input
                         type="text"
                         name="name"
-                        placeholder="Enter Full Name"
+                        placeholder="Full Name"
                         value={formData.name}
                         onChange={handleChange}
                         required
@@ -84,7 +75,7 @@ function Register() {
                     <input
                         type="email"
                         name="email"
-                        placeholder="Enter Email"
+                        placeholder="Email"
                         value={formData.email}
                         onChange={handleChange}
                         required
@@ -93,14 +84,14 @@ function Register() {
                     <input
                         type="password"
                         name="password"
-                        placeholder="Enter Password"
+                        placeholder="Password"
                         value={formData.password}
                         onChange={handleChange}
                         required
                     />
 
-                    <button type="submit">
-                        Register
+                    <button type="submit" disabled={loading}>
+                        {loading ? "Registering..." : "Register"}
                     </button>
 
                 </form>
@@ -111,11 +102,8 @@ function Register() {
                 </p>
 
             </div>
-
         </div>
-
     );
-
 }
 
 export default Register;

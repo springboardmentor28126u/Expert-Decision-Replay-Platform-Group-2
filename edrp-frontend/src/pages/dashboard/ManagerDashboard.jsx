@@ -1,259 +1,317 @@
+import { useEffect, useState } from "react";
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "../../styles/dashboard.css";
 
+import api from "../../services/api";
 
-function ManagerDashboard({ user }) {
+
+function ManagerDashboard(){
+
+    const [user,setUser]=useState(null);
+
+    const [teams,setTeams]=useState([]);
+
+    const [decisions,setDecisions]=useState([]);
+
+    const [loading,setLoading]=useState(true);
 
 
-    const statistics = [
 
-        {
-            title: "Team Decisions",
-            value: 45
-        },
+    useEffect(()=>{
 
-        {
-            title: "Pending Approvals",
-            value: 10
-        },
+        loadData();
 
-        {
-            title: "Approved Decisions",
-            value: 32
-        },
+    },[]);
 
-        {
-            title: "Team Members",
-            value: 18
+
+
+    const loadData=async()=>{
+
+        try{
+
+
+            const userRes=await api.get("/users/me");
+
+            const teamRes=await api.get("/teams");
+
+            const decisionRes=await api.get("/decisions/");
+
+
+
+            setUser(userRes.data);
+
+            setTeams(teamRes.data);
+
+            setDecisions(decisionRes.data);
+
+
+        }
+        catch(error){
+
+            console.log(error);
+
+        }
+        finally{
+
+            setLoading(false);
+
         }
 
-    ];
+    };
 
 
 
-    return (
 
-        <DashboardLayout user={user}>
+    if(loading)
+        return <h2>Loading...</h2>;
 
 
-            <div className="dashboard-page">
 
 
-                <div className="page-header">
+    return(
 
-                    <h1>
-                        Manager Dashboard
-                    </h1>
+    <DashboardLayout user={user}>
 
 
-                    <p>
-                        Welcome back, {user.name}
-                    </p>
+    <div className="dashboard-page">
 
-                </div>
 
+        <div className="page-header">
 
+            <h1>
+                Manager Dashboard
+            </h1>
 
-                {/* Statistics Cards */}
+            <p>
+                Welcome back, {user.name}
+            </p>
 
-                <div className="stats-grid">
+        </div>
 
 
-                {
-                    statistics.map((item,index)=>(
 
-                        <div 
-                            className="stat-card"
-                            key={index}
-                        >
 
-                            <h3>
-                                {item.title}
-                            </h3>
+        {/* Statistics */}
 
+        <div className="stats-grid">
 
-                            <h2>
-                                {item.value}
-                            </h2>
 
+            <div className="stat-card">
 
-                        </div>
+                <h3>
+                    Total Decisions
+                </h3>
 
-                    ))
-                }
-
-
-                </div>
-
-
-
-
-                {/* Team Decisions */}
-
-
-                <div className="dashboard-section">
-
-
-                    <h2>
-                        Team Decisions
-                    </h2>
-
-
-
-                    <table className="decision-table">
-
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Decision
-                                </th>
-
-                                <th>
-                                    Owner
-                                </th>
-
-                                <th>
-                                    Status
-                                </th>
-
-
-                            </tr>
-
-                        </thead>
-
-
-
-                        <tbody>
-
-
-                            <tr>
-
-                                <td>
-                                    Cloud Migration
-                                </td>
-
-                                <td>
-                                    Raj
-                                </td>
-
-                                <td>
-                                    Approved
-                                </td>
-
-                            </tr>
-
-
-
-                            <tr>
-
-                                <td>
-                                    Security Upgrade
-                                </td>
-
-                                <td>
-                                    Anjali
-                                </td>
-
-                                <td>
-                                    Under Review
-                                </td>
-
-                            </tr>
-
-
-                        </tbody>
-
-
-                    </table>
-
-
-                </div>
-
-
-
-
-
-                {/* Pending Approvals */}
-
-
-                <div className="dashboard-section">
-
-
-                    <h2>
-                        Pending Approvals
-                    </h2>
-
-
-
-                    <div className="approval-list">
-
-
-                        <div className="approval-card">
-
-                            <h3>
-                                New Hiring Process
-                            </h3>
-
-                            <p>
-                                Submitted by Rahul
-                            </p>
-
-
-                            <button className="approve-btn">
-                                Approve
-                            </button>
-
-
-                            <button className="reject-btn">
-                                Reject
-                            </button>
-
-
-                        </div>
-
-
-
-                        <div className="approval-card">
-
-                            <h3>
-                                Budget Planning
-                            </h3>
-
-                            <p>
-                                Submitted by Anjali
-                            </p>
-
-
-                            <button className="approve-btn">
-                                Approve
-                            </button>
-
-
-                            <button className="reject-btn">
-                                Reject
-                            </button>
-
-
-                        </div>
-
-
-
-                    </div>
-
-
-                </div>
-
-
+                <h2>
+                    {decisions.length}
+                </h2>
 
             </div>
 
 
-        </DashboardLayout>
+
+            <div className="stat-card">
+
+                <h3>
+                    Total Teams
+                </h3>
+
+                <h2>
+                    {teams.length}
+                </h2>
+
+            </div>
+
+
+        </div>
+
+
+
+
+
+        {/* Team Section */}
+
+
+        <div className="dashboard-section">
+
+
+            <h2>
+                Teams
+            </h2>
+
+
+
+            <table className="decision-table">
+
+
+            <thead>
+
+            <tr>
+
+                <th>
+                    Team ID
+                </th>
+
+
+                <th>
+                    Team Name
+                </th>
+
+
+                <th>
+                    Manager ID
+                </th>
+
+
+            </tr>
+
+
+            </thead>
+
+
+
+            <tbody>
+
+
+            {
+                teams.length>0 ?
+
+                teams.map((team)=>(
+
+                <tr key={team.id}>
+
+
+                    <td>
+                        {team.id}
+                    </td>
+
+
+                    <td>
+                        {team.name}
+                    </td>
+
+
+                    <td>
+                        {team.manager_id || "-"}
+                    </td>
+
+
+                </tr>
+
+
+                ))
+
+                :
+
+                <tr>
+
+                    <td colSpan="3">
+                        No Teams Found
+                    </td>
+
+                </tr>
+
+
+            }
+
+
+            </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+
+
+
+
+        {/* Decisions */}
+
+
+        <div className="dashboard-section">
+
+
+            <h2>
+                Decision Management
+            </h2>
+
+
+
+            <table className="decision-table">
+
+
+            <thead>
+
+            <tr>
+
+                <th>
+                    Title
+                </th>
+
+                <th>
+                    Status
+                </th>
+
+
+            </tr>
+
+            </thead>
+
+
+
+            <tbody>
+
+
+            {
+
+            decisions.map((decision)=>(
+
+
+                <tr key={decision.id}>
+
+
+                    <td>
+                        {decision.title}
+                    </td>
+
+
+                    <td>
+                        {decision.status}
+                    </td>
+
+
+                </tr>
+
+
+            ))
+
+            }
+
+
+
+            </tbody>
+
+
+            </table>
+
+
+
+        </div>
+
+
+
+
+    </div>
+
+
+    </DashboardLayout>
 
     );
+
 
 }
 
