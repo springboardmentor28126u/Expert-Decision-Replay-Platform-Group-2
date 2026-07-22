@@ -4,12 +4,15 @@ import "./dashboard.css";
 import CreateDecision from "./CreateDecision";
 import DecisionsList from "./DecisionsList";
 import DecisionDetails from "./DecisionDetails";
+import ProfileMenu from "./ProfileMenu";
+import ChangePassword from "./ChangePassword";
 
 function Dashboard({ token, onLogout }) {
   const [profile, setProfile] = useState(null);
   const [users, setUsers] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedDecision, setSelectedDecision] = useState(null);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -57,12 +60,23 @@ function Dashboard({ token, onLogout }) {
       <nav className="dash-nav">
         <span className="dash-logo">EDRP</span>
         <div className="dash-nav-right">
-          <span className="dash-user">{profile.full_name} · <b>{profile.role}</b></span>
-          <button className="dash-logout" onClick={onLogout}>Logout</button>
+         <ProfileMenu
+          profile={profile}
+          onLogout={onLogout}
+          onManageAccount={() => setShowAccountSettings(true)}
+        />
         </div>
       </nav>
       <main className="dash-main">
-        {selectedDecision ? (
+        {showAccountSettings ? (
+          <div>
+            <button className="dash-back-btn" onClick={() => setShowAccountSettings(false)}>
+              &larr; Back to Dashboard
+            </button>
+            <h2 className="dash-heading" style={{ fontSize: "22px" }}>Account Settings</h2>
+            <ChangePassword token={token} />
+          </div>
+        ) : selectedDecision ? (
           <div>
             <button className="dash-back-btn" onClick={() => { setSelectedDecision(null); setRefreshKey(prev => prev + 1); }}>
               &larr; Back to Dashboard

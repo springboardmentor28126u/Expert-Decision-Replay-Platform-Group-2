@@ -153,3 +153,21 @@ body {
   color: var(--accent);
   text-transform: capitalize;
 }
+
+.auth-back-btn {
+  background: none;
+  border: none;
+  color: #9AA5B5;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.auth-back-btn:hover {
+  color: #4FD1B5;
+}

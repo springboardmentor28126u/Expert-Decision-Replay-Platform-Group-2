@@ -80,6 +80,25 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
+from schemas import ChangePassword
+
+@app.put("/me/change-password")
+def change_password(
+    payload: ChangePassword,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+
+    return {"message": "Password changed successfully"}
+
 
 @app.get("/users", response_model=List[UserResponse])
 def list_users(
@@ -179,6 +198,24 @@ def update_decision_status(
     db.commit()
     db.refresh(decision)
     return decision
+
+@app.delete("/decisions/{decision_id}")
+def delete_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.admin)),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    db.delete(decision)
+    db.commit()
+
+    return {"message": "Decision deleted successfully"}
 
 
 # ===================== ALTERNATIVES ENDPOINTS =====================
