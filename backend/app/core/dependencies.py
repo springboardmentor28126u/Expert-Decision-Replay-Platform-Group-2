@@ -40,3 +40,43 @@ def get_current_user(
         raise credentials_exception
 
     return user
+
+
+# ===========================
+# Role Based Access Control
+# ===========================
+
+def require_employee(current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["Employee", "Reviewer", "Manager", "Administrator"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Employee access required"
+        )
+    return current_user
+
+
+def require_reviewer(current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["Reviewer", "Manager", "Administrator"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Reviewer access required"
+        )
+    return current_user
+
+
+def require_manager(current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["Manager", "Administrator"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Manager access required"
+        )
+    return current_user
+
+
+def require_admin(current_user: User = Depends(get_current_user)):
+    if current_user.role != "Administrator":
+        raise HTTPException(
+            status_code=403,
+            detail="Administrator access required"
+        )
+    return current_user

@@ -14,8 +14,10 @@ from fastapi import UploadFile, File
 import os
 
 from app.models.decision_document import DecisionDocument
-from app.core.dependencies import get_current_user
-
+from app.core.dependencies import (
+    get_current_user,
+    require_reviewer
+)
 router = APIRouter(
     prefix="/decisions",
     tags=["Decisions"]
@@ -82,6 +84,52 @@ def update_decision(
 
     return db_decision
 
+@router.put("/{decision_id}/approve")
+def approve_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_reviewer)
+):
+    decision = db.query(Decision).filter(
+        Decision.id == decision_id
+    ).first()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    decision.status = "Approved"
+
+    db.commit()
+    db.refresh(decision)
+
+    return {
+        "message": "Decision approved successfully",
+        "decision": decision
+    }
+
+@router.put("/{decision_id}/reject")
+def reject_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_reviewer)
+):
+    decision = db.query(Decision).filter(
+        Decision.id == decision_id
+    ).first()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    decision.status = "Rejected"
+
+    db.commit()
+    db.refresh(decision)
+
+    return {
+        "message": "Decision rejected successfully",
+        "decision": decision
+    }
+
 @router.delete("/{decision_id}")
 def delete_decision(
     decision_id: int,
@@ -123,7 +171,6 @@ def get_decision(
         db.query(Decision)
         .filter(
             Decision.id == decision_id,
-            Decision.created_by == current_user.id
         )
         .first()
     )
@@ -217,3 +264,49 @@ def delete_document(
     db.commit()
 
     return {"message": "Document deleted successfully"}
+
+@router.get("/stats/dashboard")
+def dashboard_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    total = db.query(Decision).count()
+
+    approved = db.query(Decision).filter(
+        Decision.status == "Approved"
+    ).count()
+
+    pending = db.query(Decision).filter(
+        Decision.status == "Pending"
+    ).count()
+
+    rejected = db.query(Decision).filter(
+        Decision.status == "Rejected"
+    ).count()
+
+    draft = db.query(Decision).filter(
+        Decision.status == "Draft"
+    ).count()
+
+    return {
+        "total": total,
+        "approved": approved,
+        "pending": pending,
+        "rejected": rejected,
+        "draft": draft
+    }
+
+@router.get("/{decision_id}/history")
+def get_decision_history(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    history = (
+        db.query(DecisionHistory)
+        .filter(DecisionHistory.decision_id == decision_id)
+        .order_by(DecisionHistory.updated_at.desc())
+        .all()
+    )
+
+    return history
