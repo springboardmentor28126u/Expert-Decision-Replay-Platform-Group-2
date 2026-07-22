@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Decision Replay{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="auth-container">
+        <div class="card glass-card shadow p-4">
+            <div class="text-center mb-4">
+                <i class="fa-solid fa-shield-halved text-accent fs-1 mb-2"></i>
+                <h2 class="text-white">Sign In</h2>
+                <p class="text-secondary small">Access the Expert Decision Replay Platform</p>
+            </div>
+            
+            <form action="{{ url_for('login') }}" method="POST">
+                <div class="mb-3">
+                    <label for="email" class="form-label form-label-custom">Email Address</label>
+                    <input type="email" class="form-control form-control-custom" id="email" name="email" required placeholder="name@company.com">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="password" class="form-label form-label-custom">Password</label>
+                    <input type="password" class="form-control form-control-custom" id="password" name="password" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="btn btn-accent w-100 py-3 rounded-3 fw-bold">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In
+                </button>
+            </form>
+            
+            <div class="text-center mt-4">
+                <p class="mb-0 text-secondary small">New to the platform? <a href="{{ url_for('register') }}" class="text-accent text-decoration-none">Register here</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - Decision Replay{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card glass-card shadow p-4">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="avatar bg-accent rounded-circle text-white d-flex align-items-center justify-content-center me-3" style="width: 70px; height: 70px;">
+                        <i class="fa-solid fa-user fs-2"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-white mb-1">{{ user.full_name }}</h2>
+                        <span class="badge bg-primary text-uppercase px-3 py-2">{{ user.role }}</span>
+                    </div>
+                </div>
+                
+                <hr class="border-secondary my-4">
+                
+                <form action="{{ url_for('profile') }}" method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="full_name" class="form-label form-label-custom">Full Name</label>
+                            <input type="text" class="form-control form-control-custom" id="full_name" name="full_name" required value="{{ user.full_name }}">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label form-label-custom">Email Address</label>
+                            <input type="email" class="form-control form-control-custom" id="email" name="email" required value="{{ user.email }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="team_id" class="form-label form-label-custom">Current Team</label>
+                            <select class="form-select form-control-custom" id="team_id" name="team_id">
+                                <option value="">None / Select Team</option>
+                                {% for team in teams %}
+                                    <option value="{{ team.id }}" {% if user.team_id == team.id %}selected{% endif %}>{{ team.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label form-label-custom">Change Password (Optional)</label>
+                            <input type="password" class="form-control form-control-custom" id="password" name="password" placeholder="Leave blank to keep same">
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 text-end">
+                        <button type="submit" class="btn btn-accent px-5 py-3 rounded-3 fw-bold">
+                            <i class="fa-solid fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

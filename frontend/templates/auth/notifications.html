@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}My Notifications - Decision Replay{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-9">
+            <div class="card glass-card p-4 shadow">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+                    <h2 class="text-white mb-0"><i class="fa-solid fa-bell text-accent me-2"></i> Notifications Feed</h2>
+                    <span class="badge bg-primary px-3 py-2 rounded-pill">{{ notifications | length }} Total</span>
+                </div>
+                
+                <div class="notifications-list">
+                    {% for n in notifications %}
+                        <div class="p-3 mb-3 bg-darker rounded-4 border border-secondary d-flex justify-content-between align-items-center notif-item {% if not n.is_read %}border-primary{% endif %}" id="notif-{{ n.id }}">
+                            <div>
+                                <h6 class="text-white mb-1 fw-bold">
+                                    {% if not n.is_read %}
+                                        <span class="badge bg-primary me-2">New</span>
+                                    {% endif %}
+                                    {{ n.title }}
+                                </h6>
+                                <p class="text-secondary small mb-1">{{ n.message }}</p>
+                                <span class="text-muted small">{{ n.created_at[:16] | replace('T', ' ') }}</span>
+                            </div>
+                            
+                            {% if not n.is_read %}
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill mark-read-btn" data-id="{{ n.id }}">
+                                    <i class="fa-solid fa-check"></i> Dismiss
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-secondary">
+                            <i class="fa-solid fa-bell-slash fs-1 text-muted mb-3"></i>
+                            <h5>No notifications yet</h5>
+                            <p class="small mb-0">We will notify you here when decisions get assigned or advanced.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.mark-read-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const id = this.getAttribute('data-id');
+        try {
+            const resp = await fetch(`/notifications/${id}/read`, {
+                method: 'POST'
+            });
+            if (resp.ok) {
+                const item = document.getElementById(`notif-${id}`);
+                // Modify styles
+                item.classList.remove('border-primary');
+                const badge = item.querySelector('.badge');
+                if (badge) badge.remove();
+                this.remove();
+            }
+        } catch (e) {
+            console.error("Error updating notification status: ", e);
+        }
+    });
+});
+</script>
+{% endblock %}

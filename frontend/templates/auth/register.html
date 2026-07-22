@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Decision Replay{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="auth-container" style="max-width: 500px;">
+        <div class="card glass-card shadow p-4">
+            <div class="text-center mb-4">
+                <i class="fa-solid fa-user-plus text-accent fs-1 mb-2"></i>
+                <h2 class="text-white">Create Account</h2>
+                <p class="text-secondary small">Register to start documenting and reviewing decisions</p>
+            </div>
+            
+            <form action="{{ url_for('register') }}" method="POST">
+                <div class="mb-3">
+                    <label for="full_name" class="form-label form-label-custom">Full Name</label>
+                    <input type="text" class="form-control form-control-custom" id="full_name" name="full_name" required placeholder="John Doe">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="email" class="form-label form-label-custom">Email Address</label>
+                    <input type="email" class="form-control form-control-custom" id="email" name="email" required placeholder="name@company.com">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label form-label-custom">Password</label>
+                    <input type="password" class="form-control form-control-custom" id="password" name="password" required placeholder="Min 6 characters">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="role" class="form-label form-label-custom">Organization Role</label>
+                    <select class="form-select form-control-custom" id="role" name="role" required>
+                        <option value="employee" selected>Employee</option>
+                        <option value="reviewer">Reviewer</option>
+                        <option value="manager">Manager</option>
+                        <option value="administrator">Administrator</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4" id="team-selection">
+                    <label for="team_id" class="form-label form-label-custom">Select Team (Optional)</label>
+                    <select class="form-select form-control-custom" id="team_id" name="team_id">
+                        <option value="">None / Join Later</option>
+                        {% for team in teams %}
+                            <option value="{{ team.id }}">{{ team.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-accent w-100 py-3 rounded-3 fw-bold">
+                    <i class="fa-solid fa-user-check me-2"></i> Register Account
+                </button>
+            </form>
+            
+            <div class="text-center mt-4">
+                <p class="mb-0 text-secondary small">Already registered? <a href="{{ url_for('login') }}" class="text-accent text-decoration-none">Sign In here</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

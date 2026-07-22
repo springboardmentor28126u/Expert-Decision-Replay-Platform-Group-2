@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Decision - Decision Replay{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card glass-card p-4 shadow-lg">
+                <div class="mb-4">
+                    <h2 class="text-white"><i class="fa-solid fa-edit text-accent me-2"></i> Edit Decision Settings</h2>
+                    <p class="text-secondary mb-0">Modify details or advance the workflow status. Any textual update creates a new entry in version history.</p>
+                </div>
+                
+                <form action="{{ url_for('edit_decision_route', decision_id=decision.id) }}" method="POST">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="title" class="form-label form-label-custom">Decision Title</label>
+                            <input type="text" class="form-control form-control-custom" id="title" name="title" required value="{{ decision.title }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="category_id" class="form-label form-label-custom">Category</label>
+                            <select class="form-select form-control-custom" id="category_id" name="category_id" required>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}" {% if decision.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="status" class="form-label form-label-custom">Workflow Status</label>
+                        <select class="form-select form-control-custom" id="status" name="status" required>
+                            <option value="draft" {% if decision.status == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="under_review" {% if decision.status == 'under_review' %}selected{% endif %}>Under Review</option>
+                            <option value="approved" {% if decision.status == 'approved' %}selected{% endif %}>Approved</option>
+                            <option value="rejected" {% if decision.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                            <option value="archived" {% if decision.status == 'archived' %}selected{% endif %}>Archived</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="problem_statement" class="form-label form-label-custom">Problem Statement / Context</label>
+                        <textarea class="form-control form-control-custom" id="problem_statement" name="problem_statement" rows="5" required>{{ decision.problem_statement }}</textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="evaluation_criteria" class="form-label form-label-custom">Evaluation Criteria</label>
+                        <textarea class="form-control form-control-custom" id="evaluation_criteria" name="evaluation_criteria" rows="4" required>{{ decision.evaluation_criteria }}</textarea>
+                    </div>
+
+                    <div class="text-end">
+                        <a href="{{ url_for('view_decision_route', decision_id=decision.id) }}" class="btn btn-secondary px-4 py-3 rounded-3 me-2 fw-semibold">Cancel</a>
+                        <button type="submit" class="btn btn-accent px-5 py-3 rounded-3 fw-bold">
+                            <i class="fa-solid fa-save me-2"></i> Save Modifications
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

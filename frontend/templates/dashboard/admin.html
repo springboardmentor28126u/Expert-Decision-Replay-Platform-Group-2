@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Decision Replay{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row align-items-center mb-5">
+        <div class="col-md-8">
+            <h1 class="text-white mb-2">System Administration</h1>
+            <p class="text-secondary mb-0">Logged in as: <span class="badge bg-danger text-uppercase">{{ user.role }}</span> | Manage users, configure departments/teams, and audit operations.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
+            <button type="button" class="btn btn-accent py-3 px-4 rounded-3 fw-bold shadow" data-bs-toggle="modal" data-bs-target="#createTeamModal">
+                <i class="fa-solid fa-plus-circle me-2"></i> Create New Team
+            </button>
+            <a href="{{ url_for('export_excel_route') }}" class="btn btn-outline-success py-3 px-4 rounded-3 fw-bold">
+                <i class="fa-solid fa-file-excel me-2"></i> Export Logs
+            </a>
+        </div>
+    </div>
+
+    <!-- Admin Tools & Grid -->
+    <div class="row">
+        <!-- Users Management List -->
+        <div class="col-lg-8 mb-4">
+            <div class="card glass-card p-4 mb-4">
+                <h3 class="text-white mb-4"><i class="fa-solid fa-users text-accent me-2"></i> Registered Users</h3>
+                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                    <table class="table table-dark table-hover align-middle border-secondary mb-0">
+                        <thead>
+                            <tr class="text-secondary">
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in users_list %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                                <i class="fa-solid fa-user text-white-50"></i>
+                                            </div>
+                                            <span class="fw-semibold text-white">{{ u.full_name }}</span>
+                                        </div>
+                                    </td>
+                                    <td>{{ u.email }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if u.role == 'administrator' else 'warning text-dark' if u.role == 'manager' else 'info' if u.role == 'reviewer' else 'primary' }} text-uppercase">
+                                            {{ u.role }}
+                                        </span>
+                                    </td>
+                                    <td class="text-secondary small">{{ u.created_at[:10] }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-secondary">No users found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Audit Logs List (Milestone 3 addition) -->
+            <div class="card glass-card p-4">
+                <h3 class="text-white mb-4"><i class="fa-solid fa-file-invoice text-accent me-2"></i> Security & Operations Audit Logs</h3>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-dark table-hover align-middle border-secondary mb-0">
+                        <thead>
+                            <tr class="text-secondary">
+                                <th>Action</th>
+                                <th>Entity</th>
+                                <th>IP Address</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in logs_list %}
+                                <tr>
+                                    <td><strong class="text-accent">{{ l.action }}</strong></td>
+                                    <td><span class="text-white-50">{{ l.entity_name or 'N/A' }}</span> <small class="text-muted">({{ l.entity_id[:8] or '' }})</small></td>
+                                    <td class="text-secondary small">{{ l.ip_address or 'System' }}</td>
+                                    <td class="text-secondary small">{{ l.timestamp[:16] | replace('T', ' ') }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-secondary">No audit logs found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar for Quick Configurations -->
+        <div class="col-lg-4">
+            <!-- Notifications Feed -->
+            <div class="card glass-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="text-white mb-0"><i class="fa-solid fa-bell text-accent me-2"></i> Notifications</h5>
+                    <a href="{{ url_for('list_notifications_route') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Inbox</a>
+                </div>
+                <div class="activity-feed">
+                    {% for n in notifications %}
+                        <div class="d-flex mb-3 align-items-start border-bottom border-secondary pb-2">
+                            <div class="badge bg-primary p-2 rounded-circle me-3 mt-1">
+                                <i class="fa-solid fa-envelope text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-white mb-1" style="font-size: 0.85rem;">{{ n.title }}</h6>
+                                <p class="text-secondary small mb-0">{{ n.message }}</p>
+                                <span class="text-muted small" style="font-size: 0.7rem;">{{ n.created_at[:16] | replace('T', ' ') }}</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-secondary text-center small py-3">No new notifications.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card glass-card p-4 mb-4">
+                <h3 class="text-white mb-3"><i class="fa-solid fa-gears text-accent me-2"></i> System Status</h3>
+                <ul class="list-unstyled text-secondary small mb-0">
+                    <li class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                        <span>FastAPI Backend</span>
+                        <span class="text-success"><i class="fa-solid fa-circle-check"></i> Connected</span>
+                    </li>
+                    <li class="d-flex justify-content-between py-2 border-bottom border-secondary">
+                        <span>Database Server</span>
+                        <span class="text-success"><i class="fa-solid fa-circle-check"></i> PostgreSQL 15</span>
+                    </li>
+                    <li class="d-flex justify-content-between py-2">
+                        <span>Redis Cache</span>
+                        <span class="text-success"><i class="fa-solid fa-circle-check"></i> Enabled</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Team Modal -->
+<div class="modal fade" id="createTeamModal" tabindex="-1" aria-labelledby="createTeamModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-secondary rounded-4">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white" id="createTeamModalLabel">Create New Organizational Team</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="createTeamForm">
+                <div class="modal-body">
+                    <div id="modalAlert" class="alert d-none rounded-3" role="alert"></div>
+                    
+                    <div class="mb-3">
+                        <label for="teamName" class="form-label form-label-custom">Team Name</label>
+                        <input type="text" class="form-control form-control-custom" id="teamName" required placeholder="e.g. Architecture Board">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="teamDescription" class="form-label form-label-custom">Description</label>
+                        <textarea class="form-control form-control-custom" id="teamDescription" rows="3" placeholder="Explain the focus of this team..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-accent px-4 rounded-pill">Create Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('createTeamForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('teamName').value;
+    const description = document.getElementById('teamDescription').value;
+    const alertBox = document.getElementById('modalAlert');
+
+    try {
+        const response = await fetch('/teams/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, description })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alertBox.className = 'alert alert-success rounded-3';
+            alertBox.textContent = 'Team created successfully!';
+            alertBox.classList.remove('d-none');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            alertBox.className = 'alert alert-danger rounded-3';
+            alertBox.textContent = data.detail || 'Failed to create team.';
+            alertBox.classList.remove('d-none');
+        }
+    } catch (err) {
+        alertBox.className = 'alert alert-danger rounded-3';
+        alertBox.textContent = 'Connection error: ' + err.message;
+        alertBox.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}

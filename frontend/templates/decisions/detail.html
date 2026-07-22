@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}{{ decision.title }} - Decision Replay{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Back Navigation and Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{{ url_for('list_decisions_route') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Repository
+        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('export_pdf_route', decision_id=decision.id) }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                <i class="fa-solid fa-file-pdf me-1"></i> Export PDF
+            </a>
+            {% if user.role == 'administrator' or decision.creator_id == user.id or (user.role == 'manager' and decision.creator.team_id == user.team_id) %}
+                <a href="{{ url_for('edit_decision_route', decision_id=decision.id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                    <i class="fa-solid fa-edit me-1"></i> Edit Decision / Status
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Header Details -->
+    <div class="card glass-card p-4 mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
+                    <span class="badge bg-secondary text-uppercase py-2 px-3 rounded-pill">{{ decision.category.name }}</span>
+                    <span class="badge bg-{{ 'primary' if decision.status == 'draft' else 'warning text-dark' if decision.status == 'under_review' else 'success' if decision.status == 'approved' else 'danger' if decision.status == 'rejected' else 'secondary' }} text-uppercase py-2 px-3 rounded-pill">
+                        {{ decision.status | replace('_', ' ') }}
+                    </span>
+                    <span class="text-muted small"><i class="fa-solid fa-code-branch ms-2 me-1"></i> Version {{ decision.version }}</span>
+                </div>
+                <h2 class="text-white fw-bold">{{ decision.title }}</h2>
+                <div class="d-flex text-secondary small gap-3 mt-3 flex-wrap">
+                    <span><i class="fa-solid fa-user me-1 text-accent"></i> Creator: <strong>{{ decision.creator.full_name }}</strong></span>
+                    {% if decision.team %}
+                        <span><i class="fa-solid fa-users me-1 text-accent"></i> Team: <strong>{{ decision.team.name }}</strong></span>
+                    {% endif %}
+                    <span><i class="fa-solid fa-calendar me-1 text-accent"></i> Logged: {{ decision.created_at[:10] }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context & Criteria Grid -->
+    <div class="row mb-5">
+        <div class="col-md-6 mb-4 mb-md-0">
+            <div class="card glass-card p-4 h-100">
+                <h4 class="text-white mb-3 border-bottom border-secondary pb-2"><i class="fa-solid fa-circle-info text-accent me-2"></i> Problem Statement / Context</h4>
+                <p class="text-secondary mb-0 style-preserve-newlines">{{ decision.problem_statement }}</p>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card glass-card p-4 h-100">
+                <h4 class="text-white mb-3 border-bottom border-secondary pb-2"><i class="fa-solid fa-list-check text-accent me-2"></i> Evaluation Criteria</h4>
+                <p class="text-secondary mb-0 style-preserve-newlines">{{ decision.evaluation_criteria }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Navigation tabs -->
+    <ul class="nav nav-tabs border-secondary mb-4" id="detailTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active text-white fw-semibold" id="alternatives-tab" data-bs-toggle="tab" data-bs-target="#alternatives" type="button" role="tab"><i class="fa-solid fa-code-compare me-1"></i> Alternatives ({{ decision.alternatives | length }})</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-white fw-semibold" id="discussion-tab" data-bs-toggle="tab" data-bs-target="#discussion" type="button" role="tab"><i class="fa-solid fa-comments me-1"></i> Discussions ({{ decision.discussions | length }})</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-white fw-semibold" id="attachments-tab" data-bs-toggle="tab" data-bs-target="#attachments" type="button" role="tab"><i class="fa-solid fa-file-lines me-1"></i> Documents ({{ decision.attachments | length }})</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-white fw-semibold" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab"><i class="fa-solid fa-history me-1"></i> Version History ({{ decision.versions | length }})</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-white fw-semibold" id="approvals-tab" data-bs-toggle="tab" data-bs-target="#approvals" type="button" role="tab"><i class="fa-solid fa-file-signature me-1"></i> Approvals ({{ decision.approvals | length }})</button>
+        </li>
+    </ul>
+
+    <!-- Tabs Content -->
+    <div class="tab-content" id="detailTabContent">
+        <!-- 1. Alternatives Comparison -->
+        <div class="tab-pane fade show active" id="alternatives" role="tabpanel">
+            <div class="row">
+                {% for alt in decision.alternatives %}
+                    <div class="col-md-12 mb-4">
+                        <div class="card bg-darker border {% if alt.is_chosen %}border-success{% else %}border-secondary{% endif %} rounded-4 p-4">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="text-white mb-0">
+                                    {{ alt.title }}
+                                    {% if alt.is_chosen %}
+                                        <span class="badge bg-success ms-2"><i class="fa-solid fa-check-circle me-1"></i> Chosen Option</span>
+                                    {% endif %}
+                                </h5>
+                                <span class="text-accent fw-bold">${{ "{:,.2f}".format(alt.cost_estimate) }}</span>
+                            </div>
+                            
+                            <p class="text-secondary small mb-3">{{ alt.description }}</p>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <div class="p-3 bg-dark rounded-3 border-start border-success border-3">
+                                        <strong class="text-success text-uppercase small d-block mb-2">Pros</strong>
+                                        <p class="text-secondary small mb-0 style-preserve-newlines">{{ alt.pros or 'None specified' }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-dark rounded-3 border-start border-danger border-3">
+                                        <strong class="text-danger text-uppercase small d-block mb-2">Cons</strong>
+                                        <p class="text-secondary small mb-0 style-preserve-newlines">{{ alt.cons or 'None specified' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <strong class="text-white small d-block mb-1">Feasibility Analysis</strong>
+                                    <p class="text-secondary small mb-0 style-preserve-newlines">{{ alt.feasibility_analysis or 'Not provided' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong class="text-white small d-block mb-1">Risk Assessment</strong>
+                                    <p class="text-secondary small mb-0 style-preserve-newlines">{{ alt.risk_assessment or 'Not provided' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="col-12 text-center py-4">
+                        <p class="text-secondary">No alternatives comparison recorded for this decision.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 2. Discussions threads -->
+        <div class="tab-pane fade" id="discussion" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <!-- Comments Feed -->
+                    <div class="card glass-card p-4">
+                        <h5 class="text-white mb-4"><i class="fa-solid fa-comments text-accent me-2"></i> Activity Discussion</h5>
+                        
+                        <div class="comments-list">
+                            {% for comm in decision.discussions %}
+                                <div class="d-flex mb-4 align-items-start border-bottom border-secondary pb-3">
+                                    <div class="avatar bg-accent rounded-circle text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; min-width: 40px;">
+                                        <i class="fa-solid fa-user"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap">
+                                            <span class="fw-bold text-white me-2">{{ comm.user.full_name }} <span class="badge bg-secondary text-uppercase ms-1" style="font-size: 0.65rem;">{{ comm.user.role }}</span></span>
+                                            <span class="text-muted small">{{ comm.created_at[:16] | replace('T', ' ') }}</span>
+                                        </div>
+                                        
+                                        <p class="text-secondary small mb-2 style-preserve-newlines">{{ comm.content }}</p>
+                                        
+                                        <!-- Highlight special attributes if provided -->
+                                        {% if comm.meeting_notes %}
+                                            <div class="alert alert-secondary py-2 px-3 rounded-3 mb-2 small bg-darker border-0 text-secondary">
+                                                <strong class="text-white small d-block"><i class="fa-solid fa-clipboard-check text-info me-1"></i> Official Meeting Notes:</strong>
+                                                {{ comm.meeting_notes }}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {% if comm.decision_rationale %}
+                                            <div class="alert alert-primary py-2 px-3 rounded-3 mb-0 small bg-darker border-0 text-secondary">
+                                                <strong class="text-accent small d-block"><i class="fa-solid fa-lightbulb text-warning me-1"></i> Recorded Decision Rationale:</strong>
+                                                {{ comm.decision_rationale }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-secondary text-center py-4">No comments posted yet. Start the conversation below.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <!-- Post Comment Form -->
+                    <div class="card glass-card p-4">
+                        <h5 class="text-white mb-3">Add Comment</h5>
+                        <form action="{{ url_for('add_comment_route', decision_id=decision.id) }}" method="POST">
+                            <div class="mb-3">
+                                <label for="content" class="form-label form-label-custom">Comment Content</label>
+                                <textarea class="form-control form-control-custom" id="content" name="content" rows="3" required placeholder="Type your comment..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="meeting_notes" class="form-label form-label-custom">Meeting Notes (Optional)</label>
+                                <textarea class="form-control form-control-custom" id="meeting_notes" name="meeting_notes" rows="2" placeholder="Record meeting conclusions or minutes..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="decision_rationale" class="form-label form-label-custom">Decision Rationale (Optional)</label>
+                                <textarea class="form-control form-control-custom" id="decision_rationale" name="decision_rationale" rows="2" placeholder="Add rationale behind picking a chosen option..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-accent w-100 rounded-3 py-2 fw-semibold">
+                                <i class="fa-solid fa-paper-plane me-1"></i> Post Comment
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Documents / Attachments -->
+        <div class="tab-pane fade" id="attachments" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <div class="card glass-card p-4">
+                        <h5 class="text-white mb-4"><i class="fa-solid fa-file-shield text-accent me-2"></i> Attached Documents</h5>
+                        <div class="list-group list-group-flush">
+                            {% for doc in decision.attachments %}
+                                <div class="list-group-item bg-transparent text-secondary border-secondary d-flex justify-content-between align-items-center px-0 py-3">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa-solid fa-file-pdf fs-3 text-danger me-3"></i>
+                                        <div>
+                                            <h6 class="text-white mb-0">{{ doc.file_name }}</h6>
+                                            <span class="text-muted small">Uploaded on {{ doc.uploaded_at[:10] }}</span>
+                                        </div>
+                                    </div>
+                                    <a href="{{ url_for('download_attachment_route', attachment_id=doc.id) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                                        <i class="fa-solid fa-download"></i> Download
+                                    </a>
+                                </div>
+                            {% else %}
+                                <p class="text-secondary text-center py-4">No attachments uploaded yet.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <!-- Upload Form -->
+                    <div class="card glass-card p-4">
+                        <h5 class="text-white mb-3">Attach File</h5>
+                        <form action="{{ url_for('upload_attachment_route', decision_id=decision.id) }}" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="file" class="form-label form-label-custom">Select Document</label>
+                                <input class="form-control form-control-custom" type="file" id="file" name="file" required>
+                            </div>
+                            <button type="submit" class="btn btn-accent w-100 rounded-3 py-2 fw-semibold">
+                                <i class="fa-solid fa-cloud-arrow-up me-1"></i> Upload File
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Version History timeline -->
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="card glass-card p-4">
+                <h5 class="text-white mb-4"><i class="fa-solid fa-clock-rotate-left text-accent me-2"></i> Version History timeline</h5>
+                <div class="timeline ps-4 position-relative border-start border-secondary">
+                    {% for ver in decision.versions | sort(attribute='version', reverse=true) %}
+                        <div class="mb-4 position-relative">
+                            <div class="position-absolute bg-accent rounded-circle" style="width: 12px; height: 12px; left: -31px; top: 6px; box-shadow: 0 0 10px var(--accent-glow);"></div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                <h6 class="text-white mb-1">
+                                    Version {{ ver.version }} 
+                                    <span class="badge bg-secondary ms-2 text-uppercase" style="font-size: 0.65rem;">{{ ver.status | replace('_', ' ') }}</span>
+                                </h6>
+                                <span class="text-muted small">{{ ver.updated_at[:16] | replace('T', ' ') }}</span>
+                            </div>
+                            <p class="text-white-50 mb-2 small fw-semibold">"{{ ver.title }}"</p>
+                            <p class="text-secondary small mb-1">Edited by: <strong>{{ ver.editor.full_name }}</strong> ({{ ver.editor.role }})</p>
+                            <div class="bg-darker p-3 rounded-3 border border-secondary mt-2">
+                                <strong class="text-white small d-block mb-1">Problem Statement:</strong>
+                                <p class="text-secondary small mb-2 style-preserve-newlines">{{ ver.problem_statement }}</p>
+                                <strong class="text-white small d-block mb-1">Evaluation Criteria:</strong>
+                                <p class="text-secondary small mb-0 style-preserve-newlines">{{ ver.evaluation_criteria }}</p>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-secondary text-center py-4">No modification history recorded.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 5. Approvals & Reviews -->
+        <div class="tab-pane fade" id="approvals" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <div class="card glass-card p-4 h-100">
+                        <h5 class="text-white mb-4"><i class="fa-solid fa-file-signature text-accent me-2"></i> Approval Assignments & History</h5>
+                        <div class="list-group list-group-flush">
+                            {% for app in decision.approvals %}
+                                <div class="list-group-item bg-transparent text-secondary border-secondary py-3 px-0 d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="text-white mb-1">
+                                            Stage {{ app.stage }}: Reviewer <strong>{{ app.reviewer.full_name }}</strong>
+                                        </h6>
+                                        {% if app.comments %}
+                                            <p class="text-secondary small mb-1 bg-darker p-2 rounded-3 mt-2">Remarks: "{{ app.comments }}"</p>
+                                        {% endif %}
+                                        <span class="text-muted small">Assigned: {{ app.assigned_at[:16] | replace('T', ' ') }}</span>
+                                        {% if app.actioned_at %}
+                                            <br><span class="text-muted small">Actioned: {{ app.actioned_at[:16] | replace('T', ' ') }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="badge bg-{{ 'success' if app.status == 'approved' else 'danger' if app.status == 'rejected' else 'warning text-dark' }} text-uppercase">
+                                        {{ app.status }}
+                                    </span>
+                                </div>
+                            {% else %}
+                                <p class="text-secondary text-center py-4">No approval workflows assigned yet.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    {% if decision.status != 'approved' and decision.status != 'archived' %}
+                        {% if user.role == 'administrator' or decision.creator_id == user.id or (user.role == 'manager' and decision.creator.team_id == user.team_id) %}
+                            <div class="card glass-card p-4">
+                                <h5 class="text-white mb-3">Assign Reviewer</h5>
+                                <form action="{{ url_for('assign_reviewer_route', decision_id=decision.id) }}" method="POST">
+                                    <div class="mb-3">
+                                        <label for="reviewer_id" class="form-label form-label-custom">Select Reviewer</label>
+                                        <select class="form-select form-control-custom" id="reviewer_id" name="reviewer_id" required>
+                                            <option value="" disabled selected>Select user...</option>
+                                            {% for r in reviewers %}
+                                                {% if r.id != user.id %}
+                                                    <option value="{{ r.id }}">{{ r.full_name }} ({{ r.role }})</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="stage" class="form-label form-label-custom">Approval Level / Stage</label>
+                                        <input type="number" class="form-control form-control-custom" id="stage" name="stage" value="1" min="1" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-accent w-100 rounded-3 py-2 fw-semibold">
+                                        <i class="fa-solid fa-user-check me-1"></i> Assign Reviewer
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.style-preserve-newlines {
+    white-space: pre-wrap;
+}
+.timeline {
+    margin-left: 10px;
+}
+</style>
+{% endblock %}

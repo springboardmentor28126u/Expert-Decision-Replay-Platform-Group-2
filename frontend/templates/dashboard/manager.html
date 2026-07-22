@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Manager Dashboard - Decision Replay{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row align-items-center mb-5">
+        <div class="col-md-8">
+            <h1 class="text-white mb-2">Welcome Back, Manager <span class="text-accent">{{ user.full_name }}</span></h1>
+            <p class="text-secondary mb-0">Role: <span class="badge bg-warning text-dark text-uppercase">{{ user.role }}</span> | Manage your team, review proposals, and analyze decisions.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="{{ url_for('create_decision_route') }}" class="btn btn-accent py-3 px-4 rounded-3 fw-bold shadow">
+                <i class="fa-solid fa-plus-circle me-2"></i> Create Team Decision
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4 mb-md-0">
+            <div class="card glass-card shadow p-4 text-center">
+                <i class="fa-solid fa-users text-accent fs-2 mb-3"></i>
+                <h4 class="text-white mb-1">{{ team_members | length }}</h4>
+                <p class="text-secondary small mb-0">Team Members</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4 mb-md-0">
+            <div class="card glass-card shadow p-4 text-center">
+                <i class="fa-solid fa-file-signature text-warning fs-2 mb-3"></i>
+                <h4 class="text-white mb-1">{{ team_stats.pending }}</h4>
+                <p class="text-secondary small mb-0">Team Pending Approvals</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card glass-card shadow p-4 text-center">
+                <i class="fa-solid fa-circle-check text-success fs-2 mb-3"></i>
+                <h4 class="text-white mb-1">{{ team_stats.approved }}</h4>
+                <p class="text-secondary small mb-0">Team Decisions Approved</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Main Grid -->
+    <div class="row">
+        <!-- Main Panel (Team Decisions) -->
+        <div class="col-lg-8 mb-4 mb-lg-0">
+            <div class="card glass-card p-4 h-100">
+                <h3 class="text-white mb-4"><i class="fa-solid fa-folder-open text-accent me-2"></i> Team Decisions</h3>
+                
+                {% if team_decisions %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover border-secondary align-middle mb-0">
+                            <thead>
+                                <tr class="text-secondary">
+                                    <th>Decision Title</th>
+                                    <th>Creator</th>
+                                    <th>Status</th>
+                                    <th>Version</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for td in team_decisions[:6] %}
+                                    <tr>
+                                        <td class="fw-semibold text-white">{{ td.title }}</td>
+                                        <td class="text-secondary small">{{ td.creator.full_name }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'primary' if td.status == 'draft' else 'warning text-dark' if td.status == 'under_review' else 'success' if td.status == 'approved' else 'danger' if td.status == 'rejected' else 'secondary' }}">
+                                                {{ td.status | replace('_', ' ') }}
+                                            </span>
+                                        </td>
+                                        <td>v{{ td.version }}</td>
+                                        <td>
+                                            <a href="{{ url_for('view_decision_route', decision_id=td.id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                                Audit
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <img src="https://illustrations.popsy.co/white/project-launch.svg" alt="No Decisions" style="max-height: 160px; filter: drop-shadow(0 0 10px rgba(99,102,241,0.25));" class="mb-4">
+                        <h5 class="text-white">No decisions recorded yet</h5>
+                        <p class="text-secondary small">Your team hasn't created any decision logs yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Notifications Feed -->
+            <div class="card glass-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="text-white mb-0"><i class="fa-solid fa-bell text-accent me-2"></i> Notifications</h5>
+                    <a href="{{ url_for('list_notifications_route') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Inbox</a>
+                </div>
+                <div class="activity-feed">
+                    {% for n in notifications %}
+                        <div class="d-flex mb-3 align-items-start border-bottom border-secondary pb-2">
+                            <div class="badge bg-primary p-2 rounded-circle me-3 mt-1">
+                                <i class="fa-solid fa-envelope text-white"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-white mb-1" style="font-size: 0.85rem;">{{ n.title }}</h6>
+                                <p class="text-secondary small mb-0">{{ n.message }}</p>
+                                <span class="text-muted small" style="font-size: 0.7rem;">{{ n.created_at[:16] | replace('T', ' ') }}</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-secondary text-center small py-3">No new notifications.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Team Members -->
+            <div class="card glass-card p-4">
+                <h3 class="text-white mb-4"><i class="fa-solid fa-users-gear text-accent me-2"></i> Team Members</h3>
+                <div class="list-group list-group-flush">
+                    {% for tm in team_members %}
+                        <div class="list-group-item bg-transparent border-secondary text-secondary d-flex justify-content-between align-items-center px-0 py-2">
+                            <div>
+                                <strong class="text-white small d-block">{{ tm.full_name }}</strong>
+                                <span class="text-muted small" style="font-size: 0.75rem;">{{ tm.email }}</span>
+                            </div>
+                            <span class="badge bg-secondary text-uppercase" style="font-size: 0.65rem;">{{ tm.role }}</span>
+                        </div>
+                    {% else %}
+                        <p class="text-secondary text-center small py-3">No members assigned to your team.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
