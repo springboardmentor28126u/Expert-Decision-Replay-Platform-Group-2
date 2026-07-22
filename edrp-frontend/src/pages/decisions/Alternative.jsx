@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-
+import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import AlternativeTable from "../../components/decision/AlternativeTable";
 import api from "../../services/api";
@@ -8,7 +8,7 @@ import api from "../../services/api";
 import "../../styles/alternative.css";
 
 function Alternative() {
-
+    console.log("===== ALTERNATIVE PAGE =====");
     const { id } = useParams();
 
     const [alternatives, setAlternatives] = useState([]);
@@ -68,9 +68,12 @@ function Alternative() {
                         </p>
                     </div>
 
-                    <button className="add-btn">
+                    <Link
+                        to={`/decisions/${id}/alternatives/add`}
+                        className="add-btn"
+                    >
                         + Add Alternative
-                    </button>
+                    </Link>
 
                 </div>
 

@@ -286,7 +286,9 @@ import CreateDiscussion from "./pages/discussion/CreateDiscussion";
 import CategoryList from "./pages/categories/CategoryList";
 import CreateCategory from "./pages/categories/CreateCategory";
 import CategoryDetails from "./pages/categories/CategoryDetails";
-
+import AddAlternative from "./pages/decisions/AddAlternative";
+import EditAlternative from "./pages/decisions/EditAlternative";
+import ViewAlternative from "./pages/decisions/ViewAlternative";
 function App() {
 
     const [user, setUser] = useState(null);
@@ -454,8 +456,21 @@ function App() {
                 path="/categories/:id"
                 element={<CategoryDetails />}
             />
-
-        </Routes>
+                    
+            <Route
+                path="/decisions/:id/alternatives/add"
+                element={<AddAlternative />}
+            />
+            <Route
+                path="/alternatives/edit/:id"
+                element={<EditAlternative />}
+            />
+            <Route
+        path="/alternatives/:id"
+        element={<ViewAlternative />}
+    />
+            </Routes>
+            
 
     );
 

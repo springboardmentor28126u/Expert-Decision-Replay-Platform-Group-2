@@ -1,0 +1,54 @@
+.view-alternative-page{
+    max-width:900px;
+    margin:auto;
+    padding:20px;
+}
+
+.view-alternative-page h2{
+    margin-bottom:25px;
+}
+
+.detail-card{
+    background:#fff;
+    border-radius:10px;
+    padding:25px;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+
+.detail-row{
+    display:flex;
+    justify-content:space-between;
+    padding:14px 0;
+    border-bottom:1px solid #eee;
+}
+
+.detail-row label{
+    font-weight:600;
+    color:#444;
+}
+
+.detail-row span{
+    color:#555;
+}
+
+.button-group{
+    margin-top:25px;
+    display:flex;
+    gap:15px;
+}
+
+.edit-btn,
+.back-btn{
+    padding:10px 18px;
+    text-decoration:none;
+    border-radius:6px;
+    color:white;
+}
+
+.edit-btn{
+    background:#2563eb;
+}
+
+.back-btn{
+    background:#6b7280;
+}

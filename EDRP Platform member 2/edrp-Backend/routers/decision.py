@@ -246,12 +246,17 @@ def add_alternative(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
     db_alt = Alternative(
-        decision_id=decision_id,
-        description=alternative.description,
-        pros=alternative.pros,
-        cons=alternative.cons,
-        score=alternative.score,
-    )
+    decision_id=decision_id,
+    title=alternative.title,
+    description=alternative.description,
+    pros=alternative.pros,
+    cons=alternative.cons,
+    score=alternative.score,
+    estimated_cost=alternative.estimated_cost,
+    feasibility_score=alternative.feasibility_score,
+    risk_score=alternative.risk_score,
+    is_selected=alternative.is_selected,
+)
     db.add(db_alt)
     db.commit()
     db.refresh(db_alt)
