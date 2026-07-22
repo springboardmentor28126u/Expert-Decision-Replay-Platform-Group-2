@@ -55,7 +55,7 @@ class DecisionOut(BaseModel):
         from_attributes = True
 
 class AlternativeCreate(BaseModel):
-    decision_id: int
+   
     description: str
     title: str | None = None
     pros: str | None = None
