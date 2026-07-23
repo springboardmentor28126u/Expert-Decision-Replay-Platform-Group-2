@@ -29,11 +29,13 @@ class DiscussionMessage(Base):
         nullable=False,
     )
     attachment_url = Column(String, nullable=True)
+    attachment_id = Column(String, ForeignKey("uploaded_files.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     decision = relationship("Decision")
     user = relationship("User")
+    attachment = relationship("UploadedFile")
     replies = relationship(
         "DiscussionMessage",
         cascade="all, delete-orphan",

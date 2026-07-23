@@ -83,3 +83,16 @@ class AuditLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User")
+
+
+class UploadedFile(Base):
+    __tablename__ = "uploaded_files"
+
+    id = Column(String, primary_key=True, index=True)
+    filename = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    uploader = relationship("User")
