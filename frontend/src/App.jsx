@@ -85,6 +85,7 @@ if (loggedInUser && view === "decisionDetail") {
       />
     );
   }
+  
 
   if (loggedInUser) {
     return (
