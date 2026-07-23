@@ -12,6 +12,8 @@ from database import engine, Base, get_db
 from models import User, UserRole
 from discussion import DiscussionMessage
 
+from uploads import router as uploads_router
+
 from schemas import UserCreate, UserLogin, UserResponse, Token
 
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_role
@@ -26,6 +28,7 @@ ALLOWED_DISCUSSION_EXTENSIONS = {".pdf", ".docx", ".jpg", ".jpeg", ".png"}
 UPLOAD_ROOT.mkdir(exist_ok=True)
 DISCUSSION_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
+app.include_router(uploads_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:5174"],
@@ -140,6 +143,10 @@ from schemas import DecisionCreate, DecisionResponse, DecisionStatusUpdate
 from models import Decision, DecisionStatus
 from typing import List as ListType
 
+def _with_creator_name(decision: Decision) -> Decision:
+    decision.creator_name = decision.creator.full_name if decision.creator else None
+    return decision
+
 @app.post("/decisions", response_model=DecisionResponse)
 def create_decision(
     decision: DecisionCreate,
@@ -151,10 +158,12 @@ def create_decision(
         problem_statement=decision.problem_statement,
         category=decision.category,
         created_by=current_user.id,
+        attachment_url=decision.attachment_url,
     )
     db.add(new_decision)
     db.commit()
     db.refresh(new_decision)
+    new_decision.creator_name = new_decision.creator.full_name
     return new_decision
 
 
@@ -164,6 +173,8 @@ def list_decisions(
     current_user: User = Depends(get_current_user),
 ):
     decisions = db.execute(select(Decision)).scalars().all()
+    for d in decisions:
+        d.creator_name = d.creator.full_name if d.creator else None
     return decisions
 
 
@@ -178,6 +189,7 @@ def get_decision(
     ).scalar_one_or_none()
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
+    decision.creator_name = decision.creator.full_name if decision.creator else None
     return decision
 
 
@@ -198,6 +210,71 @@ def update_decision_status(
     db.commit()
     db.refresh(decision)
     return decision
+
+from schemas import DecisionUpdate, DecisionVersionResponse
+from models import DecisionVersion
+
+@app.put("/decisions/{decision_id}", response_model=DecisionResponse)
+def update_decision(
+    decision_id: int,
+    decision_update: DecisionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    # Save a version snapshot of the CURRENT state, before making changes
+    existing_versions = db.execute(
+        select(DecisionVersion).where(DecisionVersion.decision_id == decision_id)
+    ).scalars().all()
+    next_version_number = len(existing_versions) + 1
+
+    snapshot = DecisionVersion(
+        decision_id=decision.id,
+        version_number=next_version_number,
+        title=decision.title,
+        problem_statement=decision.problem_statement,
+        category=decision.category,
+        status=decision.status.value,
+        changed_by=current_user.id,
+    )
+    db.add(snapshot)
+
+    # Now apply the updates
+    update_data = decision_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(decision, key, value)
+
+    db.commit()
+    db.refresh(decision)
+    return decision
+
+
+@app.get("/decisions/{decision_id}/versions", response_model=ListType[DecisionVersionResponse])
+def get_decision_versions(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    versions = db.execute(
+        select(DecisionVersion)
+        .where(DecisionVersion.decision_id == decision_id)
+        .order_by(DecisionVersion.version_number)
+    ).scalars().all()
+
+    return versions
 
 @app.delete("/decisions/{decision_id}")
 def delete_decision(

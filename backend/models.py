@@ -50,9 +50,10 @@ class Decision(Base):
     category = Column(String, nullable=True)
     status = Column(Enum(DecisionStatus), default=DecisionStatus.draft, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    attachment_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
+    
     creator = relationship("User")
 
 
@@ -95,4 +96,21 @@ class UploadedFile(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    uploader = relationship("User")
+    uploader = relationship("User")
+
+
+class DecisionVersion(Base):
+    __tablename__ = "decision_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=False)
+    version_number = Column(Integer, nullable=False)
+    title = Column(String, nullable=False)
+    problem_statement = Column(Text, nullable=False)
+    category = Column(String, nullable=True)
+    status = Column(String, nullable=False)
+    changed_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    decision = relationship("Decision")
+    editor = relationship("User")

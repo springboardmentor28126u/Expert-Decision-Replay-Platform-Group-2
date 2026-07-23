@@ -38,6 +38,7 @@ class DecisionCreate(BaseModel):
     title: str
     problem_statement: str
     category: str | None = None
+    attachment_url: str | None = None
 
 class DecisionResponse(BaseModel):
     id: int
@@ -46,6 +47,8 @@ class DecisionResponse(BaseModel):
     category: str | None
     status: DecisionStatus
     created_by: int
+    creator_name: str | None = None
+    attachment_url: str | None
     created_at: datetime
     updated_at: datetime | None
 
@@ -133,3 +136,22 @@ class DiscussionResponse(BaseModel):
 class ChangePassword(BaseModel):
     current_password: str
     new_password: str
+
+class DecisionUpdate(BaseModel):
+    title: str | None = None
+    problem_statement: str | None = None
+    category: str | None = None
+
+class DecisionVersionResponse(BaseModel):
+    id: int
+    decision_id: int
+    version_number: int
+    title: str
+    problem_statement: str
+    category: str | None
+    status: str
+    changed_by: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

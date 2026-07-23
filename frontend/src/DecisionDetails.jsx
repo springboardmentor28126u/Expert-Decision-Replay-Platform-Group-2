@@ -1,10 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import VersionHistory from "./VersionHistory";
+import AlternativesPanel from "./AlternativesPanel";
+import "./discussion.css";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(decision.title);
+  const [editProblemStatement, setEditProblemStatement] = useState(decision.problem_statement);
+  const [editCategory, setEditCategory] = useState(decision.category || "");
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history"
+  const [editError, setEditError] = useState("");
 
   const isClosed = decision.status === "approved" || decision.status === "rejected";
   
@@ -198,6 +208,25 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
     }
   };
 
+  const handleSaveDecisionEdit = async () => {
+    setEditError("");
+    try {
+    const res = await axios.put(
+      `http://127.0.0.1:8000/decisions/${decision.id}`,
+      {
+        title: editTitle,
+        problem_statement: editProblemStatement,
+        category: editCategory,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (onStatusUpdated) onStatusUpdated(res.data);
+    setIsEditing(false);
+  } catch (err) {
+    setEditError(err?.response?.data?.detail || "Failed to save changes.");
+  }
+};
+
   // Format Dates nicely
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleString(undefined, {
@@ -233,12 +262,16 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
       <div 
         key={msg.id} 
         className={`discussion-message-node ${msg.parent_id ? "is-reply" : "is-root"}`}
-      >
-        <div className={`message-card ${msg.message_type === "meeting_note" ? "is-meeting-note" : ""}`}>
-          <div className="message-header">
-            <div className="message-author-info">
-              <span className="message-author-name">{msg.user?.full_name || "Unknown User"}</span>
-              <span className={`message-author-role ${msg.user?.role || "employee"}`}>
+       >
+        <div className="msg-avatar">
+           {(msg.user?.full_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+        </div>
+        <div className="msg-body-col">
+          <div className={`message-card ${msg.message_type === "meeting_note" ? "is-meeting-note" : ""}`}>
+            <div className="message-header">
+             <div className="message-author-info">
+               <span className="message-author-name">{msg.user?.full_name || "Unknown User"}</span>
+                <span className={`message-author-role ${msg.user?.role || "employee"}`}>
                 {msg.user?.role || "employee"}
               </span>
               {msg.message_type === "meeting_note" && (
@@ -415,170 +448,287 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
           </div>
         )}
       </div>
+    </div>
     );
   };
 
   return (
     <div className="decision-details-container">
-      {/* Decision Summary Info */}
+      {/* Decision Summary Info — always visible */}
       <div className="decision-header-card">
-        <div className="decision-title-row">
-          <h1 className="decision-title-main">{decision.title}</h1>
-          <div className="decision-meta-pills">
-            {decision.category && (
-              <span className="decision-category-pill">{decision.category}</span>
-            )}
-            <span
-              className="dash-role-badge"
-              style={{
-                background:
-                  decision.status === "approved"
-                    ? "rgba(79, 209, 181, 0.12)"
-                    : decision.status === "rejected"
-                    ? "rgba(255, 107, 107, 0.12)"
-                    : decision.status === "under_review"
-                    ? "rgba(242, 166, 35, 0.12)"
-                    : "rgba(154, 165, 181, 0.12)",
-                color:
-                  decision.status === "approved"
-                    ? "#4FD1B5"
-                    : decision.status === "rejected"
-                    ? "#FF6B6B"
-                    : decision.status === "under_review"
-                    ? "#F2A623"
-                    : "#9AA5B5",
-              }}
-            >
-              {decision.status.replace("_", " ")}
-            </span>
-          </div>
-        </div>
-
-        <div className="decision-date">
-          Created on {new Date(decision.created_at).toLocaleDateString()}
-        </div>
-
-        <div className="decision-problem-statement">
-          <strong>Problem Statement:</strong>
-          <p>{decision.problem_statement}</p>
-        </div>
-
-        {/* Manager/Admin Status update options */}
-        {(profile.role === "manager" || profile.role === "admin") && (
-          <div className="status-control-section">
-            <span className="status-control-label">Update Status:</span>
-            <select
-              className="status-select"
-              value={decision.status}
-              onChange={handleStatusChange}
-            >
-              <option value="draft">Draft</option>
-              <option value="under_review">Under Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-        )}
-      </div>
-
-      {/* Discussion Board Section */}
-      <div className="discussion-board">
-        <h2 className="discussion-title">Discussion & Meeting Notes</h2>
-
-        {/* Post New Comment / Meeting Note Form */}
-        {isClosed ? (
-          <div className="discussion-closed-notice">
-            🔒 This decision has been {decision.status}. Comments and replies are closed.
-          </div>
-        ) : (
-          <div className="comment-form-card">
-            <form onSubmit={handlePostMessage}>
-              <div className="form-tabs">
-                <button
-                  type="button"
-                  className={`form-tab-btn ${newMessageType === "comment" ? "active" : ""}`}
-                  onClick={() => setNewMessageType("comment")}
-                >
-                  💬 Add Comment
-                </button>
-                <button
-                  type="button"
-                  className={`form-tab-btn ${newMessageType === "meeting_note" ? "active" : ""}`}
-                  onClick={() => setNewMessageType("meeting_note")}
-                >
-                  📝 Add Meeting Note
-                </button>
-              </div>
-
-              <textarea
-                className="form-textarea"
-                placeholder={
-                  newMessageType === "meeting_note"
-                    ? "Write minutes of the meeting, action items, or formal notes..."
-                    : "Share feedback, ask questions, or contribute to this decision..."
-                }
-                value={newMessageText}
-                onChange={(e) => setNewMessageText(e.target.value)}
-                rows={4}
-                required
+        {isEditing ? (
+          <div>
+            <div className="auth-field">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                style={{ fontSize: "18px", fontWeight: 700 }}
               />
-
-              <div className="form-file-input-wrapper">
-                <label className="form-file-label">
-                  📎 Attach File (PDF, DOCX, JPG, PNG)
-                  <input
-                    type="file"
-                    className="form-file-input"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
-                  />
-                </label>
-                {selectedFile && (
-                  <div className="form-selected-file">
-                    📄 {selectedFile.name}
-                    <button
-                      type="button"
-                      className="message-action-btn delete"
-                      onClick={() => setSelectedFile(null)}
-                      style={{ border: "none", background: "none", cursor: "pointer", marginLeft: "4px" }}
-                    >
-                      (remove)
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {formError && <div className="auth-message error" style={{ marginBottom: "12px" }}>{formError}</div>}
-
-              <div className="form-actions-row">
-                <button type="submit" className="form-btn primary" disabled={submitting}>
-                  {submitting
-                    ? "Posting..."
-                    : newMessageType === "meeting_note"
-                    ? "Post Meeting Note"
-                    : "Post Comment"}
-                </button>
-              </div>
-            </form>
+            </div>
+            <div className="auth-field">
+              <textarea
+                value={editProblemStatement}
+                onChange={(e) => setEditProblemStatement(e.target.value)}
+                rows={4}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "#12161D",
+                  border: "1px solid #2E3646",
+                  borderRadius: "6px",
+                  color: "#F1F3F6",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+            <div className="auth-field">
+              <input
+                type="text"
+                placeholder="Category"
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+              />
+            </div>
+            {editError && <div className="auth-message error">{editError}</div>}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button className="auth-button" onClick={handleSaveDecisionEdit}>Save Changes</button>
+              <button
+                className="dash-back-btn"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditTitle(decision.title);
+                  setEditProblemStatement(decision.problem_statement);
+                  setEditCategory(decision.category || "");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        )}
-
-        {loading ? (
-          <p className="dash-card-note">Loading discussion stream...</p>
-        ) : error ? (
-          <div className="auth-message error">{error}</div>
         ) : (
-          <div className="discussion-stream">
-            {topLevel.length === 0 ? (
-              <p className="dash-card-note">No comments or meeting notes yet. Start the conversation!</p>
-            ) : (
-              topLevel.map((msg) => renderMessageNode(msg))
+          <>
+            <div className="decision-title-row">
+              <h1 className="decision-title-main">{decision.title}</h1>
+              <div className="decision-meta-pills">
+                {decision.category && (
+                  <span className="decision-category-pill">{decision.category}</span>
+                )}
+                <span
+                  className="dash-role-badge"
+                  style={{
+                    background:
+                      decision.status === "approved"
+                        ? "rgba(79, 209, 181, 0.12)"
+                        : decision.status === "rejected"
+                        ? "rgba(255, 107, 107, 0.12)"
+                        : decision.status === "under_review"
+                        ? "rgba(242, 166, 35, 0.12)"
+                        : "rgba(154, 165, 181, 0.12)",
+                    color:
+                      decision.status === "approved"
+                        ? "#4FD1B5"
+                        : decision.status === "rejected"
+                        ? "#FF6B6B"
+                        : decision.status === "under_review"
+                        ? "#F2A623"
+                        : "#9AA5B5",
+                  }}
+                >
+                  {decision.status.replace("_", " ")}
+                </span>
+              </div>
+            </div>
+
+            <div className="decision-date">
+              Created on {new Date(decision.created_at).toLocaleString()}
+              {decision.creator_name && <> by <b>{decision.creator_name}</b></>}
+            </div>
+
+            <div className="decision-problem-statement">
+              <strong>Problem Statement:</strong>
+              <p>{decision.problem_statement}</p>
+            </div>
+
+            {decision.attachment_url && (
+              <div style={{ marginTop: "12px" }}>
+                <a
+                  href={`http://127.0.0.1:8000${decision.attachment_url}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#4FD1B5", fontSize: "13px", textDecoration: "none" }}
+                >
+                  📎 View attached file
+                </a>
+              </div>
             )}
-          </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+              <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
+                Edit Decision
+              </button>
+            </div>
+
+            {(profile.role === "manager" || profile.role === "admin") && (
+              <div className="status-control-section">
+                <span className="status-control-label">Update Status:</span>
+                <select
+                  className="status-select"
+                  value={decision.status}
+                  onChange={handleStatusChange}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      {/* Tab bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: "4px",
+          borderBottom: "1px solid var(--border, #2E3646)",
+          marginTop: "20px",
+          marginBottom: "20px",
+        }}
+      >
+        {[
+          { key: "alternatives", label: "Alternatives" },
+          { key: "discussion", label: "Discussion" },
+          { key: "history", label: "Version History" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === tab.key ? "2px solid #4FD1B5" : "2px solid transparent",
+              color: activeTab === tab.key ? "#4FD1B5" : "var(--text-secondary, #9AA5B5)",
+              fontWeight: activeTab === tab.key ? 700 : 500,
+              fontSize: "14px",
+              padding: "10px 16px",
+              cursor: "pointer",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === "alternatives" && (
+        <AlternativesPanel token={token} decisionId={decision.id} />
+      )}
+
+      {activeTab === "history" && (
+        <VersionHistory token={token} decisionId={decision.id} />
+      )}
+
+      {activeTab === "discussion" && (
+        <div className="discussion-board">
+          {isClosed ? (
+            <div className="discussion-closed-notice">
+              🔒 This decision has been {decision.status}. Comments and replies are closed.
+            </div>
+          ) : (
+            <div className="comment-form-card">
+              <form onSubmit={handlePostMessage}>
+                <div className="form-tabs">
+                  <button
+                    type="button"
+                    className={`form-tab-btn ${newMessageType === "comment" ? "active" : ""}`}
+                    onClick={() => setNewMessageType("comment")}
+                  >
+                    💬 Add Comment
+                  </button>
+                  <button
+                    type="button"
+                    className={`form-tab-btn ${newMessageType === "meeting_note" ? "active" : ""}`}
+                    onClick={() => setNewMessageType("meeting_note")}
+                  >
+                    📝 Add Meeting Note
+                  </button>
+                </div>
+
+                <textarea
+                  className="form-textarea"
+                  placeholder={
+                    newMessageType === "meeting_note"
+                      ? "Write minutes of the meeting, action items, or formal notes..."
+                      : "Share feedback, ask questions, or contribute to this decision..."
+                  }
+                  value={newMessageText}
+                  onChange={(e) => setNewMessageText(e.target.value)}
+                  rows={4}
+                  required
+                />
+
+                <div className="form-file-input-wrapper">
+                  <label className="form-file-label">
+                    📎 Attach File (PDF, DOCX, JPG, PNG)
+                    <input
+                      type="file"
+                      className="form-file-input"
+                      onChange={(e) => setSelectedFile(e.target.files[0])}
+                    />
+                  </label>
+                  {selectedFile && (
+                    <div className="form-selected-file">
+                      📄 {selectedFile.name}
+                      <button
+                        type="button"
+                        className="message-action-btn delete"
+                        onClick={() => setSelectedFile(null)}
+                        style={{ border: "none", background: "none", cursor: "pointer", marginLeft: "4px" }}
+                      >
+                        (remove)
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {formError && <div className="auth-message error" style={{ marginBottom: "12px" }}>{formError}</div>}
+
+                <div className="form-actions-row">
+                  <button type="submit" className="form-btn primary" disabled={submitting}>
+                    {submitting
+                      ? "Posting..."
+                      : newMessageType === "meeting_note"
+                      ? "Post Meeting Note"
+                      : "Post Comment"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {loading ? (
+            <p className="dash-card-note">Loading discussion stream...</p>
+          ) : error ? (
+            <div className="auth-message error">{error}</div>
+          ) : (
+            <div className="discussion-stream">
+              {topLevel.length === 0 ? (
+                <p className="dash-card-note">No comments or meeting notes yet. Start the conversation!</p>
+              ) : (
+                topLevel.map((msg) => renderMessageNode(msg))
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 export default DecisionDetails;
+
