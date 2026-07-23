@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import "./App.css";
+import Decisions from "./Decisions";
+import DecisionDetail from "./DecisionDetail";
 
 const BASE_URL = "http://127.0.0.1:8000/auth";
 
@@ -12,12 +14,16 @@ function App() {
   const [role, setRole] = useState("employee");
   const [message, setMessage] = useState("");
   const [loggedInUser, setLoggedInUser] = useState(null);
+  const [view, setView] = useState("dashboard");
+  const [selectedDecisionId, setSelectedDecisionId] = useState(null);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      const payload = JSON.parse(atob(token.split(".")[1]));
+    const savedToken = localStorage.getItem("token");
+    if (savedToken) {
+      const payload = JSON.parse(atob(savedToken.split(".")[1]));
       setLoggedInUser({ email: payload.sub, role: payload.role });
+      setToken(savedToken);
     }
   }, []);
 
@@ -41,6 +47,7 @@ function App() {
       localStorage.setItem("token", res.data.access_token);
       const payload = JSON.parse(atob(res.data.access_token.split(".")[1]));
       setLoggedInUser({ email: payload.sub, role: payload.role });
+      setToken(res.data.access_token);
       setMessage("");
     } catch (err) {
       setMessage(err.response?.data?.detail || "Login failed");
@@ -50,9 +57,35 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     setLoggedInUser(null);
+    setToken(null);
+    setView("dashboard");
     setEmail("");
     setPassword("");
   };
+
+if (loggedInUser && view === "decisionDetail") {
+    return (
+      <DecisionDetail
+        token={token}
+        decisionId={selectedDecisionId}
+        onBack={() => setView("decisions")}
+      />
+    );
+  }
+
+  if (loggedInUser && view === "decisions") {
+    return (
+      <Decisions
+        token={token}
+        onBack={() => setView("dashboard")}
+        onSelectDecision={(id) => {
+          setSelectedDecisionId(id);
+          setView("decisionDetail");
+        }}
+      />
+    );
+  }
+  
 
   if (loggedInUser) {
     return (
@@ -68,6 +101,9 @@ function App() {
             <span>Role</span>
             <span>{loggedInUser.role}</span>
           </div>
+          <button className="submit-btn" style={{ marginTop: 20 }} onClick={() => setView("decisions")}>
+            Go to Decisions
+          </button>
           <button className="logout-btn" onClick={handleLogout}>Log out</button>
         </div>
       </div>
