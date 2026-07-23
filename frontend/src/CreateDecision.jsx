@@ -78,7 +78,6 @@ function CreateDecision({ token, onCreated }) {
             onChange={(e) => setCategory(e.target.value)}
           />
         </div>
-        <button type="submit" className="auth-button">Create decision</button>
         <div className="auth-field">
           <FileUpload onUploadSuccess={(url) => setAttachmentUrl(url)} />
           {attachmentUrl && (
@@ -87,6 +86,7 @@ function CreateDecision({ token, onCreated }) {
              </p>
          )}
         </div>
+        <button type="submit" className="auth-button">Create decision</button>
       </form>
       {message && (
         <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }}>

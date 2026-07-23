@@ -1,26 +1,54 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
-function VersionHistory({ token, decisionId }) {
+function VersionHistory({ token, decisionId, onRestored }) {
   const [versions, setVersions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchVersions = async () => {
-      try {
-        const res = await axios.get(
-          `http://127.0.0.1:8000/decisions/${decisionId}/versions`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setVersions(res.data);
-      } catch (err) {
-        console.log("Failed to load version history", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchVersions();
+  const fetchVersions = useCallback(async () => {
+    try {
+      const res = await axios.get(
+        `http://127.0.0.1:8000/decisions/${decisionId}/versions`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setVersions(res.data);
+    } catch (err) {
+      console.log("Failed to load version history", err);
+    } finally {
+      setLoading(false);
+    }
   }, [token, decisionId]);
+
+  useEffect(() => {
+    fetchVersions();
+  }, [fetchVersions]);
+
+  const handleRestore = async (v) => {
+    if (!window.confirm(`Are you sure you want to restore the decision to Version ${v.version_number}?`)) {
+      return;
+    }
+    try {
+      const res = await axios.put(
+        `http://127.0.0.1:8000/decisions/${decisionId}`,
+        {
+          title: v.title,
+          problem_statement: v.problem_statement,
+          category: v.category,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert(`Decision successfully restored to Version ${v.version_number}!`);
+      // Reload versions history list locally
+      fetchVersions();
+      // Notify parent component to update its props/state
+      if (onRestored) {
+        onRestored(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to restore version", err);
+      alert(err?.response?.data?.detail || "Failed to restore version.");
+    }
+  };
 
   if (loading) return <p className="dash-card-note">Loading version history...</p>;
 
@@ -28,9 +56,12 @@ function VersionHistory({ token, decisionId }) {
     return <p className="dash-card-note">No previous versions — this decision hasn't been edited yet.</p>;
   }
 
+  // Sort versions by version_number descending (newest versions first)
+  const sortedVersions = [...versions].sort((a, b) => b.version_number - a.version_number);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      {versions.map((v) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {sortedVersions.map((v) => (
         <div
           key={v.id}
           style={{
@@ -54,12 +85,29 @@ function VersionHistory({ token, decisionId }) {
           <p style={{ color: "#9AA5B5", fontSize: "13px", margin: 0 }}>
             {v.problem_statement}
           </p>
-          <span
-            className="dash-role-badge"
-            style={{ display: "inline-block", marginTop: "8px" }}
-          >
-            {v.status.replace("_", " ")}
-          </span>
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", borderTop: "1px solid #2E3646", paddingTop: "10px" }}>
+            <span
+              className="dash-role-badge"
+              style={{ display: "inline-block", margin: 0, textTransform: "capitalize" }}
+            >
+              {v.status.replace("_", " ")}
+            </span>
+            <button
+              onClick={() => handleRestore(v)}
+              className="form-btn primary"
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                height: "auto",
+                fontWeight: "600",
+                cursor: "pointer",
+                borderRadius: "6px"
+              }}
+            >
+              Restore to this version
+            </button>
+          </div>
         </div>
       ))}
     </div>

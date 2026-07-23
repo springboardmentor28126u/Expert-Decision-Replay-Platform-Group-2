@@ -3,6 +3,7 @@ import axios from "axios";
 import VersionHistory from "./VersionHistory";
 import AlternativesPanel from "./AlternativesPanel";
 import "./discussion.css";
+import "./dashboard.css";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [messages, setMessages] = useState([]);
@@ -15,6 +16,12 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history"
   const [editError, setEditError] = useState("");
+
+  useEffect(() => {
+    setEditTitle(decision.title);
+    setEditProblemStatement(decision.problem_statement);
+    setEditCategory(decision.category || "");
+  }, [decision]);
 
   const isClosed = decision.status === "approved" || decision.status === "rejected";
   
@@ -249,6 +256,15 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
     } else {
       topLevel.push(msg);
     }
+  });
+
+  const filteredTopLevel = topLevel.filter((msg) => {
+    if (newMessageType === "comment") {
+      return msg.message_type === "comment";
+    } else if (newMessageType === "meeting_note") {
+      return msg.message_type === "meeting_note";
+    }
+    return true;
   });
 
   // Recursive component to render a single message card and its replies
@@ -510,66 +526,87 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
           </div>
         ) : (
           <>
-            <div className="decision-title-row">
-              <h1 className="decision-title-main">{decision.title}</h1>
-              <div className="decision-meta-pills">
+            <div className="decision-header-section" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "20px", marginBottom: "20px" }}>
+              <div className="decision-title-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+                <h1 className="decision-title-main" style={{ fontSize: "26px", fontWeight: "700", color: "var(--text-primary)", margin: 0, flex: "1 1 auto" }}>
+                  {decision.title}
+                </h1>
+                
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
+                  <button className="edit-decision-btn" onClick={() => setIsEditing(true)}>
+                    ✏️ Edit Decision
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
                 {decision.category && (
-                  <span className="decision-category-pill">{decision.category}</span>
+                  <span className="decision-category-pill" style={{ background: "rgba(145, 152, 168, 0.15)", color: "var(--text-secondary)", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "600" }}>
+                    {decision.category}
+                  </span>
                 )}
+                
                 <span
-                  className="dash-role-badge"
+                  className="decision-status-badge"
                   style={{
+                    padding: "4px 12px",
+                    borderRadius: "20px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    textTransform: "capitalize",
                     background:
                       decision.status === "approved"
-                        ? "rgba(79, 209, 181, 0.12)"
+                        ? "rgba(45, 212, 167, 0.12)"
                         : decision.status === "rejected"
-                        ? "rgba(255, 107, 107, 0.12)"
+                        ? "rgba(240, 85, 90, 0.12)"
                         : decision.status === "under_review"
-                        ? "rgba(242, 166, 35, 0.12)"
-                        : "rgba(154, 165, 181, 0.12)",
+                        ? "rgba(245, 166, 35, 0.12)"
+                        : "rgba(145, 152, 168, 0.12)",
                     color:
                       decision.status === "approved"
-                        ? "#4FD1B5"
+                        ? "var(--success)"
                         : decision.status === "rejected"
-                        ? "#FF6B6B"
+                        ? "var(--danger)"
                         : decision.status === "under_review"
-                        ? "#F2A623"
-                        : "#9AA5B5",
+                        ? "var(--warning)"
+                        : "var(--text-secondary)",
+                    border: `1px solid ${
+                      decision.status === "approved"
+                        ? "var(--success)"
+                        : decision.status === "rejected"
+                        ? "var(--danger)"
+                        : decision.status === "under_review"
+                        ? "var(--warning)"
+                        : "var(--text-secondary)"
+                    }`
                   }}
                 >
                   {decision.status.replace("_", " ")}
                 </span>
+                
+                <span className="decision-date" style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
+                  Created {new Date(decision.created_at).toLocaleString()} by <strong>{decision.creator_name || "Unknown"}</strong>
+                </span>
               </div>
             </div>
 
-            <div className="decision-date">
-              Created on {new Date(decision.created_at).toLocaleString()}
-              {decision.creator_name && <> by <b>{decision.creator_name}</b></>}
-            </div>
-
-            <div className="decision-problem-statement">
+            <div className="decision-problem-statement" style={{ borderTop: "none", marginTop: 0, paddingTop: 0 }}>
               <strong>Problem Statement:</strong>
-              <p>{decision.problem_statement}</p>
+              <p style={{ marginTop: "8px", color: "var(--text-primary)" }}>{decision.problem_statement}</p>
             </div>
 
             {decision.attachment_url && (
-              <div style={{ marginTop: "12px" }}>
+              <div style={{ marginTop: "16px", padding: "12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "8px", width: "fit-content", display: "flex", alignItems: "center", gap: "8px" }}>
                 <a
                   href={`http://127.0.0.1:8000${decision.attachment_url}`}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: "#4FD1B5", fontSize: "13px", textDecoration: "none" }}
+                  style={{ color: "var(--accent)", fontSize: "13px", textDecoration: "none", fontWeight: "600" }}
                 >
                   📎 View attached file
                 </a>
               </div>
             )}
-
-            <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
-              <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
-                Edit Decision
-              </button>
-            </div>
 
             {(profile.role === "manager" || profile.role === "admin") && (
               <div className="status-control-section">
@@ -631,7 +668,15 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
       )}
 
       {activeTab === "history" && (
-        <VersionHistory token={token} decisionId={decision.id} />
+        <VersionHistory
+          token={token}
+          decisionId={decision.id}
+          onRestored={(updatedDecision) => {
+            if (onStatusUpdated) {
+              onStatusUpdated(updatedDecision);
+            }
+          }}
+        />
       )}
 
       {activeTab === "discussion" && (
@@ -717,10 +762,14 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
             <div className="auth-message error">{error}</div>
           ) : (
             <div className="discussion-stream">
-              {topLevel.length === 0 ? (
-                <p className="dash-card-note">No comments or meeting notes yet. Start the conversation!</p>
+              {filteredTopLevel.length === 0 ? (
+                <p className="dash-card-note">
+                  {newMessageType === "meeting_note"
+                    ? "No meeting notes yet. Start the conversation!"
+                    : "No comments yet. Start the conversation!"}
+                </p>
               ) : (
-                topLevel.map((msg) => renderMessageNode(msg))
+                filteredTopLevel.map((msg) => renderMessageNode(msg))
               )}
             </div>
           )}
