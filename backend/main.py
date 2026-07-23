@@ -143,6 +143,10 @@ from schemas import DecisionCreate, DecisionResponse, DecisionStatusUpdate
 from models import Decision, DecisionStatus
 from typing import List as ListType
 
+def _with_creator_name(decision: Decision) -> Decision:
+    decision.creator_name = decision.creator.full_name if decision.creator else None
+    return decision
+
 @app.post("/decisions", response_model=DecisionResponse)
 def create_decision(
     decision: DecisionCreate,
@@ -159,6 +163,7 @@ def create_decision(
     db.add(new_decision)
     db.commit()
     db.refresh(new_decision)
+    new_decision.creator_name = new_decision.creator.full_name
     return new_decision
 
 
@@ -168,6 +173,8 @@ def list_decisions(
     current_user: User = Depends(get_current_user),
 ):
     decisions = db.execute(select(Decision)).scalars().all()
+    for d in decisions:
+        d.creator_name = d.creator.full_name if d.creator else None
     return decisions
 
 
@@ -182,6 +189,7 @@ def get_decision(
     ).scalar_one_or_none()
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
+    decision.creator_name = decision.creator.full_name if decision.creator else None
     return decision
 
 

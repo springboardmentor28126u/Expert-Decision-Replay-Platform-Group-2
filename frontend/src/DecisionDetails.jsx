@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import VersionHistory from "./VersionHistory";
+import AlternativesPanel from "./AlternativesPanel";
+import "./discussion.css";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [messages, setMessages] = useState([]);
@@ -11,6 +13,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [editProblemStatement, setEditProblemStatement] = useState(decision.problem_statement);
   const [editCategory, setEditCategory] = useState(decision.category || "");
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history"
   const [editError, setEditError] = useState("");
 
   const isClosed = decision.status === "approved" || decision.status === "rejected";
@@ -259,12 +262,16 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
       <div 
         key={msg.id} 
         className={`discussion-message-node ${msg.parent_id ? "is-reply" : "is-root"}`}
-      >
-        <div className={`message-card ${msg.message_type === "meeting_note" ? "is-meeting-note" : ""}`}>
-          <div className="message-header">
-            <div className="message-author-info">
-              <span className="message-author-name">{msg.user?.full_name || "Unknown User"}</span>
-              <span className={`message-author-role ${msg.user?.role || "employee"}`}>
+       >
+        <div className="msg-avatar">
+           {(msg.user?.full_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+        </div>
+        <div className="msg-body-col">
+          <div className={`message-card ${msg.message_type === "meeting_note" ? "is-meeting-note" : ""}`}>
+            <div className="message-header">
+             <div className="message-author-info">
+               <span className="message-author-name">{msg.user?.full_name || "Unknown User"}</span>
+                <span className={`message-author-role ${msg.user?.role || "employee"}`}>
                 {msg.user?.role || "employee"}
               </span>
               {msg.message_type === "meeting_note" && (
@@ -441,12 +448,13 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
           </div>
         )}
       </div>
+    </div>
     );
   };
 
   return (
     <div className="decision-details-container">
-      {/* Decision Summary Info */}
+      {/* Decision Summary Info — always visible */}
       <div className="decision-header-card">
         {isEditing ? (
           <div>
@@ -535,7 +543,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
             </div>
 
             <div className="decision-date">
-              Created on {new Date(decision.created_at).toLocaleDateString()}
+              Created on {new Date(decision.created_at).toLocaleString()}
+              {decision.creator_name && <> by <b>{decision.creator_name}</b></>}
             </div>
 
             <div className="decision-problem-statement">
@@ -560,16 +569,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
               <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
                 Edit Decision
               </button>
-              <button className="dash-back-btn" onClick={() => setShowVersionHistory(!showVersionHistory)}>
-                {showVersionHistory ? "Hide" : "View"} Version History
-              </button>
             </div>
-
-            {showVersionHistory && (
-              <div style={{ marginTop: "16px" }}>
-                <VersionHistory token={token} decisionId={decision.id} />
-              </div>
-            )}
 
             {(profile.role === "manager" || profile.role === "admin") && (
               <div className="status-control-section">
@@ -591,103 +591,144 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
         )}
       </div>
 
-      {/* Discussion Board Section */}
-      <div className="discussion-board">
-        <h2 className="discussion-title">Discussion & Meeting Notes</h2>
-
-        {/* Post New Comment / Meeting Note Form */}
-        {isClosed ? (
-          <div className="discussion-closed-notice">
-            🔒 This decision has been {decision.status}. Comments and replies are closed.
-          </div>
-        ) : (
-          <div className="comment-form-card">
-            <form onSubmit={handlePostMessage}>
-              <div className="form-tabs">
-                <button
-                  type="button"
-                  className={`form-tab-btn ${newMessageType === "comment" ? "active" : ""}`}
-                  onClick={() => setNewMessageType("comment")}
-                >
-                  💬 Add Comment
-                </button>
-                <button
-                  type="button"
-                  className={`form-tab-btn ${newMessageType === "meeting_note" ? "active" : ""}`}
-                  onClick={() => setNewMessageType("meeting_note")}
-                >
-                  📝 Add Meeting Note
-                </button>
-              </div>
-
-              <textarea
-                className="form-textarea"
-                placeholder={
-                  newMessageType === "meeting_note"
-                    ? "Write minutes of the meeting, action items, or formal notes..."
-                    : "Share feedback, ask questions, or contribute to this decision..."
-                }
-                value={newMessageText}
-                onChange={(e) => setNewMessageText(e.target.value)}
-                rows={4}
-                required
-              />
-
-              <div className="form-file-input-wrapper">
-                <label className="form-file-label">
-                  📎 Attach File (PDF, DOCX, JPG, PNG)
-                  <input
-                    type="file"
-                    className="form-file-input"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
-                  />
-                </label>
-                {selectedFile && (
-                  <div className="form-selected-file">
-                    📄 {selectedFile.name}
-                    <button
-                      type="button"
-                      className="message-action-btn delete"
-                      onClick={() => setSelectedFile(null)}
-                      style={{ border: "none", background: "none", cursor: "pointer", marginLeft: "4px" }}
-                    >
-                      (remove)
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {formError && <div className="auth-message error" style={{ marginBottom: "12px" }}>{formError}</div>}
-
-              <div className="form-actions-row">
-                <button type="submit" className="form-btn primary" disabled={submitting}>
-                  {submitting
-                    ? "Posting..."
-                    : newMessageType === "meeting_note"
-                    ? "Post Meeting Note"
-                    : "Post Comment"}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {loading ? (
-          <p className="dash-card-note">Loading discussion stream...</p>
-        ) : error ? (
-          <div className="auth-message error">{error}</div>
-        ) : (
-          <div className="discussion-stream">
-            {topLevel.length === 0 ? (
-              <p className="dash-card-note">No comments or meeting notes yet. Start the conversation!</p>
-            ) : (
-              topLevel.map((msg) => renderMessageNode(msg))
-            )}
-          </div>
-        )}
+      {/* Tab bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: "4px",
+          borderBottom: "1px solid var(--border, #2E3646)",
+          marginTop: "20px",
+          marginBottom: "20px",
+        }}
+      >
+        {[
+          { key: "alternatives", label: "Alternatives" },
+          { key: "discussion", label: "Discussion" },
+          { key: "history", label: "Version History" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === tab.key ? "2px solid #4FD1B5" : "2px solid transparent",
+              color: activeTab === tab.key ? "#4FD1B5" : "var(--text-secondary, #9AA5B5)",
+              fontWeight: activeTab === tab.key ? 700 : 500,
+              fontSize: "14px",
+              padding: "10px 16px",
+              cursor: "pointer",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* Tab content */}
+      {activeTab === "alternatives" && (
+        <AlternativesPanel token={token} decisionId={decision.id} />
+      )}
+
+      {activeTab === "history" && (
+        <VersionHistory token={token} decisionId={decision.id} />
+      )}
+
+      {activeTab === "discussion" && (
+        <div className="discussion-board">
+          {isClosed ? (
+            <div className="discussion-closed-notice">
+              🔒 This decision has been {decision.status}. Comments and replies are closed.
+            </div>
+          ) : (
+            <div className="comment-form-card">
+              <form onSubmit={handlePostMessage}>
+                <div className="form-tabs">
+                  <button
+                    type="button"
+                    className={`form-tab-btn ${newMessageType === "comment" ? "active" : ""}`}
+                    onClick={() => setNewMessageType("comment")}
+                  >
+                    💬 Add Comment
+                  </button>
+                  <button
+                    type="button"
+                    className={`form-tab-btn ${newMessageType === "meeting_note" ? "active" : ""}`}
+                    onClick={() => setNewMessageType("meeting_note")}
+                  >
+                    📝 Add Meeting Note
+                  </button>
+                </div>
+
+                <textarea
+                  className="form-textarea"
+                  placeholder={
+                    newMessageType === "meeting_note"
+                      ? "Write minutes of the meeting, action items, or formal notes..."
+                      : "Share feedback, ask questions, or contribute to this decision..."
+                  }
+                  value={newMessageText}
+                  onChange={(e) => setNewMessageText(e.target.value)}
+                  rows={4}
+                  required
+                />
+
+                <div className="form-file-input-wrapper">
+                  <label className="form-file-label">
+                    📎 Attach File (PDF, DOCX, JPG, PNG)
+                    <input
+                      type="file"
+                      className="form-file-input"
+                      onChange={(e) => setSelectedFile(e.target.files[0])}
+                    />
+                  </label>
+                  {selectedFile && (
+                    <div className="form-selected-file">
+                      📄 {selectedFile.name}
+                      <button
+                        type="button"
+                        className="message-action-btn delete"
+                        onClick={() => setSelectedFile(null)}
+                        style={{ border: "none", background: "none", cursor: "pointer", marginLeft: "4px" }}
+                      >
+                        (remove)
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {formError && <div className="auth-message error" style={{ marginBottom: "12px" }}>{formError}</div>}
+
+                <div className="form-actions-row">
+                  <button type="submit" className="form-btn primary" disabled={submitting}>
+                    {submitting
+                      ? "Posting..."
+                      : newMessageType === "meeting_note"
+                      ? "Post Meeting Note"
+                      : "Post Comment"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {loading ? (
+            <p className="dash-card-note">Loading discussion stream...</p>
+          ) : error ? (
+            <div className="auth-message error">{error}</div>
+          ) : (
+            <div className="discussion-stream">
+              {topLevel.length === 0 ? (
+                <p className="dash-card-note">No comments or meeting notes yet. Start the conversation!</p>
+              ) : (
+                topLevel.map((msg) => renderMessageNode(msg))
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 export default DecisionDetails;
+

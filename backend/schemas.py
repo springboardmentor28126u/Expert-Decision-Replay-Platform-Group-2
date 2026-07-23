@@ -47,6 +47,7 @@ class DecisionResponse(BaseModel):
     category: str | None
     status: DecisionStatus
     created_by: int
+    creator_name: str | None = None
     attachment_url: str | None
     created_at: datetime
     updated_at: datetime | None
