@@ -40,7 +40,7 @@ class DecisionCreate(BaseModel):
     title: str
     description: str | None = None
     status: str | None = "draft"
-    owner_id: int
+    owner_id: int | None = None
 
 class DecisionOut(BaseModel):
     id: int

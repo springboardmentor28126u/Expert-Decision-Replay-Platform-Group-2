@@ -48,7 +48,23 @@ def get_discussions_for_decision(decision_id: int, db: Session = Depends(get_db)
 
     discussions = db.query(Discussion).filter(Discussion.decision_id == decision_id).all()
     return discussions
+@router.get("/discussion/{discussion_id}", response_model=DiscussionOut)
+def get_discussion(
+    discussion_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    discussion = db.query(Discussion).filter(
+        Discussion.id == discussion_id
+    ).first()
 
+    if not discussion:
+        raise HTTPException(
+            status_code=404,
+            detail="Discussion not found"
+        )
+
+    return discussion
 
 @router.post("/discussion/{discussion_id}/comments", response_model=CommentOut)
 def add_comment(discussion_id: int, comment_in: CommentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

@@ -206,7 +206,10 @@ class AttachmentOut(BaseModel):
 
 class DiscussionCreate(BaseModel):
     title: str
-
+class DecisionUpdate(BaseModel):
+    title: str
+    description: str | None = None
+    status: str | None = "draft"
 class DiscussionOut(BaseModel):
     id: int
     decision_id: int

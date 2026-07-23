@@ -125,10 +125,16 @@ def get_discussion(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    print("Requested ID:", discussion_id)
+
+    all_discussions = db.query(Discussion).all()
+    print("All Discussion IDs:", [d.id for d in all_discussions])
 
     discussion = db.query(Discussion).filter(
         Discussion.id == discussion_id
     ).first()
+
+    print("Found Discussion:", discussion)
 
     if not discussion:
         raise HTTPException(
@@ -137,9 +143,9 @@ def get_discussion(
         )
 
     return discussion
-
 @router.get("/decisions/{decision_id}/rationale", response_model=List[DecisionRationaleOut])
 def get_decision_rationales(decision_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    
     decision = db.query(Decision).filter(Decision.id == decision_id).first()
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
@@ -217,21 +223,21 @@ def download_discussion_attachment(
         path=attachment.filepath,
         filename=attachment.filename
     )
-@router.get("/discussion/{discussion_id}", response_model=DiscussionOut)
-def get_single_discussion(
-    discussion_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+# @router.get("/discussion/{discussion_id}", response_model=DiscussionOut)
+# def get_single_discussion(
+#     discussion_id: int,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     print("Discussion:", discussion)
+#     discussion = db.query(Discussion).filter(
+#         Discussion.id == discussion_id
+#     ).first()
 
-    discussion = db.query(Discussion).filter(
-        Discussion.id == discussion_id
-    ).first()
+#     if not discussion:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Discussion not found"
+#         )
 
-    if not discussion:
-        raise HTTPException(
-            status_code=404,
-            detail="Discussion not found"
-        )
-
-    return discussion
+#     return discussion

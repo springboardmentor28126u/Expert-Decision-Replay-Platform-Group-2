@@ -6,7 +6,7 @@ import uuid
 import shutil
 
 from models import Decision, Alternative, Knowledge, Category, DecisionVersion, Attachment
-from schemas import DecisionCreate, DecisionOut, AlternativeCreate, AlternativeOut, KnowledgeCreate, KnowledgeOut, CategoryAssign, CategoryOut, DecisionStatusUpdate, DecisionVersionOut, AttachmentOut
+from schemas import DecisionCreate, DecisionUpdate, DecisionOut, AlternativeCreate, AlternativeOut, KnowledgeCreate, KnowledgeOut, CategoryAssign, CategoryOut, DecisionStatusUpdate, DecisionVersionOut, AttachmentOut
 from auth import get_current_user, get_db
 
 router = APIRouter()
@@ -85,7 +85,7 @@ def get_decision(
 @router.patch("/{decision_id}", response_model=DecisionOut)
 def update_decision(
     decision_id: int,
-    decision: DecisionCreate,
+    decision: DecisionUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
