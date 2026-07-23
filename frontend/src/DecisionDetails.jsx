@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import VersionHistory from "./VersionHistory";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(decision.title);
+  const [editProblemStatement, setEditProblemStatement] = useState(decision.problem_statement);
+  const [editCategory, setEditCategory] = useState(decision.category || "");
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const isClosed = decision.status === "approved" || decision.status === "rejected";
   
@@ -197,6 +204,25 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
       alert("Failed to edit comment.");
     }
   };
+
+  const handleSaveDecisionEdit = async () => {
+    setEditError("");
+    try {
+    const res = await axios.put(
+      `http://127.0.0.1:8000/decisions/${decision.id}`,
+      {
+        title: editTitle,
+        problem_statement: editProblemStatement,
+        category: editCategory,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (onStatusUpdated) onStatusUpdated(res.data);
+    setIsEditing(false);
+  } catch (err) {
+    setEditError(err?.response?.data?.detail || "Failed to save changes.");
+  }
+};
 
   // Format Dates nicely
   const formatDate = (dateStr) => {
@@ -422,63 +448,146 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
     <div className="decision-details-container">
       {/* Decision Summary Info */}
       <div className="decision-header-card">
-        <div className="decision-title-row">
-          <h1 className="decision-title-main">{decision.title}</h1>
-          <div className="decision-meta-pills">
-            {decision.category && (
-              <span className="decision-category-pill">{decision.category}</span>
+        {isEditing ? (
+          <div>
+            <div className="auth-field">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                style={{ fontSize: "18px", fontWeight: 700 }}
+              />
+            </div>
+            <div className="auth-field">
+              <textarea
+                value={editProblemStatement}
+                onChange={(e) => setEditProblemStatement(e.target.value)}
+                rows={4}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "#12161D",
+                  border: "1px solid #2E3646",
+                  borderRadius: "6px",
+                  color: "#F1F3F6",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+            <div className="auth-field">
+              <input
+                type="text"
+                placeholder="Category"
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+              />
+            </div>
+            {editError && <div className="auth-message error">{editError}</div>}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button className="auth-button" onClick={handleSaveDecisionEdit}>Save Changes</button>
+              <button
+                className="dash-back-btn"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditTitle(decision.title);
+                  setEditProblemStatement(decision.problem_statement);
+                  setEditCategory(decision.category || "");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="decision-title-row">
+              <h1 className="decision-title-main">{decision.title}</h1>
+              <div className="decision-meta-pills">
+                {decision.category && (
+                  <span className="decision-category-pill">{decision.category}</span>
+                )}
+                <span
+                  className="dash-role-badge"
+                  style={{
+                    background:
+                      decision.status === "approved"
+                        ? "rgba(79, 209, 181, 0.12)"
+                        : decision.status === "rejected"
+                        ? "rgba(255, 107, 107, 0.12)"
+                        : decision.status === "under_review"
+                        ? "rgba(242, 166, 35, 0.12)"
+                        : "rgba(154, 165, 181, 0.12)",
+                    color:
+                      decision.status === "approved"
+                        ? "#4FD1B5"
+                        : decision.status === "rejected"
+                        ? "#FF6B6B"
+                        : decision.status === "under_review"
+                        ? "#F2A623"
+                        : "#9AA5B5",
+                  }}
+                >
+                  {decision.status.replace("_", " ")}
+                </span>
+              </div>
+            </div>
+
+            <div className="decision-date">
+              Created on {new Date(decision.created_at).toLocaleDateString()}
+            </div>
+
+            <div className="decision-problem-statement">
+              <strong>Problem Statement:</strong>
+              <p>{decision.problem_statement}</p>
+            </div>
+
+            {decision.attachment_url && (
+              <div style={{ marginTop: "12px" }}>
+                <a
+                  href={`http://127.0.0.1:8000${decision.attachment_url}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#4FD1B5", fontSize: "13px", textDecoration: "none" }}
+                >
+                  📎 View attached file
+                </a>
+              </div>
             )}
-            <span
-              className="dash-role-badge"
-              style={{
-                background:
-                  decision.status === "approved"
-                    ? "rgba(79, 209, 181, 0.12)"
-                    : decision.status === "rejected"
-                    ? "rgba(255, 107, 107, 0.12)"
-                    : decision.status === "under_review"
-                    ? "rgba(242, 166, 35, 0.12)"
-                    : "rgba(154, 165, 181, 0.12)",
-                color:
-                  decision.status === "approved"
-                    ? "#4FD1B5"
-                    : decision.status === "rejected"
-                    ? "#FF6B6B"
-                    : decision.status === "under_review"
-                    ? "#F2A623"
-                    : "#9AA5B5",
-              }}
-            >
-              {decision.status.replace("_", " ")}
-            </span>
-          </div>
-        </div>
 
-        <div className="decision-date">
-          Created on {new Date(decision.created_at).toLocaleDateString()}
-        </div>
+            <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+              <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
+                Edit Decision
+              </button>
+              <button className="dash-back-btn" onClick={() => setShowVersionHistory(!showVersionHistory)}>
+                {showVersionHistory ? "Hide" : "View"} Version History
+              </button>
+            </div>
 
-        <div className="decision-problem-statement">
-          <strong>Problem Statement:</strong>
-          <p>{decision.problem_statement}</p>
-        </div>
+            {showVersionHistory && (
+              <div style={{ marginTop: "16px" }}>
+                <VersionHistory token={token} decisionId={decision.id} />
+              </div>
+            )}
 
-        {/* Manager/Admin Status update options */}
-        {(profile.role === "manager" || profile.role === "admin") && (
-          <div className="status-control-section">
-            <span className="status-control-label">Update Status:</span>
-            <select
-              className="status-select"
-              value={decision.status}
-              onChange={handleStatusChange}
-            >
-              <option value="draft">Draft</option>
-              <option value="under_review">Under Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
+            {(profile.role === "manager" || profile.role === "admin") && (
+              <div className="status-control-section">
+                <span className="status-control-label">Update Status:</span>
+                <select
+                  className="status-select"
+                  value={decision.status}
+                  onChange={handleStatusChange}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            )}
+          </>
         )}
       </div>
 

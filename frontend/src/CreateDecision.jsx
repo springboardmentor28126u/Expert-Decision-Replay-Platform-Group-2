@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import FileUpload from "./FileUpload";
 
 function CreateDecision({ token, onCreated }) {
   const [title, setTitle] = useState("");
@@ -7,6 +8,7 @@ function CreateDecision({ token, onCreated }) {
   const [category, setCategory] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,6 +19,7 @@ function CreateDecision({ token, onCreated }) {
           title,
           problem_statement: problemStatement,
           category,
+          attachment_url: attachmentUrl || null,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -25,6 +28,7 @@ function CreateDecision({ token, onCreated }) {
       setTitle("");
       setProblemStatement("");
       setCategory("");
+      setAttachmentUrl("");
       if (onCreated) onCreated(response.data);
     } catch (error) {
       console.error("Error creating decision:", error);
@@ -75,13 +79,23 @@ function CreateDecision({ token, onCreated }) {
           />
         </div>
         <button type="submit" className="auth-button">Create decision</button>
+        <div className="auth-field">
+          <FileUpload onUploadSuccess={(url) => setAttachmentUrl(url)} />
+          {attachmentUrl && (
+             <p style={{ color: "#4FD1B5", fontSize: "12px", marginTop: "6px" }}>
+                File attached ✓
+             </p>
+         )}
+        </div>
       </form>
       {message && (
         <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }}>
           {message}
         </div>
+        
       )}
     </div>
+       
   );
 }
 

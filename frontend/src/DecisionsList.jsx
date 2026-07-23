@@ -61,6 +61,18 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision }) {
     }
   };
 
+  const handleDelete = async (decisionId) => {
+    if (!window.confirm("Delete this decision permanently?")) return;
+    try {
+      await axios.delete(`http://127.0.0.1:8000/decisions/${decisionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDecisions((prev) => prev.filter((d) => d.id !== decisionId));
+    } catch (err) {
+      alert(err?.response?.data?.detail || "Failed to delete decision.");
+    }
+  };
+
   if (loading) {
     return <p className="dash-card-note">Loading decisions...</p>;
   }
@@ -87,8 +99,9 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision }) {
             <th>Category</th>
             <th>Status</th>
             <th>Created</th>
-            <th>Status Actions</th>
+            {canUpdateStatus && <th>Status Actions</th>}
             <th>Alternatives</th>
+            {role === "admin" && <th>Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -112,8 +125,8 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision }) {
                 </span>
               </td>
               <td>{new Date(d.created_at).toLocaleDateString()}</td>
-              <td>
-                {canUpdateStatus ? (
+              {canUpdateStatus && (
+                <td>
                   <div className="dash-status-actions">
                     <select
                       className="dash-select"
@@ -128,10 +141,8 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision }) {
                       ))}
                     </select>
                   </div>
-                ) : (
-                  <span className="dash-card-note">—</span>
-                )}
-              </td>
+                </td>
+              )}
               <td>
                 <button
                   className="dash-logout"
@@ -141,6 +152,17 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision }) {
                   {selectedDecisionId === d.id ? "Hide" : "Manage"} Alternatives
                 </button>
               </td>
+              {role === "admin" && (
+                <td>
+                  <button
+                    className="dash-logout"
+                    style={{ padding: "6px 10px", borderColor: "#FF6B6B", color: "#FF6B6B" }}
+                    onClick={() => handleDelete(d.id)}
+                  >
+                    Delete
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
