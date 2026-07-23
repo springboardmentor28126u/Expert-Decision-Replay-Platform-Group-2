@@ -1,123 +1,58 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import api from "../services/api";
-import "../styles/login.css";
+import { useNavigate, Link } from "react-router-dom";
+import { loginUser, saveToken } from "../services/api";
+import AuthCard from "../components/AuthCard";
+import "../styles/forms.css";
 
 function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-    const navigate = useNavigate();
+  async function handleSubmit(event) {
+    event.preventDefault();
+    try {
+      const data = await loginUser(email, password);
+      saveToken(data.access_token);
+      setError("");
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Invalid email or password");
+    }
+  }
 
-    const [formData, setFormData] = useState({
-        email: "",
-        password: "",
-    });
-
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
-
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        setError("");
-        setLoading(true);
-
-        try {
-
-            const form = new URLSearchParams();
-
-            form.append("username", formData.email);
-            form.append("password", formData.password);
-
-            const response = await api.post("/login", form, {
-                headers: {
-                    "Content-Type":
-                        "application/x-www-form-urlencoded",
-                },
-            });
-
-            localStorage.setItem(
-                "access_token",
-                response.data.access_token
-            );
-
-            const user = await api.get("/users/me");
-
-            localStorage.setItem(
-                "user",
-                JSON.stringify(user.data)
-            );
-
-            navigate("/dashboard");
-
-        } catch (err) {
-
-            setError(
-                err.response?.data?.detail ||
-                "Invalid Email or Password"
-            );
-
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="login-page">
-
-            <div className="login-card">
-
-                <h1>EDRP</h1>
-
-                <p className="subtitle">
-                    Expert Decision Replay Platform
-                </p>
-
-                <h2>Login</h2>
-
-                {error && <p className="error">{error}</p>}
-
-                <form onSubmit={handleSubmit}>
-
-                    <input
-                        type="email"
-                        name="email"
-                        placeholder="Email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                    />
-
-                    <input
-                        type="password"
-                        name="password"
-                        placeholder="Password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                    />
-
-                    <button type="submit" disabled={loading}>
-                        {loading ? "Logging in..." : "Login"}
-                    </button>
-
-                </form>
-
-                <p className="register-link">
-                    Don't have an account?
-                    <Link to="/register"> Register</Link>
-                </p>
-
-            </div>
-
+  return (
+    <AuthCard
+      title="Sign in to your file"
+      footer={
+        <>Don't have an account? <Link to="/register">Register</Link></>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         </div>
-    );
+        <div className="form-group">
+          <label>Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        {error && <p className="form-error">{error}</p>}
+        <button type="submit" className="btn-primary">Log In</button>
+      </form>
+    </AuthCard>
+  );
 }
 
 export default Login;

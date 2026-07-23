@@ -1,145 +1,173 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../services/api";
-import "../styles/dashboard.css";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  getCurrentUser, getMyDecisions, getPendingReviewDecisions, getAdminStats,
+} from "../services/api";
+import AppHeader from "../components/AppHeader";
+import RoleStamp from "../components/RoleStamp";
+import StatusStamp from "../components/StatusStamp";
+import "./Dashboard.css";
+import MyTeamCard from "../components/MyTeamCard";
+
 
 function Dashboard() {
+  const [user, setUser] = useState(null);
+  const [myDecisions, setMyDecisions] = useState([]);
+  const [pendingReview, setPendingReview] = useState([]);
+  const [adminStats, setAdminStats] = useState(null);
+  const [error, setError] = useState("");
 
-    const navigate = useNavigate();
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const userData = await getCurrentUser();
+        setUser(userData);
 
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+        // Always relevant, regardless of role
+        const mine = await getMyDecisions();
+        setMyDecisions(mine);
 
-    useEffect(() => {
-        fetchCurrentUser();
-    }, []);
-
-    const fetchCurrentUser = async () => {
-
-        try {
-
-            const response = await api.get("/users/me");
-
-            setUser(response.data);
-
-        } catch (error) {
-
-            localStorage.removeItem("access_token");
-
-            navigate("/login");
-
-        } finally {
-
-            setLoading(false);
-
+        // Only Reviewer/Manager/Administrator will get anything meaningful back here
+        if (["Reviewer", "Manager", "Administrator"].includes(userData.role)) {
+          const pending = await getPendingReviewDecisions();
+          setPendingReview(pending);
         }
 
-    };
-
-    const logout = () => {
-
-        localStorage.removeItem("access_token");
-
-        navigate("/login");
-
-    };
-
-    if (loading) {
-
-        return <h2 className="loading">Loading...</h2>;
-
+        // Only Administrators are allowed to call this at all
+        if (userData.role === "Administrator") {
+          const stats = await getAdminStats();
+          setAdminStats(stats);
+        }
+      } catch (err) {
+        setError(err.friendlyMessage);
+      }
     }
 
-    return (
+    loadDashboard();
+  }, []);
 
-        <div className="dashboard">
+  if (!user && !error) {
+    return <p style={{ padding: 40, color: "var(--line)" }}>Loading dashboard...</p>;
+  }
 
-            <header className="dashboard-header">
+  return (
+    <div className="dashboard-page">
+      <AppHeader />
 
-                <h1>EDRP Dashboard</h1>
+      {error && (
+        <p className="form-error" style={{ textAlign: "center", padding: "12px 0", margin: 0 }}>
+          {error}
+        </p>
+      )}
 
-                <button onClick={logout}>
-                    Logout
-                </button>
+      {user && (
+        <div className="dashboard-container">
 
-            </header>
-
-            <div className="welcome-card">
-
-                <h2>Welcome, {user.name}</h2>
-
-                <p>
-                    Manage your profile and teams from here.
-                </p>
-
+          {/* ---- Profile summary ---- */}
+          <div className="record-card">
+            <p className="record-card__eyebrow">Record No. {user.id}</p>
+            <h1 className="record-card__title">{user.name}</h1>
+            <div className="record-field">
+              <span className="record-field__label">Email</span>
+              <span className="record-field__value">{user.email}</span>
             </div>
-
-            <div className="profile-card">
-
-                <h2>User Details</h2>
-
-                <div className="row">
-                    <span>ID</span>
-                    <span>{user.id}</span>
-                </div>
-
-                <div className="row">
-                    <span>Name</span>
-                    <span>{user.name}</span>
-                </div>
-
-                <div className="row">
-                    <span>Email</span>
-                    <span>{user.email}</span>
-                </div>
-
-                <div className="row">
-                    <span>Role</span>
-                    <span>{user.role}</span>
-                </div>
-
+            <div className="record-field">
+              <span className="record-field__label">Role</span>
+              <span className="record-field__value"><RoleStamp role={user.role} /></span>
             </div>
+          </div>
 
-            <div className="action-cards">
+          {/* ---- Admin Stats (Administrator only) ---- */}
+          {adminStats && (
+            <section className="detail-section">
+              <h2 className="detail-section__title">System Overview</h2>
+              <div className="stats-grid">
+                <Link to="/users" className="stat-box stat-box--clickable">
+                  <span className="stat-box__value">{adminStats.total_users}</span>
+                  <span className="stat-box__label">Users</span>
+                </Link>
+                <Link to="/team" className="stat-box stat-box--clickable">
+                  <span className="stat-box__value">{adminStats.total_teams}</span>
+                  <span className="stat-box__label">Teams</span>
+                </Link>
+                <Link to="/decisions" className="stat-box stat-box--clickable">
+                  <span className="stat-box__value">{adminStats.total_decisions}</span>
+                  <span className="stat-box__label">Decisions</span>
+                </Link>
+              </div>
 
-                <div className="card">
+              <div className="status-breakdown">
+                {Object.entries(adminStats.decisions_by_status).map(([status, count]) => (
+                  <Link
+                    to={`/decisions?status=${encodeURIComponent(status)}`}
+                    className="status-breakdown__row"
+                    key={status}
+                    style={{ textDecoration: "none" }}
+                  >
+                    <StatusStamp value={status} />
+                    <span className="status-breakdown__count">{count}</span>
+                  </Link>
+                ))}
+              </div>
+              <Link to="/audit-log" className="btn-ghost-light" style={{ display: "inline-block", marginTop: 16 }}>
+                View Full Audit Log
+              </Link>
+              <Link to="/users" className="btn-ghost-light" style={{ display: "inline-block", marginTop: 16, marginLeft: 12 }}>
+              Manage Users
+            </Link>
+            <Link to="/team" className="btn-ghost-light" style={{ display: "inline-block", marginTop: 16, marginLeft: 18 }}>
+              Manage Teams
+            </Link>
+            </section>
+          )}
 
-                    <h3>Teams</h3>
+          {/* ---- Pending My Review (Reviewer/Manager/Admin only) ---- */}
+          {["Reviewer", "Manager", "Administrator"].includes(user.role) && (
+            <section className="detail-section">
+              <h2 className="detail-section__title">Pending My Review</h2>
+              {pendingReview.length === 0 && (
+                <p className="detail-section__empty">Nothing awaiting your review right now.</p>
+              )}
+              <div className="mini-decision-list">
+                {pendingReview.map((d) => (
+                  <Link to={`/decisions/${d.id}`} key={d.id} className="mini-decision-card">
+                    <span className="mini-decision-card__id">File #{d.id}</span>
+                    <span className="mini-decision-card__title">{d.title}</span>
+                    <StatusStamp value={d.status} />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
-                    <p>
-                        View all teams available in the organization.
-                    </p>
-
-                    <button>
-                        View Teams
-                    </button>
-
-                </div>
-
-                {
-                    user.role === "Administrator" &&
-
-                    <div className="card">
-
-                        <h3>Users</h3>
-
-                        <p>
-                            Manage users and assign roles.
-                        </p>
-
-                        <button>
-                            Manage Users
-                        </button>
-
-                    </div>
-                }
-
+          {/* ---- My Decisions (everyone) ---- */}
+          <section className="detail-section">
+            <div className="detail-section__header">
+              <h2 className="detail-section__title" style={{ border: "none", margin: 0, padding: 0 }}>
+                My Decisions
+              </h2>
+              <Link to="/decisions" className="btn-ghost-light">View All Decisions</Link>
             </div>
+            {myDecisions.length === 0 && (
+              <p className="detail-section__empty">You haven't recorded any decisions yet.</p>
+            )}
+            <div className="mini-decision-list">
+              {myDecisions.map((d) => (
+                <Link to={`/decisions/${d.id}`} key={d.id} className="mini-decision-card">
+                  <span className="mini-decision-card__id">File #{d.id}</span>
+                  <span className="mini-decision-card__title">{d.title}</span>
+                  <StatusStamp value={d.status} />
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <MyTeamCard userRole={user.role} />
 
         </div>
-
-    );
-
+      )}
+    </div>
+  );
 }
 
 export default Dashboard;
