@@ -1,32 +1,62 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useState } from "react";
+import Landing from "./Landing";
+import Login from "./Login";
+import Register from "./Register";
+import ForgotPassword from "./ForgotPassword";
+import Dashboard from "./Dashboard";
 
-import { AuthProvider } from "./auth/AuthContext.jsx";
-import ProtectedRoute from "./auth/ProtectedRoute.jsx";
-import AppShell from "./layouts/AppShell.jsx";
+function App() {
+  const [showLanding, setShowLanding] = useState(true);
+  const [view, setView] = useState("login"); // "login" | "register" | "forgot"
+  const [token, setToken] = useState(() => localStorage.getItem("token") || null);
 
-import LoginPage from "./pages/LoginPage.jsx";
-import RegisterPage from "./pages/RegisterPage.jsx";
-import ProfilePage from "./pages/ProfilePage.jsx";
+  const handleLoginSuccess = (newToken) => {
+    localStorage.setItem("token", newToken);
+    setToken(newToken);
+  };
 
-export default function App() {
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+    setShowLanding(true);
+    setView("login");
+  };
+
+  if (token) {
+    return <Dashboard token={token} onLogout={handleLogout} />;
+  }
+
+  if (showLanding) {
+   return (
+     <Landing
+       onLogin={() => {
+         setShowLanding(false);
+         setView("login");
+       }}
+       onSignup={() => {
+         setShowLanding(false);
+         setView("register");
+       }}
+     />
+    );
+  }
+
+  if (view === "register") {
+    return <Register onSwitch={() => setView("login")} onBackToLanding={() => setShowLanding(true)} />;
+  }
+
+  if (view === "forgot") {
+    return <ForgotPassword onSwitch={() => setView("login")} />;
+  }
+
   return (
-    <AuthProvider>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-
-        {/* Protected Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<Navigate to="/profile" replace />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Route>
-        </Route>
-
-        {/* Catch All */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AuthProvider>
+    <Login
+      onLoginSuccess={handleLoginSuccess}
+      onSwitch={() => setView("register")}
+      onForgotPassword={() => setView("forgot")}
+       onBackToLanding={() => setShowLanding(true)}
+    />
   );
 }
+
+export default App;
