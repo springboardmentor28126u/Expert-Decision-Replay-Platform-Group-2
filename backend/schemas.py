@@ -141,6 +141,7 @@ class DecisionUpdate(BaseModel):
     title: str | None = None
     problem_statement: str | None = None
     category: str | None = None
+    attachment_url: str | None = None
 
 class DecisionVersionResponse(BaseModel):
     id: int

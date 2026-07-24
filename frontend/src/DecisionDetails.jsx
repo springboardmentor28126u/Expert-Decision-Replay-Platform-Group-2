@@ -4,8 +4,9 @@ import VersionHistory from "./VersionHistory";
 import AlternativesPanel from "./AlternativesPanel";
 import "./discussion.css";
 import "./dashboard.css";
+import FileUpload from "./FileUpload";
 
-function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
+function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -13,6 +14,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
   const [editTitle, setEditTitle] = useState(decision.title);
   const [editProblemStatement, setEditProblemStatement] = useState(decision.problem_statement);
   const [editCategory, setEditCategory] = useState(decision.category || "");
+  const [editAttachmentUrl, setEditAttachmentUrl] = useState(decision.attachment_url || "");
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history"
   const [editError, setEditError] = useState("");
@@ -224,6 +226,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
         title: editTitle,
         problem_statement: editProblemStatement,
         category: editCategory,
+        attachment_url: editAttachmentUrl || null,
       },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -470,6 +473,21 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
 
   return (
     <div className="decision-details-container">
+      <button
+        onClick={onBack}
+        style={{
+          background: "none",
+          border: "1px solid var(--border, #2E3646)",
+          color: "var(--text-secondary, #9AA5B5)",
+          padding: "8px 16px",
+          borderRadius: "6px",
+          fontSize: "13px",
+          cursor: "pointer",
+          marginBottom: "16px",
+        }}
+      >
+        ← Back to Decisions
+      </button>
       {/* Decision Summary Info — always visible */}
       <div className="decision-header-card">
         {isEditing ? (
@@ -507,6 +525,33 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated }) {
                 value={editCategory}
                 onChange={(e) => setEditCategory(e.target.value)}
               />
+            </div>
+            <div className="auth-field">
+              <FileUpload onUploadSuccess={(url) => setEditAttachmentUrl(url)} />
+              {editAttachmentUrl ? (
+                <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ color: "#4FD1B5", fontSize: "12px" }}>📎 File attached</span>
+                  {(profile.id === decision.created_by || profile.role === "admin") && (
+                    <button
+                      type="button"
+                      onClick={() => setEditAttachmentUrl("")}
+                      style={{
+                        background: "none",
+                        border: "1px solid #2E3646",
+                        color: "#FF6B6B",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        padding: "2px 8px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✕ Remove
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p style={{ color: "#6B7280", fontSize: "12px", marginTop: "4px" }}>No file attached</p>
+              )}
             </div>
             {editError && <div className="auth-message error">{editError}</div>}
             <div style={{ display: "flex", gap: "10px" }}>

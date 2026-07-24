@@ -16,7 +16,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
 
   return (
     <div className="shell-wrapper">
-      <aside className="shell-sidebar">
+      <aside className="shell-sidebar" style={{ display: "flex", flexDirection: "column" }}>
         <div className="shell-logo">
           <span className="full-name">EDRP</span>
         </div>
@@ -50,6 +50,24 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
             </>
           )}
         </nav>
+
+        <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "4px" }}>
+          <button
+            className={`shell-nav-item ${activeView === "account" ? "active" : ""}`}
+            onClick={() => onNavigate("account")}
+          >
+            <span className="shell-nav-icon">⚙️</span>
+            <span className="label">Account Settings</span>
+          </button>
+          <button
+            className="shell-nav-item"
+            onClick={onLogout}
+            style={{ color: "#F0555A" }}
+          >
+            <span className="shell-nav-icon">🚪</span>
+            <span className="label">Log Out</span>
+          </button>
+        </div>
       </aside>
 
       <div className="shell-main">
@@ -61,11 +79,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}
           </h1>
-          <ProfileMenu
-            profile={profile}
-            onLogout={onLogout}
-            onManageAccount={() => onNavigate("account")}
-          />
+          <ProfileMenu profile={profile} />
         </header>
 
         <main className="shell-content">{children}</main>

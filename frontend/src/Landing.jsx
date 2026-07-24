@@ -54,7 +54,7 @@ function Landing({ onLogin, onSignup }) {
         <div className="landing-feature-card">
           <span className="landing-feature-mark">01</span>
           <h3>Decision Management</h3>
-          <p>Create, track, and move decisions through a structured approval workflow.</p>
+          <p>Create, track, and move decisions through a structured approval workflow — with supporting documents attached where needed.</p>
         </div>
         <div className="landing-feature-card">
           <span className="landing-feature-mark">02</span>
@@ -64,7 +64,12 @@ function Landing({ onLogin, onSignup }) {
         <div className="landing-feature-card">
           <span className="landing-feature-mark">03</span>
           <h3>Discussion &amp; Rationale</h3>
-          <p>Capture comments, meeting notes, and reasoning tied to every decision.</p>
+          <p>Capture comments, meeting notes, file attachments, and reasoning tied to every decision.</p>
+        </div>
+        <div className="landing-feature-card">
+          <span className="landing-feature-mark">04</span>
+          <h3>Version History</h3>
+          <p>Every edit is preserved — see exactly how a decision evolved, and who changed what.</p>
         </div>
       </section>
     </div>

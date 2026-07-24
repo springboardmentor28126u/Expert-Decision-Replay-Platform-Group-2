@@ -228,6 +228,15 @@ def update_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
+    # Only the creator or an admin can change/remove an EXISTING attachment
+    update_data = decision_update.model_dump(exclude_unset=True)
+    if "attachment_url" in update_data and decision.attachment_url:
+        if current_user.id != decision.created_by and current_user.role != UserRole.admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the decision's creator or an admin can change or remove its attachment"
+            )
+
     # Save a version snapshot of the CURRENT state, before making changes
     existing_versions = db.execute(
         select(DecisionVersion).where(DecisionVersion.decision_id == decision_id)

@@ -249,6 +249,7 @@ function Dashboard({ token, onLogout }) {
           token={token}
           profile={profile}
           onStatusUpdated={(updated) => setSelectedDecision(updated)}
+          onBack={() => setActiveView("decisions")}
         />
       )}
 

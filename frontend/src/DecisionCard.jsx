@@ -91,6 +91,14 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
         >
           {decision.status.replace("_", " ")}
         </span>
+          {decision.attachment_url && (
+            <span
+              title="Has attachment"
+              style={{ fontSize: "13px", marginLeft: "6px" }}
+            >
+              📎
+            </span>
+          )}
       </div>
 
       <div
