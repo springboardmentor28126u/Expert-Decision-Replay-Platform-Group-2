@@ -18,12 +18,12 @@ export const Sidebar = () => {
   ];
 
   // Add admin/manager only links
-  if (user?.role?.name === 'Administrator' || user?.role?.name === 'Manager') {
+  if (user?.role === 'admin' || user?.role === 'manager') {
     navItems.push({ name: 'Users', href: '/users', icon: Users });
   }
 
   // Admin only links
-  if (user?.role?.name === 'Administrator') {
+  if (user?.role === 'admin') {
     navItems.push({ name: 'Roles & Permissions', href: '/roles', icon: ShieldCheck });
     navItems.push({ name: 'Settings', href: '/settings', icon: Settings });
   }
@@ -61,7 +61,7 @@ export const Sidebar = () => {
           </div>
           <div className="ml-3 truncate">
             <p className="text-sm font-medium">{user?.full_name}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.role?.name}</p>
+            <p className="text-xs text-muted-foreground truncate capitalize">{user?.role}</p>
           </div>
         </div>
       </div>

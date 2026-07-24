@@ -17,11 +17,8 @@ class TeamService:
 
     @staticmethod
     def get_teams(db: Session) -> List[Team]:
-        """Get all teams with member counts."""
-        teams = db.query(Team).order_by(Team.name).all()
-        for team in teams:
-            team.member_count = len(team.members)
-        return teams
+        """Get all teams."""
+        return db.query(Team).order_by(Team.name).all()
 
     @staticmethod
     def get_team_by_id(db: Session, team_id: UUID) -> Team:
@@ -32,7 +29,6 @@ class TeamService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Team not found",
             )
-        team.member_count = len(team.members)
         return team
 
     @staticmethod
@@ -49,7 +45,6 @@ class TeamService:
         db.add(new_team)
         db.commit()
         db.refresh(new_team)
-        new_team.member_count = 0
         return new_team
 
     @staticmethod
@@ -70,17 +65,11 @@ class TeamService:
 
         db.commit()
         db.refresh(team)
-        team.member_count = len(team.members)
         return team
 
     @staticmethod
     def delete_team(db: Session, team_id: UUID) -> None:
-        """Delete a team (nullifies team_id for all members)."""
+        """Delete a team."""
         team = TeamService.get_team_by_id(db, team_id)
-
-        # Nullify team_id for all members
-        for member in team.members:
-            member.team_id = None
-
         db.delete(team)
         db.commit()

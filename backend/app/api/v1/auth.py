@@ -23,7 +23,7 @@ from app.schemas.auth import (
 from app.schemas.common import MessageResponse
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
-from app.api.deps import get_current_user, oauth2_scheme
+from app.api.deps import get_current_user, get_optional_current_user, oauth2_scheme
 from app.models.user import User
 from app.core.limiter import limiter
 
@@ -68,9 +68,15 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("3/minute")
-def register(request: Request, response: Response, user_data: RegisterRequest, db: Session = Depends(get_db)):
+def register(
+    request: Request, 
+    response: Response, 
+    user_data: RegisterRequest, 
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user)
+):
     """Register a new user and return tokens."""
-    _, access_token, refresh_token = AuthService.register_user(db, user_data)
+    _, access_token, refresh_token = AuthService.register_user(db, user_data, current_user)
     
     _set_refresh_cookie(response, refresh_token)
     
@@ -82,10 +88,10 @@ def register(request: Request, response: Response, user_data: RegisterRequest, d
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
-def login(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends(), login_context: str = Form(default="employee"), db: Session = Depends(get_db)):
+def login(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Login and return tokens (using OAuth2 standard form)."""
     from app.schemas.auth import LoginRequest
-    login_data = LoginRequest(email=form_data.username, password=form_data.password, login_context=login_context)
+    login_data = LoginRequest(email=form_data.username, password=form_data.password)
     
     access_token, refresh_token = AuthService.authenticate_user(db, login_data)
     

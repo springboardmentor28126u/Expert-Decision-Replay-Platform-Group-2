@@ -5,7 +5,8 @@ Request/response schemas for authentication endpoints.
 """
 
 from pydantic import BaseModel, EmailStr, Field
-
+from typing import Optional
+from uuid import UUID
 
 class RegisterRequest(BaseModel):
     """Schema for user registration."""
@@ -19,7 +20,7 @@ class LoginRequest(BaseModel):
     """Schema for user login."""
     email: EmailStr = Field(..., examples=["john.doe@example.com"])
     password: str = Field(..., min_length=1, examples=["StrongP@ss1"])
-    login_context: str = Field(default="employee")
+
 
 
 class TokenResponse(BaseModel):

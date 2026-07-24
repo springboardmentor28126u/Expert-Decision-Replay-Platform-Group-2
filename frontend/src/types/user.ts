@@ -3,18 +3,10 @@ export interface User {
   full_name: string;
   email: string;
   status: 'active' | 'inactive' | 'suspended';
-  role?: Role;
-  team?: Team;
+  role?: string;
   profile?: UserProfile;
   created_at: string;
   updated_at: string;
-}
-
-export interface Role {
-  id: string;
-  name: string;
-  description: string | null;
-  created_at: string;
 }
 
 export interface Team {

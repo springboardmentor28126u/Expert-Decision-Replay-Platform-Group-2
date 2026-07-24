@@ -15,6 +15,7 @@ export interface DecisionListParams {
   category_id?: string;
   search?: string;
   my_only?: boolean;
+  pending_for_me?: boolean;
 }
 
 export const decisionService = {
@@ -68,6 +69,18 @@ export const decisionService = {
   /** Get a specific version snapshot. */
   getVersion: async (decisionId: string, versionNumber: number): Promise<DecisionVersion> => {
     const response = await api.get(`/decisions/${decisionId}/versions/${versionNumber}`);
+    return response.data;
+  },
+
+  /** Revise a REJECTED decision back to DRAFT. */
+  revise: async (id: string): Promise<Decision> => {
+    const response = await api.patch(`/decisions/${id}/revise`);
+    return response.data;
+  },
+
+  /** Set outcome for an approved decision. */
+  setOutcome: async (id: string, outcome: string, outcome_notes?: string): Promise<Decision> => {
+    const response = await api.patch(`/decisions/${id}/outcome`, { outcome, outcome_notes });
     return response.data;
   },
 };

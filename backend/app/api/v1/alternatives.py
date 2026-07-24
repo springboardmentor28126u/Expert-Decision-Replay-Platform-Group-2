@@ -14,7 +14,8 @@ from app.schemas.alternative import AlternativeCreate, AlternativeUpdate, Altern
 from app.schemas.common import MessageResponse
 from app.services.alternative_service import AlternativeService
 from app.models.user import User
-from app.api.deps import get_current_user
+from app.models.decision import Decision
+from app.api.deps import get_current_user, can_access_decision
 
 router = APIRouter()
 
@@ -29,6 +30,11 @@ def list_alternatives(
     current_user: User = Depends(get_current_user),
 ):
     """List all alternatives for a decision."""
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        from fastapi import HTTPException, status as http_status
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Decision not found")
+    can_access_decision(current_user, decision, db)
     return AlternativeService.list_by_decision(db, decision_id)
 
 
@@ -44,6 +50,11 @@ def create_alternative(
     current_user: User = Depends(get_current_user),
 ):
     """Add a new alternative to a decision (decision must be in DRAFT)."""
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        from fastapi import HTTPException, status as http_status
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Decision not found")
+    can_access_decision(current_user, decision, db)
     return AlternativeService.create(db, decision_id, data, current_user.id)
 
 
@@ -59,6 +70,11 @@ def update_alternative(
     current_user: User = Depends(get_current_user),
 ):
     """Update an alternative (decision must be in DRAFT)."""
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        from fastapi import HTTPException, status as http_status
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Decision not found")
+    can_access_decision(current_user, decision, db)
     return AlternativeService.update(db, decision_id, alternative_id, data, current_user.id)
 
 
@@ -73,5 +89,10 @@ def delete_alternative(
     current_user: User = Depends(get_current_user),
 ):
     """Remove an alternative from a decision (decision must be in DRAFT)."""
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        from fastapi import HTTPException, status as http_status
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Decision not found")
+    can_access_decision(current_user, decision, db)
     AlternativeService.delete(db, decision_id, alternative_id, current_user.id)
     return {"message": "Alternative deleted successfully"}

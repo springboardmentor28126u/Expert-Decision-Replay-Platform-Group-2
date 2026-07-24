@@ -12,8 +12,8 @@ from app.database.session import get_db
 from app.schemas.decision_category import DecisionCategoryCreate, DecisionCategoryResponse
 from app.schemas.common import MessageResponse
 from app.models.decision_category import DecisionCategory
-from app.models.user import User
-from app.api.deps import get_current_user, get_current_active_admin
+from app.models.user import User, UserRole
+from app.api.deps import get_current_user, require_role
 
 router = APIRouter()
 
@@ -36,7 +36,7 @@ def list_categories(
 def create_category(
     data: DecisionCategoryCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin),
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
 ):
     """Create a new decision category (Admin only)."""
     existing = db.query(DecisionCategory).filter(DecisionCategory.name == data.name).first()

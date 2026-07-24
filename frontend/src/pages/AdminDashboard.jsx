@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { StatCard } from '../components/dashboard/StatCard';
 import { userService } from '../services/userService';
+import { decisionService } from '../services/decisionService';
 import {
   IconUsers,
   IconClipboard,
@@ -11,33 +12,49 @@ import {
   IconUserCog,
   IconBuildingCommunity,
   IconFileSpreadsheet,
-  IconChartBar,
 } from '@tabler/icons-react';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+};
 
 const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/admin' },
   { label: 'Users', icon: IconUserCog, path: '/dashboard/admin/users' },
   { label: 'Teams', icon: IconBuildingCommunity, path: '/dashboard/admin/teams' },
-  { label: 'Audit Logs', icon: IconFileSpreadsheet, path: '/dashboard/admin/audit' },
-  { label: 'Reports', icon: IconChartBar, path: '/dashboard/admin/reports' },
 ];
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ totalUsers: 0, activeDecisions: 0, orgReports: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
+      setError('');
       try {
-        const usersData = await userService.getUsers({ page: 1, limit: 1 });
+        const [usersData, decStats] = await Promise.all([
+          userService.getUsers({ page: 1, limit: 1 }),
+          decisionService.getStats().catch(() => null),
+        ]);
         setStats({
           totalUsers: usersData.total,
-          activeDecisions: 0,
+          activeDecisions: decStats?.total || 0,
           orgReports: 0,
         });
       } catch (err) {
-        console.error('Failed to fetch admin stats:', err);
+        setError('Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
@@ -47,19 +64,30 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="space-y-6">
+      <motion.div 
+        className="space-y-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Header */}
-        <div>
+        <motion.div variants={itemVariants}>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             System Overview
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Platform-wide statistics and recent activity.
           </p>
-        </div>
+        </motion.div>
+
+        {error && (
+          <motion.div variants={itemVariants} className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">
+            {error}
+          </motion.div>
+        )}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard
             label="Total Users"
             value={stats.totalUsers}
@@ -74,7 +102,7 @@ export default function AdminDashboard() {
             icon={IconClipboard}
             loading={loading}
             index={1}
-            subtitle="Decision module coming Week 3"
+            subtitle="Currently in workflow"
           />
           <StatCard
             label="Org Reports"
@@ -82,19 +110,16 @@ export default function AdminDashboard() {
             icon={IconReport}
             loading={loading}
             index={2}
-            subtitle="Reports module coming Week 6"
+            subtitle="Coming soon"
           />
-        </div>
+        </motion.div>
 
         {/* Recent activity placeholder */}
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 overflow-hidden">
+        <motion.div variants={itemVariants} className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800/60 flex items-center justify-between">
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
               Recent Activity
             </h2>
-            <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 rounded-full px-2.5 py-1">
-              Audit logs coming Week 5
-            </span>
           </div>
           <div className="px-5 py-12 text-center">
             <div className="flex flex-col items-center gap-3">
@@ -111,8 +136,8 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </DashboardLayout>
   );
 }

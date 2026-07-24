@@ -28,7 +28,7 @@ export const authService = {
 
   logout: async (): Promise<MessageResponse> => {
     try {
-      const response = await api.post('/auth/logout', {}, { withCredentials: true });
+      const response = await api.post('/auth/logout');
       return response.data;
     } catch (e) {
       return { message: 'Already logged out or error' };
@@ -47,6 +47,11 @@ export const authService = {
 
   resetPassword: async (token: string, new_password: string): Promise<MessageResponse> => {
     const response = await api.post('/auth/reset-password', { token, new_password });
+    return response.data;
+  },
+
+  changePassword: async (current_password: string, new_password: string): Promise<MessageResponse> => {
+    const response = await api.post('/auth/change-password', { current_password, new_password });
     return response.data;
   },
 };

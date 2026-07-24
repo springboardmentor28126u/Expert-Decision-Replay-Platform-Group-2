@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { decisionService } from '../services/decisionService';
 import { alternativeService } from '../services/alternativeService';
 import { categoryService } from '../services/categoryService';
+import api, { getDefaultGroupId } from '../services/api';
+import type { User } from '../types/user';
 import type {
   DecisionCategory,
   DecisionCreatePayload,
   AlternativeCreatePayload,
-  Alternative,
+  ImpactLevel,
 } from '../types/decision';
 import {
   IconArrowLeft,
@@ -29,7 +31,7 @@ const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/employee' },
   { label: 'My Decisions', icon: IconFileText, path: '/decisions' },
   { label: 'Discussions', icon: IconMessageCircle, path: '/dashboard/employee/discussions' },
-  { label: 'Profile', icon: IconUser, path: '/dashboard/employee/profile' },
+  { label: 'Profile', icon: IconUser, path: '/profile' },
 ];
 
 const steps = ['Basic Info', 'Alternatives', 'Review & Submit'];
@@ -45,51 +47,104 @@ export default function CreateDecision() {
   const [currentStep, setCurrentStep] = useState(0);
   const [categories, setCategories] = useState<DecisionCategory[]>([]);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false); // prevent double-submit race
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [decisionId, setDecisionId] = useState<string | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
+  const [categoriesError, setCategoriesError] = useState('');
+  const [companyAdmins, setCompanyAdmins] = useState<User[]>([]);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   // Step 1 — Basic Info
   const [title, setTitle] = useState('');
   const [problemStatement, setProblemStatement] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [impactLevel, setImpactLevel] = useState('medium');
+  const [impactLevel, setImpactLevel] = useState<string>('medium');
   const [targetDate, setTargetDate] = useState('');
 
   // Step 2 — Alternatives
   const [alternatives, setAlternatives] = useState<AlternativeForm[]>([]);
   const [savingAlt, setSavingAlt] = useState<string | null>(null);
+  const savingAltRef = useRef<Record<string, boolean>>({});
 
+  // Track if form is dirty for unsaved-changes guard
+  const isDirty = title.length > 0 || problemStatement.length > 0 || categoryId !== '' || alternatives.length > 0;
+
+  // Warn before tab close (browser navigation only)
   useEffect(() => {
-    categoryService.list().then(setCategories).catch(console.error);
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  const loadCategories = useCallback(async () => {
+    setCategoriesError('');
+    try {
+      const data = await categoryService.list();
+      setCategories(data);
+    } catch {
+      setCategoriesError('Failed to load categories');
+    }
   }, []);
 
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  useEffect(() => {
+    const gid = getDefaultGroupId();
+    if (gid) setGroupId(gid);
+  }, []);
+
+  useEffect(() => {
+    if (!groupId) {
+      api.get('/users/admins')
+        .then(res => setCompanyAdmins(res.data))
+        .catch(() => {});
+    }
+  }, [groupId]);
+
   // ─── Step navigation ──────────────────────────────────────
-  const canProceedStep1 = title.length >= 3 && problemStatement.length >= 10 && categoryId;
-  const canProceedStep2 = alternatives.length >= 1 && alternatives.some(a => a.is_recommended) && alternatives.every(a => a._saved);
+  const canProceedStep1 = title.length >= 3 && problemStatement.length >= 10 && categoryId && groupId;
+  const canProceedStep2 = alternatives.length >= 2 && alternatives.some(a => a.is_recommended) && alternatives.every(a => a._saved);
 
   const handleNext = async () => {
     setError('');
     if (currentStep === 0) {
       // Save the decision (create draft)
       if (!decisionId) {
+        if (savingRef.current) return; // prevent double submit
+        savingRef.current = true;
         setSaving(true);
         try {
           const payload: DecisionCreatePayload = {
             title,
             problem_statement: problemStatement,
             category_id: categoryId,
-            impact_level: impactLevel as any,
+            impact_level: impactLevel as ImpactLevel,
+            group_id: groupId || '',
             target_date: targetDate || null,
           };
           const decision = await decisionService.create(payload);
           setDecisionId(decision.id);
         } catch (err: any) {
-          setError(err.response?.data?.detail || 'Failed to create decision');
+          if (err.response?.status === 401) {
+            setSessionExpired(true);
+          } else {
+            setError(err.response?.data?.detail || 'Failed to create decision');
+          }
           setSaving(false);
+          savingRef.current = false;
           return;
         }
         setSaving(false);
+        savingRef.current = false;
       }
       setCurrentStep(1);
     } else if (currentStep === 1) {
@@ -99,8 +154,8 @@ export default function CreateDecision() {
         setError('Please save all alternatives before proceeding.');
         return;
       }
-      if (alternatives.length < 1) {
-        setError('At least one alternative is required.');
+      if (alternatives.length < 2) {
+        setError('At least two alternatives are required.');
         return;
       }
       if (!alternatives.some(a => a.is_recommended)) {
@@ -124,8 +179,8 @@ export default function CreateDecision() {
         _key: Date.now().toString(),
         title: '',
         description: '',
-        pros: [''],
-        cons: [''],
+        pros: [],
+        cons: [],
         estimated_cost: null,
         feasibility_score: 5,
         risk_level: 'medium',
@@ -168,10 +223,15 @@ export default function CreateDecision() {
   };
 
   const saveAlternative = async (alt: AlternativeForm) => {
-    if (!decisionId) return;
+    if (!decisionId) {
+      setError('Please complete Step 1 (Basic Info) first before saving alternatives.');
+      return;
+    }
+    if (savingAltRef.current[alt._key]) return;
+    savingAltRef.current[alt._key] = true;
     setSavingAlt(alt._key);
     try {
-      const payload: AlternativeCreatePayload = {
+      const payload = {
         title: alt.title,
         description: alt.description || undefined,
         pros: alt.pros.filter(p => p.trim()),
@@ -182,22 +242,32 @@ export default function CreateDecision() {
         is_recommended: alt.is_recommended,
       };
       if (alt._id) {
-        // Update existing
-        await alternativeService.update(decisionId, alt._id, payload);
+        const updated = await alternativeService.update(decisionId, alt._id, payload);
         setAlternatives(prev =>
-          prev.map(a => a._key === alt._key ? { ...a, _saved: true } : a)
+          prev.map(a => a._key === alt._key ? { ...a, _saved: true, updated_at: updated.updated_at } : a)
         );
       } else {
-        // Create new
         const created = await alternativeService.create(decisionId, payload);
         setAlternatives(prev =>
-          prev.map(a => a._key === alt._key ? { ...a, _id: created.id, _saved: true } : a)
+          prev.map(a => a._key === alt._key ? {
+            ...a,
+            _id: created.id,
+            _saved: true,
+            created_at: created.created_at,
+            updated_at: created.updated_at,
+          } : a)
         );
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to save alternative');
+      if (err.response?.status === 401) {
+        setSessionExpired(true);
+      } else {
+        setError(err.response?.data?.detail || 'Failed to save alternative');
+      }
+    } finally {
+      setSavingAlt(null);
+      delete savingAltRef.current[alt._key];
     }
-    setSavingAlt(null);
   };
 
   const deleteAlternative = async (alt: AlternativeForm) => {
@@ -227,14 +297,38 @@ export default function CreateDecision() {
       await decisionService.submit(decisionId);
       navigate(`/decisions/${decisionId}`);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to submit decision');
+      if (err.response?.status === 401) {
+        setSessionExpired(true);
+      } else {
+        setError(err.response?.data?.detail || 'Failed to submit decision');
+      }
       setSubmitting(false);
     }
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (decisionId) {
       navigate(`/decisions/${decisionId}`);
+    } else if (title && problemStatement && categoryId) {
+      // Save draft first, then navigate
+      try {
+        const payload: DecisionCreatePayload = {
+          title,
+          problem_statement: problemStatement,
+          category_id: categoryId,
+          impact_level: impactLevel as ImpactLevel,
+          group_id: groupId || '',
+          target_date: targetDate || null,
+        };
+        const decision = await decisionService.create(payload);
+        navigate(`/decisions/${decision.id}`);
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          setSessionExpired(true);
+        } else {
+          navigate('/decisions');
+        }
+      }
     } else {
       navigate('/decisions');
     }
@@ -263,6 +357,7 @@ export default function CreateDecision() {
         </div>
 
         {/* Steps indicator */}
+        {groupId && (
         <div className="flex items-center gap-2">
           {steps.map((step, idx) => (
             <div key={step} className="flex items-center gap-2 flex-1">
@@ -290,6 +385,7 @@ export default function CreateDecision() {
             </div>
           ))}
         </div>
+        )}
 
         {/* Error banner */}
         {error && (
@@ -299,10 +395,93 @@ export default function CreateDecision() {
           </div>
         )}
 
+        {sessionExpired ? (
+          <div className="max-w-md mx-auto mt-8 p-8 bg-white dark:bg-gray-900/80 rounded-2xl border border-red-200 dark:border-red-800/40 shadow-sm">
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                <IconAlertCircle size={28} className="text-red-500" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Session Expired
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                Your session has expired. Please log in again to continue.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => navigate('/login?redirect=/decisions/new')}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors"
+                >
+                  Go to Login
+                </button>
+                <button
+                  onClick={() => navigate('/')}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Back to Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : !groupId ? (
+          <div className="max-w-md mx-auto mt-8 p-8 bg-white dark:bg-gray-900/80 rounded-2xl border border-amber-200 dark:border-amber-800/40 shadow-sm">
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                <IconAlertCircle size={28} className="text-amber-500" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Group Assigned
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                You need to be a member of a group before you can create decisions.
+              </p>
+
+              {companyAdmins.length > 0 && (
+                <div className="mb-6 text-left">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                    Contact your company admin:
+                  </p>
+                  <ul className="space-y-2.5">
+                    {companyAdmins.map((admin) => (
+                      <li key={admin.id}>
+                        <a
+                          href={`mailto:${admin.email}?subject=${encodeURIComponent('Group Access Request for Decision Creation')}&body=${encodeURIComponent(`Hi ${admin.full_name},\n\nI need to be assigned to a group to create decisions in the platform. Could you please add me to a group?\n\nThank you.`)}`}
+                          className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                        >
+                          <span className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-medium text-xs">
+                            {admin.full_name.charAt(0).toUpperCase()}
+                          </span>
+                          <span>{admin.full_name}</span>
+                          <span className="text-gray-400 text-xs ml-auto">→</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <button
+                onClick={() => navigate('/')}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <IconArrowLeft size={16} />
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Step 1 — Basic Info */}
         {currentStep === 0 && (
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 p-6 space-y-5">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h2>
+
+            {categoriesError && (
+              <div className="flex items-center justify-between p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
+                <span>{categoriesError}</span>
+                <button onClick={loadCategories} className="text-sm font-medium underline hover:no-underline">Retry</button>
+              </div>
+            )}
 
             <div>
               <label htmlFor="decision-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -397,7 +576,7 @@ export default function CreateDecision() {
             </div>
 
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Add at least one alternative and mark at least one as recommended (★). Save each alternative before proceeding.
+              Add at least two alternatives and mark at least one as recommended (★). Save each alternative before proceeding.
             </p>
 
             {alternatives.length === 0 && (
@@ -415,35 +594,24 @@ export default function CreateDecision() {
             {alternatives.map((alt) => (
               <div
                 key={alt._key}
-                className={`rounded-2xl border bg-white dark:bg-gray-900/80 p-5 space-y-4 transition-colors ${alt._saved
+                className={`rounded-2xl border bg-white dark:bg-gray-900/80 p-6 space-y-5 shadow-sm transition-all duration-200 ${alt._saved
                     ? 'border-green-200 dark:border-green-800/40'
                     : 'border-gray-200 dark:border-gray-800/60'
                   }`}
               >
-                <div className="flex items-center justify-between">
+                {/* Card header */}
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    Alternative {alternatives.findIndex(a => a._key === alt._key) + 1}
+                  </span>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleRecommended(alt._key)}
-                      className={`p-1 rounded-lg transition-colors ${alt.is_recommended
-                          ? 'text-amber-500 hover:text-amber-600'
-                          : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'
-                        }`}
-                      title={alt.is_recommended ? 'Recommended' : 'Mark as recommended'}
-                    >
-                      {alt.is_recommended ? <IconStarFilled size={20} /> : <IconStar size={20} />}
-                    </button>
-                    <input
-                      type="text"
-                      value={alt.title}
-                      onChange={(e) => updateAlternative(alt._key, 'title', e.target.value)}
-                      placeholder="Alternative title"
-                      className="text-base font-semibold text-gray-900 dark:text-white bg-transparent border-none outline-none placeholder:text-gray-400 flex-1"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {alt._saved && (
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full">
-                        Saved
+                    {alt._saved ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-0.5 rounded-full">
+                        <IconCheck size={12} /> Saved
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 px-2.5 py-0.5 rounded-full">
+                        <span className="h-1.5 w-1.5 rounded-full bg-gray-300 dark:bg-gray-600" /> Unsaved
                       </span>
                     )}
                     <button
@@ -455,17 +623,37 @@ export default function CreateDecision() {
                   </div>
                 </div>
 
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleRecommended(alt._key)}
+                    className={`p-1 rounded-lg transition-colors ${alt.is_recommended
+                        ? 'text-amber-500 hover:text-amber-600'
+                        : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'
+                      }`}
+                    title={alt.is_recommended ? 'Recommended' : 'Mark as recommended'}
+                  >
+                    {alt.is_recommended ? <IconStarFilled size={20} /> : <IconStar size={20} />}
+                  </button>
+                  <input
+                    type="text"
+                    value={alt.title}
+                    onChange={(e) => updateAlternative(alt._key, 'title', e.target.value)}
+                    placeholder="Alternative title"
+                    className="text-base font-semibold text-gray-900 dark:text-white bg-transparent border-none outline-none placeholder:text-gray-400 flex-1"
+                  />
+                </div>
+
                 <textarea
                   value={alt.description || ''}
                   onChange={(e) => updateAlternative(alt._key, 'description', e.target.value)}
                   placeholder="Describe this alternative..."
-                  rows={2}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Pros */}
-                  <div>
+                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-xl p-3">
                     <label className="block text-xs font-semibold text-green-700 dark:text-green-400 mb-1.5 uppercase tracking-wide">
                       Pros
                     </label>
@@ -496,7 +684,7 @@ export default function CreateDecision() {
                   </div>
 
                   {/* Cons */}
-                  <div>
+                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl p-3">
                     <label className="block text-xs font-semibold text-red-700 dark:text-red-400 mb-1.5 uppercase tracking-wide">
                       Cons
                     </label>
@@ -539,7 +727,7 @@ export default function CreateDecision() {
                         updateAlternative(alt._key, 'estimated_cost', e.target.value ? Number(e.target.value) : null)
                       }
                       placeholder="0"
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                     />
                   </div>
                   <div>
@@ -554,7 +742,7 @@ export default function CreateDecision() {
                       onChange={(e) =>
                         updateAlternative(alt._key, 'feasibility_score', e.target.value ? Number(e.target.value) : null)
                       }
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                     />
                   </div>
                   <div>
@@ -564,7 +752,7 @@ export default function CreateDecision() {
                     <select
                       value={alt.risk_level}
                       onChange={(e) => updateAlternative(alt._key, 'risk_level', e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -573,18 +761,22 @@ export default function CreateDecision() {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex flex-col gap-2">
                   <button
                     onClick={() => saveAlternative(alt)}
-                    disabled={!alt.title || savingAlt === alt._key}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-medium shadow-sm shadow-indigo-600/20 transition-all duration-150"
                   >
                     {savingAlt === alt._key ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Saving...
+                      </>
                     ) : (
-                      <IconCheck size={16} />
+                      <>
+                        <IconCheck size={16} />
+                        {alt._id ? 'Update' : 'Save'} Alternative
+                      </>
                     )}
-                    {alt._id ? 'Update' : 'Save'} Alternative
                   </button>
                 </div>
               </div>
@@ -645,7 +837,7 @@ export default function CreateDecision() {
                       <div className="flex gap-6 text-xs text-gray-500 dark:text-gray-400">
                         <span>Pros: {alt.pros.filter(p => p.trim()).length}</span>
                         <span>Cons: {alt.cons.filter(c => c.trim()).length}</span>
-                        {alt.estimated_cost != null && <span>Cost: ₹{alt.estimated_cost.toLocaleString()}</span>}
+                        {alt.estimated_cost != null && <span>Cost: ₹{Number(alt.estimated_cost).toLocaleString()}</span>}
                         {alt.feasibility_score != null && <span>Feasibility: {alt.feasibility_score}/10</span>}
                         <span className="capitalize">Risk: {alt.risk_level}</span>
                       </div>
@@ -708,7 +900,15 @@ export default function CreateDecision() {
               </button>
             )}
           </div>
+          {currentStep === 1 && !canProceedStep2 && (
+            <p className="text-xs text-gray-400 text-right mt-2">
+              {alternatives.length < 2 && `Need ${2 - alternatives.length} more alternative${2 - alternatives.length > 1 ? 's' : ''}. `}
+              {!alternatives.some(a => a.is_recommended) && `Mark one as recommended (★). `}
+              {!alternatives.every(a => a._saved) && `Save all alternatives first.`}
+            </p>
+          )}
         </div>
+        </>)}
       </div>
     </DashboardLayout>
   );

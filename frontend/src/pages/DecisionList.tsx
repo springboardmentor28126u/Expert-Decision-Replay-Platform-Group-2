@@ -23,7 +23,7 @@ const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/employee' },
   { label: 'My Decisions', icon: IconFileText, path: '/decisions' },
   { label: 'Discussions', icon: IconMessageCircle, path: '/dashboard/employee/discussions' },
-  { label: 'Profile', icon: IconUser, path: '/dashboard/employee/profile' },
+  { label: 'Profile', icon: IconUser, path: '/profile' },
 ];
 
 const impactColors: Record<string, string> = {
@@ -41,6 +41,7 @@ export default function DecisionList() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -57,6 +58,7 @@ export default function DecisionList() {
 
   const fetchDecisions = async () => {
     setLoading(true);
+    setError('');
     try {
       const data = await decisionService.list({
         skip: (page - 1) * limit,
@@ -69,8 +71,8 @@ export default function DecisionList() {
       setDecisions(data.items);
       setTotal(data.total);
       setPages(data.pages);
-    } catch (err) {
-      console.error('Failed to fetch decisions', err);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to load decisions');
     } finally {
       setLoading(false);
     }
@@ -82,13 +84,28 @@ export default function DecisionList() {
     fetchDecisions();
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('');
+    setCategoryFilter('');
+    setMyOnly(true);
+    setPage(1);
   };
+
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return '—';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return '—';
+    }
+  };
+
+  const hasActiveFilters = search || statusFilter || categoryFilter || !myOnly;
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
@@ -165,10 +182,14 @@ export default function DecisionList() {
                 onChange={(e) => { setMyOnly(e.target.checked); setPage(1); }}
                 className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="text-gray-700 dark:text-gray-300">My Only</span>
+              <span className="text-gray-700 dark:text-gray-300">My decisions only</span>
             </label>
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">{error}</div>
+        )}
 
         {/* Decision List */}
         <div className="space-y-3">
@@ -184,19 +205,28 @@ export default function DecisionList() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    No decisions found
+                    {hasActiveFilters ? 'No results match your filters' : 'No decisions found'}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    Create your first decision to get started.
+                    {hasActiveFilters ? 'Try adjusting your search or filters.' : 'Create your first decision to get started.'}
                   </p>
                 </div>
-                <button
-                  onClick={() => navigate('/decisions/new')}
-                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-medium transition-colors"
-                >
-                  <IconPlus size={16} />
-                  Create Decision
-                </button>
+                {hasActiveFilters ? (
+                  <button
+                    onClick={clearFilters}
+                    className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    Clear all filters
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => navigate('/decisions/new')}
+                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-medium transition-colors"
+                  >
+                    <IconPlus size={16} />
+                    Create Decision
+                  </button>
+                )}
               </div>
             </div>
           ) : (

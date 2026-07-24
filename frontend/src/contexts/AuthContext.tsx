@@ -1,8 +1,9 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AuthState } from '../types/auth';
 import { authService } from '../services/authService';
-import { setAccessToken } from '../services/api';
-import axios from 'axios';
+import api, { setAccessToken, setOnAuthFailure, setCompanyId, setDefaultGroupId } from '../services/api';
+import { companyService, CompanyWithRole } from '../services/companyService';
+import { groupService, Group } from '../services/groupService';
 
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true';
 
@@ -11,16 +12,16 @@ const mockUser = {
   full_name: 'Dev User',
   email: 'dev@local.host',
   status: 'active' as const,
-  role: { id: '1', name: 'Administrator', description: null, created_at: '' },
+  role: 'admin',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
 
 const roleHierarchy: Record<string, number> = {
-  Employee: 0,
-  Reviewer: 1,
-  Manager: 2,
-  Administrator: 3,
+  employee: 0,
+  reviewer: 1,
+  manager: 2,
+  admin: 3,
 };
 
 function getDashboardPath(roleName: string | undefined): string {
@@ -35,6 +36,12 @@ interface AuthContextType extends AuthState {
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
   getDashboardPath: () => string;
+  companies: CompanyWithRole[];
+  groups: Group[];
+  currentCompanyId: string | null;
+  currentGroupId: string | null;
+  switchCompany: (companyId: string) => Promise<void>;
+  switchGroup: (groupId: string) => void;
 }
 
 const initialState: AuthState = {
@@ -48,8 +55,24 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>(initialState);
+  const [companies, setCompanies] = useState<CompanyWithRole[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
+  const [currentGroupId, setCurrentGroupId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Register auth failure callback so the API interceptor
+    // can clear React state instead of hard-redirecting
+    setOnAuthFailure(() => {
+      setAccessToken(null);
+      setState({
+        isAuthenticated: false,
+        user: null,
+        isLoading: false,
+        error: null,
+      });
+    });
+
     const initAuth = async () => {
       if (SKIP_AUTH) {
         setState({
@@ -62,11 +85,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       try {
-        const response = await axios.post('http://localhost:8000/api/v1/auth/refresh', {}, { withCredentials: true });
+        const response = await api.post('/auth/refresh');
         const { access_token } = response.data;
         setAccessToken(access_token);
 
         const user = await authService.getCurrentUser();
+        await fetchAndSetCompany();
         setState({
           isAuthenticated: true,
           user,
@@ -83,6 +107,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     initAuth();
+
+    return () => {
+      setOnAuthFailure(null);
+    };
+  }, []);
+
+  const fetchAndSetCompany = async () => {
+    try {
+      const companiesList = await companyService.getMyCompany();
+      setCompanies(companiesList);
+      if (companiesList.length > 0) {
+        const firstCompany = companiesList[0];
+        setCurrentCompanyId(firstCompany.id);
+        setCompanyId(firstCompany.id);
+        const groupsList = await groupService.list(firstCompany.id);
+        setGroups(groupsList);
+        if (groupsList.length > 0) {
+          setCurrentGroupId(groupsList[0].id);
+          setDefaultGroupId(groupsList[0].id);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch company info:', err);
+    }
+  };
+
+  const switchCompany = useCallback(async (companyId: string) => {
+    setCurrentCompanyId(companyId);
+    setCompanyId(companyId);
+    try {
+      const groupsList = await groupService.list(companyId);
+      setGroups(groupsList);
+      if (groupsList.length > 0) {
+        setCurrentGroupId(groupsList[0].id);
+        setDefaultGroupId(groupsList[0].id);
+      } else {
+        setCurrentGroupId(null);
+        setDefaultGroupId(null);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch groups for company:', err);
+      setGroups([]);
+      setCurrentGroupId(null);
+      setDefaultGroupId(null);
+    }
+  }, []);
+
+  const switchGroup = useCallback((groupId: string) => {
+    setCurrentGroupId(groupId);
+    setDefaultGroupId(groupId);
   }, []);
 
   const login = async (credentials: any) => {
@@ -100,13 +174,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authService.login(credentials);
       setAccessToken(response.access_token);
 
-      const user = await authService.getCurrentUser();
-      setState({
-        isAuthenticated: true,
-        user,
-        isLoading: false,
-        error: null,
-      });
+        const user = await authService.getCurrentUser();
+        await fetchAndSetCompany();
+        setState({
+          isAuthenticated: true,
+          user,
+          isLoading: false,
+          error: null,
+        });
     } catch (error: any) {
       // Extract the real error message from the backend response
       const detail = error.response?.data?.detail;
@@ -144,6 +219,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // getCurrentUser failure does NOT mask a successful registration.
       try {
         const user = await authService.getCurrentUser();
+        await fetchAndSetCompany();
         setState({
           isAuthenticated: true,
           user,
@@ -200,8 +276,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  if (state.isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+      </div>
+    );
+  }
+
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, getDashboardPath: () => getDashboardPath(state.user?.role?.name) }}>
+    <AuthContext.Provider value={{
+      ...state,
+      login,
+      register,
+      logout,
+      getDashboardPath: () => getDashboardPath(state.user?.role),
+      companies,
+      groups,
+      currentCompanyId,
+      currentGroupId,
+      switchCompany,
+      switchGroup,
+    }}>
       {children}
     </AuthContext.Provider>
   );

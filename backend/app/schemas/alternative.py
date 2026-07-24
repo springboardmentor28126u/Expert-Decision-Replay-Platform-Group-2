@@ -13,7 +13,7 @@ from decimal import Decimal
 
 class AlternativeCreate(BaseModel):
     """Schema for adding an alternative to a decision."""
-    title: str = Field(..., min_length=1, max_length=255)
+    title: str = Field(default="", max_length=255)
     description: Optional[str] = None
     pros: List[str] = Field(default_factory=list)
     cons: List[str] = Field(default_factory=list)

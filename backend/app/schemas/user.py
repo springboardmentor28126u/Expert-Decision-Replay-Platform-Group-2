@@ -9,9 +9,6 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
-from app.schemas.role import RoleResponse
-from app.schemas.team import TeamResponse
-
 
 class UserProfileBase(BaseModel):
     """Base schema for user profile data."""
@@ -45,10 +42,8 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    """Schema for creating a new user (admin endpoint)."""
+    """Schema for creating a new user."""
     password: str = Field(..., min_length=8, max_length=128)
-    role_id: Optional[UUID] = None
-    team_id: Optional[UUID] = None
 
 
 class UserUpdate(BaseModel):
@@ -58,14 +53,18 @@ class UserUpdate(BaseModel):
     status: Optional[str] = None
 
 
+class AssignRoleRequest(BaseModel):
+    """Schema for assigning a role to a user."""
+    role: str = Field(..., min_length=1)
+
+
 class UserResponse(BaseModel):
     """Schema for user in API responses."""
     id: UUID
     full_name: str
     email: str
     status: str
-    role: Optional[RoleResponse] = None
-    team: Optional[TeamResponse] = None
+    role: str = "employee"
     profile: Optional[UserProfileResponse] = None
     created_at: datetime
     updated_at: datetime
@@ -73,12 +72,3 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
-class AssignRoleRequest(BaseModel):
-    """Schema for assigning a role to a user."""
-    role_id: UUID
-
-
-class AssignTeamRequest(BaseModel):
-    """Schema for assigning a user to a team."""
-    team_id: UUID

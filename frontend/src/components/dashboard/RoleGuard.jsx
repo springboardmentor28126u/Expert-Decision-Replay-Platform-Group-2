@@ -2,10 +2,10 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 const roleHierarchy = {
-  Employee: 0,
-  Reviewer: 1,
-  Manager: 2,
-  Administrator: 3,
+  employee: 0,
+  reviewer: 1,
+  manager: 2,
+  admin: 3,
 };
 
 const dashboardRoles = {
@@ -14,7 +14,7 @@ const dashboardRoles = {
   '/dashboard/admin': 3,
 };
 
-export function RoleGuard({ children, requiredRole }) {
+export function RoleGuard({ children, requiredRole = 'employee' }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -29,8 +29,8 @@ export function RoleGuard({ children, requiredRole }) {
     return <Navigate to="/login" replace />;
   }
 
-  const userRoleLevel = roleHierarchy[user.role?.name] ?? -1;
-  const requiredLevel = roleHierarchy[requiredRole] ?? 0;
+  const userRoleLevel = roleHierarchy[user.role] ?? -1;
+  const requiredLevel = roleHierarchy[requiredRole.toLowerCase()] ?? 0;
 
   if (userRoleLevel < requiredLevel) {
     return <Navigate to="/login" replace />;

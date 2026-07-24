@@ -8,11 +8,8 @@ from typing import List, Tuple, Optional
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
-from app.models.user import User, UserStatus
-from app.models.role import Role
-from app.models.team import Team
+from app.models.user import User, UserStatus, UserRole
 from app.models.user_profile import UserProfile
 from app.schemas.user import UserCreate, UserUpdate, UserProfileUpdate
 from app.core.security import hash_password
@@ -25,17 +22,19 @@ class UserService:
         db: Session, 
         skip: int = 0, 
         limit: int = 100, 
-        role_id: Optional[UUID] = None,
-        team_id: Optional[UUID] = None,
+        role: Optional[str] = None,
         search: Optional[str] = None
     ) -> Tuple[List[User], int]:
-        """Get paginated users with optional filtering."""
+        """Get paginated users with optional search and role filter."""
         query = db.query(User)
         
-        if role_id:
-            query = query.filter(User.role_id == role_id)
-        if team_id:
-            query = query.filter(User.team_id == team_id)
+        if role:
+            try:
+                role_enum = UserRole(role)
+                query = query.filter(User.role == role_enum)
+            except ValueError:
+                pass
+        
         if search:
             search_term = f"%{search}%"
             query = query.filter(
@@ -56,7 +55,7 @@ class UserService:
         
     @staticmethod
     def create_user(db: Session, user_data: UserCreate) -> User:
-        """Create a new user (Admin functionality)."""
+        """Create a new user."""
         existing_user = db.query(User).filter(User.email == user_data.email.lower()).first()
         if existing_user:
             raise HTTPException(
@@ -64,23 +63,10 @@ class UserService:
                 detail="Email already registered"
             )
             
-        # Get role
-        role_id = user_data.role_id
-        if not role_id:
-            role = db.query(Role).filter(Role.name == "Employee").first()
-            if not role:
-                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Default role 'Employee' not found"
-                )
-            role_id = role.id
-            
         new_user = User(
             full_name=user_data.full_name,
             email=user_data.email.lower(),
             password_hash=hash_password(user_data.password),
-            role_id=role_id,
-            team_id=user_data.team_id
         )
         db.add(new_user)
         db.flush()
@@ -132,34 +118,39 @@ class UserService:
         return user
 
     @staticmethod
-    def assign_role(db: Session, user_id: UUID, role_id: UUID) -> User:
-        """Assign a new role to a user."""
-        user = UserService.get_user_by_id(db, user_id)
-        role = db.query(Role).filter(Role.id == role_id).first()
-        if not role:
-             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
-             
-        user.role_id = role.id
-        db.commit()
-        db.refresh(user)
-        return user
-
-    @staticmethod
-    def assign_team(db: Session, user_id: UUID, team_id: UUID) -> User:
-        """Assign a user to a team."""
-        user = UserService.get_user_by_id(db, user_id)
-        team = db.query(Team).filter(Team.id == team_id).first()
-        if not team:
-             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-             
-        user.team_id = team.id
-        db.commit()
-        db.refresh(user)
-        return user
-
-    @staticmethod
     def deactivate_user(db: Session, user_id: UUID) -> None:
         """Soft delete a user."""
         user = UserService.get_user_by_id(db, user_id)
         user.status = UserStatus.INACTIVE
         db.commit()
+
+    @staticmethod
+    def get_company_admins(db: Session, company_id: UUID) -> list["User"]:
+        """Get all active admin users for a company."""
+        from app.models.membership import Membership, CompanyRole
+        return (
+            db.query(User)
+            .join(Membership, Membership.user_id == User.id)
+            .filter(
+                Membership.company_id == company_id,
+                Membership.role == CompanyRole.ADMIN,
+                User.status == UserStatus.ACTIVE,
+            )
+            .all()
+        )
+
+    @staticmethod
+    def assign_role(db: Session, user_id: UUID, role: str) -> User:
+        """Assign a global role to a user."""
+        user = UserService.get_user_by_id(db, user_id)
+        try:
+            user.role = UserRole(role)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {role}. Must be one of: {[r.value for r in UserRole]}",
+            )
+        db.commit()
+        db.refresh(user)
+        return user
+

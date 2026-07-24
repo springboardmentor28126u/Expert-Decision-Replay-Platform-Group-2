@@ -29,7 +29,7 @@ const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/employee' },
   { label: 'My Decisions', icon: IconFileText, path: '/decisions' },
   { label: 'Discussions', icon: IconMessageCircle, path: '/dashboard/employee/discussions' },
-  { label: 'Profile', icon: IconUser, path: '/dashboard/employee/profile' },
+  { label: 'Profile', icon: IconUser, path: '/profile' },
 ];
 
 interface AltForm {

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql://postgres:7410@localhost:5432/expert_decision"
+    DATABASE_URL_LOCAL: str = "postgresql://postgres:7410@localhost:5432/expert_decision"
 
     # JWT
     SECRET_KEY: str = "dev-secret-key-change-in-production-1234567890abcdef"

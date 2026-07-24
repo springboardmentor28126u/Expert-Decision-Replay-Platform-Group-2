@@ -9,6 +9,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import { IconAlertCircle } from '@tabler/icons-react';
+import { motion } from 'framer-motion';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -40,11 +41,16 @@ export const Login = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="flex justify-center mb-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-md mx-auto"
+    >
+      <div className="flex justify-center mb-8 md:hidden">
         <h1 className="text-3xl font-bold tracking-tight text-primary">EDR Platform</h1>
       </div>
-      <Card className="shadow-lg border-primary/20 backdrop-blur-sm bg-card/90">
+      <Card className="shadow-2xl border-primary/20 backdrop-blur-xl bg-card/80 border-t-white/10 dark:border-t-white/5">
         <CardHeader className="space-y-4">
           <div className="space-y-1">
             <CardTitle className="text-2xl font-semibold text-center">Sign in to your account</CardTitle>
@@ -130,7 +136,7 @@ export const Login = () => {
           </p>
         </CardFooter>
       </Card>
-    </div>
+    </motion.div>
   );
 };
 

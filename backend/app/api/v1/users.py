@@ -16,12 +16,11 @@ from app.schemas.user import (
     UserUpdate, 
     UserProfileUpdate,
     AssignRoleRequest,
-    AssignTeamRequest
 )
 from app.schemas.common import PaginatedResponse, MessageResponse
 from app.services.user_service import UserService
-from app.api.deps import get_current_user, get_current_active_admin, get_current_manager_or_admin
-from app.models.user import User
+from app.api.deps import get_current_user, require_role, get_company_context
+from app.models.user import User, UserRole
 
 router = APIRouter()
 
@@ -30,14 +29,13 @@ router = APIRouter()
 def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    role_id: Optional[UUID] = None,
-    team_id: Optional[UUID] = None,
+    role: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_manager_or_admin)
+    current_user: User = Depends(require_role(UserRole.MANAGER, UserRole.ADMIN))
 ):
     """List all users (Admin/Manager only)."""
-    users, total = UserService.get_users(db, skip, limit, role_id, team_id, search)
+    users, total = UserService.get_users(db, skip, limit, role, search)
     # Convert ORM models to Pydantic responses manually to avoid nested async issues if any
     user_responses = [UserResponse.model_validate(u) for u in users]
     
@@ -50,11 +48,21 @@ def list_users(
     }
 
 
+@router.get("/admins", response_model=list[UserResponse])
+def list_company_admins(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    ctx = Depends(get_company_context),
+):
+    """List active admins for the current user's company."""
+    return UserService.get_company_admins(db, ctx.company_id)
+
+
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     user_data: UserCreate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(require_role(UserRole.ADMIN))
 ):
     """Create a new user (Admin only)."""
     return UserService.create_user(db, user_data)
@@ -79,7 +87,7 @@ def update_user(
 ):
     """Update a user's basic info. Admins can update anyone, users can update themselves."""
     from fastapi import HTTPException
-    if current_user.id != user_id and current_user.role.name != "Administrator":
+    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
         
     return UserService.update_user(db, user_id, user_data)
@@ -94,7 +102,7 @@ def update_profile(
 ):
     """Update extended user profile."""
     from fastapi import HTTPException
-    if current_user.id != user_id and current_user.role.name != "Administrator":
+    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this profile")
         
     return UserService.update_profile(db, user_id, profile_data)
@@ -104,7 +112,7 @@ def update_profile(
 def delete_user(
     user_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(require_role(UserRole.ADMIN))
 ):
     """Deactivate a user (Admin only)."""
     UserService.deactivate_user(db, user_id)
@@ -116,18 +124,7 @@ def assign_role(
     user_id: UUID,
     role_data: AssignRoleRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(require_role(UserRole.ADMIN))
 ):
     """Assign a role to a user (Admin only)."""
-    return UserService.assign_role(db, user_id, role_data.role_id)
-
-
-@router.patch("/{user_id}/team", response_model=UserResponse)
-def assign_team(
-    user_id: UUID,
-    team_data: AssignTeamRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_manager_or_admin)
-):
-    """Assign a user to a team (Admin/Manager only)."""
-    return UserService.assign_team(db, user_id, team_data.team_id)
+    return UserService.assign_role(db, user_id, role_data.role)

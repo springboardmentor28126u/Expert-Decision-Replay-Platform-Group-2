@@ -18,6 +18,7 @@ class DecisionCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
     problem_statement: str = Field(..., min_length=10)
     category_id: UUID
+    group_id: UUID
     impact_level: str = Field(default="medium")  # low, medium, high
     target_date: Optional[date] = None
     stakeholder_ids: Optional[List[UUID]] = Field(default_factory=list)
@@ -28,6 +29,7 @@ class DecisionUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=255)
     problem_statement: Optional[str] = Field(None, min_length=10)
     category_id: Optional[UUID] = None
+    group_id: Optional[UUID] = None
     impact_level: Optional[str] = None
     target_date: Optional[date] = None
     stakeholder_ids: Optional[List[UUID]] = None
@@ -46,6 +48,8 @@ class CreatorSummary(BaseModel):
 class DecisionResponse(BaseModel):
     """Full decision response for detail views."""
     id: UUID
+    company_id: UUID
+    group_id: UUID
     title: str
     problem_statement: str
     category_id: UUID
@@ -55,7 +59,6 @@ class DecisionResponse(BaseModel):
     created_by: UUID
     creator: Optional[CreatorSummary] = None
     current_version: int
-    locked: bool
     target_date: Optional[date] = None
     stakeholder_ids: Optional[List[UUID]] = None
     implementation_status: str
@@ -70,9 +73,16 @@ class DecisionResponse(BaseModel):
         from_attributes = True
 
 
+class ImplementationStatusUpdate(BaseModel):
+    """Schema for updating implementation_status."""
+    implementation_status: str = Field(..., pattern=r"^(not_started|in_progress|completed)$")
+
+
 class DecisionListItem(BaseModel):
     """Lighter decision schema for list views."""
     id: UUID
+    company_id: UUID
+    group_id: UUID
     title: str
     status: str
     impact_level: str
@@ -86,3 +96,10 @@ class DecisionListItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class OutcomeUpdate(BaseModel):
+    """Schema for setting a decision outcome."""
+    outcome: str = Field(..., pattern=r"^(success|partial|failed|pending)$")
+    outcome_notes: Optional[str] = None
+

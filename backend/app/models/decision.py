@@ -9,7 +9,7 @@ import uuid
 import enum
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, String, Text, DateTime, Date, Integer, Boolean, Enum, ForeignKey, Index
+    Column, String, Text, DateTime, Date, Integer, Enum, ForeignKey, Index
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -72,6 +72,18 @@ class Decision(Base):
     __tablename__ = "decisions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    group_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     title = Column(String(255), nullable=False)
     problem_statement = Column(Text, nullable=False)
     category_id = Column(
@@ -92,7 +104,6 @@ class Decision(Base):
     )
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     current_version = Column(Integer, default=1, nullable=False)
-    locked = Column(Boolean, default=False, nullable=False)
     target_date = Column(Date, nullable=True)
     stakeholder_ids = Column(JSONB, nullable=True, default=list)
     implementation_status = Column(
@@ -113,6 +124,8 @@ class Decision(Base):
     )
 
     # Relationships
+    company = relationship("Company", back_populates="decisions")
+    group = relationship("Group", back_populates="decisions")
     creator = relationship("User", backref="decisions", lazy="joined")
     category = relationship("DecisionCategory", back_populates="decisions", lazy="joined")
     alternatives = relationship(
@@ -129,11 +142,19 @@ class Decision(Base):
         lazy="selectin",
         order_by="DecisionVersion.version_number.desc()",
     )
+    approvals = relationship(
+        "Approval",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="Approval.level",
+    )
 
     # Composite index for dashboard filters
     __table_args__ = (
+        Index("ix_decisions_company_group_status", "company_id", "group_id", "status"),
         Index("ix_decisions_status_category_creator", "status", "category_id", "created_by"),
     )
 
     def __repr__(self) -> str:
-        return f"<Decision(id={self.id}, title={self.title}, status={self.status})>"
+        return f"<Decision(id={self.id}, title={self.title}, status={self.status}, company_id={self.company_id})>"

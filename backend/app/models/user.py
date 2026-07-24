@@ -1,13 +1,14 @@
 """
 Expert Decision Replay Platform - User Model
 
-Defines the users table with authentication and organizational fields.
+Defines the users table with authentication fields.
+Role is scoped per company via the Membership model.
 """
 
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Enum, ForeignKey
+from sqlalchemy import Column, String, DateTime, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -21,6 +22,14 @@ class UserStatus(str, enum.Enum):
     SUSPENDED = "suspended"
 
 
+class UserRole(str, enum.Enum):
+    """Global user-level role (used for route-level authorization)."""
+    ADMIN = "admin"
+    MANAGER = "manager"
+    REVIEWER = "reviewer"
+    EMPLOYEE = "employee"
+
+
 class User(Base):
     """
     User model for authentication and identity.
@@ -30,13 +39,11 @@ class User(Base):
         full_name: User's full display name.
         email: Unique email address used for login.
         password_hash: Bcrypt-hashed password.
-        role_id: Foreign key to the roles table.
-        team_id: Foreign key to the teams table (nullable).
         status: Account status (active, inactive, suspended).
         created_at: Timestamp when the user was created.
         updated_at: Timestamp of last update.
-        role: Relationship to the user's role.
-        team: Relationship to the user's team.
+        memberships: Relationship to company memberships.
+        group_memberships: Relationship to group memberships.
         profile: One-to-one relationship to extended profile.
     """
     __tablename__ = "users"
@@ -45,11 +52,14 @@ class User(Base):
     full_name = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
-    role_id = Column(UUID(as_uuid=True), ForeignKey("roles.id"), nullable=False)
-    team_id = Column(UUID(as_uuid=True), ForeignKey("teams.id"), nullable=True)
     status = Column(
-        Enum(UserStatus, name="user_status"),
+        SAEnum(UserStatus, name="user_status"),
         default=UserStatus.ACTIVE,
+        nullable=False,
+    )
+    role = Column(
+        SAEnum(UserRole, name="user_role"),
+        default=UserRole.EMPLOYEE,
         nullable=False,
     )
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -60,8 +70,8 @@ class User(Base):
     )
 
     # Relationships
-    role = relationship("Role", back_populates="users", lazy="joined")
-    team = relationship("Team", back_populates="members", lazy="joined")
+    memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
+    group_memberships = relationship("GroupMembership", back_populates="user", cascade="all, delete-orphan")
     profile = relationship(
         "UserProfile",
         back_populates="user",
@@ -72,3 +82,4 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email})>"
+

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -26,7 +26,8 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const Register = () => {
-  const { register: registerUser, error: authError } = useAuth();
+  const { register: registerUser, error: authError, getDashboardPath } = useAuth();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormValues>({
@@ -37,6 +38,7 @@ export const Register = () => {
     setIsSubmitting(true);
     try {
       await registerUser(data);
+      navigate(getDashboardPath());
     } catch (err) {
       // Error handled in context
     } finally {

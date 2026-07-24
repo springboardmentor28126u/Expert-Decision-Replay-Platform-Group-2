@@ -43,12 +43,13 @@ export interface Decision {
   created_by: string;
   creator: CreatorSummary | null;
   current_version: number;
-  locked: boolean;
   target_date: string | null;
   stakeholder_ids: string[] | null;
   implementation_status: string;
   outcome: string | null;
   outcome_notes: string | null;
+  company_id: string;
+  group_id: string;
   alternatives: Alternative[];
   alternative_count: number;
   created_at: string;
@@ -95,6 +96,7 @@ export interface DecisionCreatePayload {
   problem_statement: string;
   category_id: string;
   impact_level: ImpactLevel;
+  group_id: string;
   target_date?: string | null;
   stakeholder_ids?: string[];
 }
@@ -103,6 +105,7 @@ export interface DecisionUpdatePayload {
   title?: string;
   problem_statement?: string;
   category_id?: string;
+  group_id?: string;
   impact_level?: ImpactLevel;
   target_date?: string | null;
   stakeholder_ids?: string[];

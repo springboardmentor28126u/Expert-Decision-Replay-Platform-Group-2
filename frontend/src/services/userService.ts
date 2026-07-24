@@ -1,5 +1,5 @@
 import api from './api';
-import { User, PaginatedUsers, Role, Team } from '../types/user';
+import { User, PaginatedUsers } from '../types/user';
 
 export const userService = {
   getUsers: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedUsers> => {
@@ -27,14 +27,18 @@ export const userService = {
     const response = await api.put(`/users/${id}/profile`, data);
     return response.data;
   },
-  
-  getRoles: async (): Promise<Role[]> => {
-    const response = await api.get('/roles');
+
+  createUser: async (data: { full_name: string; email: string; password: string }): Promise<User> => {
+    const response = await api.post('/users', data);
     return response.data;
   },
-  
-  getTeams: async (): Promise<Team[]> => {
-    const response = await api.get('/teams');
+
+  assignRole: async (userId: string, role: string): Promise<User> => {
+    const response = await api.patch(`/users/${userId}/role`, { role });
     return response.data;
-  }
+  },
+
+  deleteUser: async (id: string): Promise<void> => {
+    await api.delete(`/users/${id}`);
+  },
 };

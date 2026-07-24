@@ -16,12 +16,26 @@ import {
   IconPlus,
   IconChevronRight,
 } from '@tabler/icons-react';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+};
 
 const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/employee' },
   { label: 'My Decisions', icon: IconFileText, path: '/decisions' },
   { label: 'Discussions', icon: IconMessageCircle, path: '/dashboard/employee/discussions' },
-  { label: 'Profile', icon: IconUser, path: '/dashboard/employee/profile' },
+  { label: 'Profile', icon: IconUser, path: '/profile' },
 ];
 
 export default function EmployeeDashboard() {
@@ -30,18 +44,18 @@ export default function EmployeeDashboard() {
   const [stats, setStats] = useState({ total: 0, by_status: {} });
   const [recentDecisions, setRecentDecisions] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState('');
+  const [decisionsError, setDecisionsError] = useState('');
 
   useEffect(() => {
-    // Fetch stats
     decisionService.getStats()
       .then(setStats)
-      .catch(console.error)
+      .catch((err) => setStatsError(err.response?.data?.detail || 'Failed to load stats'))
       .finally(() => setLoadingStats(false));
 
-    // Fetch recent decisions
     decisionService.list({ limit: 5, my_only: true })
       .then(data => setRecentDecisions(data.items))
-      .catch(console.error);
+      .catch((err) => setDecisionsError(err.response?.data?.detail || 'Failed to load decisions'));
   }, []);
 
   const pendingReviews = (stats.by_status?.under_review || 0);
@@ -54,9 +68,14 @@ export default function EmployeeDashboard() {
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="space-y-6">
+      <motion.div 
+        className="space-y-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Welcome header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Welcome back, {user?.full_name?.split(' ')[0]} 👋
@@ -73,10 +92,14 @@ export default function EmployeeDashboard() {
             <IconPlus size={18} stroke={2} />
             <span>Create Decision</span>
           </button>
-        </div>
+        </motion.div>
+
+        {statsError && (
+          <motion.div variants={itemVariants} className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">{statsError}</motion.div>
+        )}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard
             label="My Decisions"
             value={loadingStats ? '—' : stats.total}
@@ -98,10 +121,10 @@ export default function EmployeeDashboard() {
             index={2}
             subtitle="Drafts + under review"
           />
-        </div>
+        </motion.div>
 
         {/* Recent decisions */}
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 overflow-hidden">
+        <motion.div variants={itemVariants} className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800/60 flex items-center justify-between">
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
               My Decisions
@@ -114,7 +137,11 @@ export default function EmployeeDashboard() {
             </button>
           </div>
 
-          {recentDecisions.length === 0 ? (
+          {decisionsError && (
+          <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400 mb-4">{decisionsError}</div>
+        )}
+
+        {recentDecisions.length === 0 ? (
             <div className="px-5 py-12 text-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-12 w-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
@@ -156,8 +183,8 @@ export default function EmployeeDashboard() {
               ))}
             </div>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </DashboardLayout>
   );
 }

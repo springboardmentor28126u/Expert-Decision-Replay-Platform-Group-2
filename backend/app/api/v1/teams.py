@@ -13,7 +13,8 @@ from app.database.session import get_db
 from app.schemas.team import TeamResponse, TeamCreate, TeamUpdate
 from app.schemas.common import MessageResponse
 from app.services.team_service import TeamService
-from app.api.deps import get_current_user, get_current_active_admin
+from app.api.deps import get_current_user, require_role
+from app.models.user import UserRole
 
 router = APIRouter()
 
@@ -31,7 +32,7 @@ def list_teams(
 def create_team(
     team_data: TeamCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_active_admin),
+    current_user=Depends(require_role(UserRole.ADMIN)),
 ):
     """Create a new team (Admin only)."""
     return TeamService.create_team(db, team_data)
@@ -52,7 +53,7 @@ def update_team(
     team_id: UUID,
     team_data: TeamUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_active_admin),
+    current_user=Depends(require_role(UserRole.ADMIN)),
 ):
     """Update a team (Admin only)."""
     return TeamService.update_team(db, team_id, team_data)
@@ -62,7 +63,7 @@ def update_team(
 def delete_team(
     team_id: UUID,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_active_admin),
+    current_user=Depends(require_role(UserRole.ADMIN)),
 ):
     """Delete a team (Admin only)."""
     TeamService.delete_team(db, team_id)

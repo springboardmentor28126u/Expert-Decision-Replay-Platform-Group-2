@@ -25,9 +25,10 @@ from app.core.security import (
     decode_token
 )
 from app.models.user import User, UserStatus
-from app.models.role import Role
 from app.models.user_profile import UserProfile
 from app.models.password_reset_token import PasswordResetToken
+from app.models.company import Company
+from app.models.membership import Membership, CompanyRole
 from app.schemas.auth import RegisterRequest, LoginRequest, ChangePasswordRequest
 from app.utils.validators import sanitize_input, validate_password_strength
 
@@ -54,7 +55,7 @@ def _hash_reset_token(raw_token: str) -> str:
 class AuthService:
     
     @staticmethod
-    def register_user(db: Session, user_data: RegisterRequest) -> Tuple[User, str, str]:
+    def register_user(db: Session, user_data: RegisterRequest, current_user: Optional[User] = None) -> Tuple[User, str, str]:
         """
         Register a new user and return user with tokens.
 
@@ -86,28 +87,38 @@ class AuthService:
                 detail="Email already registered."
             )
             
-        # Get default role (Employee)
-        default_role = db.query(Role).filter(Role.name == "Employee").first()
-        if not default_role:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Default role 'Employee' not found in database."
-            )
-
         # --- Atomic transaction: user + profile ---
         try:
             new_user = User(
                 full_name=sanitize_input(user_data.full_name),
                 email=sanitized_email,
                 password_hash=hash_password(user_data.password),
-                role_id=default_role.id
             )
             db.add(new_user)
             db.flush()  # Get new_user.id without committing
             
             new_profile = UserProfile(user_id=new_user.id)
             db.add(new_profile)
-            
+
+            # Assign user to default company (create if not exists)
+            default_company = db.query(Company).filter(Company.slug == "default-company").first()
+            if not default_company:
+                default_company = Company(name="Default Company", slug="default-company")
+                db.add(default_company)
+                db.flush()
+
+            existing_membership = db.query(Membership).filter(
+                Membership.user_id == new_user.id,
+                Membership.company_id == default_company.id,
+            ).first()
+            if not existing_membership:
+                membership = Membership(
+                    user_id=new_user.id,
+                    company_id=default_company.id,
+                    role=CompanyRole.EMPLOYEE,
+                )
+                db.add(membership)
+
             db.commit()
             db.refresh(new_user)
             
@@ -128,9 +139,10 @@ class AuthService:
                 detail="An unexpected error occurred during registration."
             )
         
-        # Generate tokens (stateless — no DB write needed)
-        access_token = create_access_token(data={"sub": str(new_user.id)})
-        refresh_token = create_refresh_token(data={"sub": str(new_user.id)})
+        # Generate tokens (lightweight payload — sub: user_id)
+        token_data = {"sub": str(new_user.id)}
+        access_token = create_access_token(data=token_data)
+        refresh_token = create_refresh_token(data=token_data)
         
         logger.info("User registered successfully: %s (id=%s)", sanitized_email, new_user.id)
         return new_user, access_token, refresh_token
@@ -153,17 +165,10 @@ class AuthService:
                 detail="User account is not active.",
             )
              
-        # Check login context
-        if login_data.login_context == "admin":
-            if not user.role or user.role.name != "Administrator":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="This account does not have admin access. Please use employee login.",
-                )
-             
-        # Generate tokens
-        access_token = create_access_token(data={"sub": str(user.id)})
-        refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        # Generate tokens (lightweight payload — sub: user_id)
+        token_data = {"sub": str(user.id)}
+        access_token = create_access_token(data=token_data)
+        refresh_token = create_refresh_token(data=token_data)
         
         return access_token, refresh_token
 

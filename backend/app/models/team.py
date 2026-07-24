@@ -8,7 +8,6 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 
 from app.database.base import Base
 
@@ -37,8 +36,7 @@ class Team(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    # Relationships
-    members = relationship("User", back_populates="team", lazy="selectin")
+    # Relationships (team_id was removed from User model in multi-tenant redesign)
 
     def __repr__(self) -> str:
         return f"<Team(id={self.id}, name={self.name})>"

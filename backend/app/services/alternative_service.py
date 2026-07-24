@@ -52,7 +52,10 @@ class AlternativeService:
         try:
             risk = ImpactLevel(data.risk_level)
         except ValueError:
-            risk = ImpactLevel.MEDIUM
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid risk_level '{data.risk_level}'. Must be one of: low, medium, high",
+            )
 
         alternative = Alternative(
             decision_id=decision_id,
@@ -97,7 +100,10 @@ class AlternativeService:
             try:
                 update_data["risk_level"] = ImpactLevel(update_data["risk_level"])
             except ValueError:
-                update_data["risk_level"] = ImpactLevel.MEDIUM
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Invalid risk_level '{update_data['risk_level']}'. Must be one of: low, medium, high",
+                )
 
         for key, value in update_data.items():
             setattr(alternative, key, value)
