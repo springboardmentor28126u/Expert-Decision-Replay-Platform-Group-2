@@ -1,7 +1,8 @@
 import os
 import uuid
 from fastapi import APIRouter, File, UploadFile, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
+import b2_service
 
 router = APIRouter(prefix="/api/uploads", tags=["Uploads"])
 UPLOAD_DIR = "uploads"
@@ -25,19 +26,33 @@ async def upload_file(file: UploadFile = File(...)):
             detail="File size exceeds the 5 MB limit."
         )
     unique_filename = f"{uuid.uuid4().hex}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
-    with open(file_path, "wb") as f:
-        f.write(contents)
+    
+    # Upload to Backblaze B2
+    try:
+        b2_service.upload_to_b2(contents, f"uploads/{unique_filename}", file.content_type)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload file to Backblaze B2: {str(e)}"
+        )
+        
     file_url = f"/api/uploads/{unique_filename}"
     return {
         "filename": file.filename,
         "saved_as": unique_filename,
         "file_url": file_url
     }
+
 @router.get("/{filename}")
 async def get_uploaded_file(filename: str):
     """Serves an uploaded file by filename."""
     file_path = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found.")
-    return FileResponse(file_path)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    
+    # If not found locally, redirect to Backblaze B2
+    try:
+        b2_url = b2_service.get_b2_download_url(f"uploads/{filename}")
+        return RedirectResponse(b2_url)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="File not found on server or Backblaze B2.")

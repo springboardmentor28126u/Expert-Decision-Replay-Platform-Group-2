@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+import b2_service
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from pathlib import Path
@@ -27,6 +29,29 @@ DISCUSSION_UPLOAD_DIR = UPLOAD_ROOT / "discussion"
 ALLOWED_DISCUSSION_EXTENSIONS = {".pdf", ".docx", ".jpg", ".jpeg", ".png"}
 UPLOAD_ROOT.mkdir(exist_ok=True)
 DISCUSSION_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+@app.get("/uploads/{folder}/{filename}")
+async def get_uploads_folder_file(folder: str, filename: str):
+    local_path = UPLOAD_ROOT / folder / filename
+    if local_path.exists():
+        return FileResponse(local_path)
+    try:
+        b2_url = b2_service.get_b2_download_url(f"{folder}/{filename}")
+        return RedirectResponse(b2_url)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="File not found on server or Backblaze B2.")
+
+@app.get("/uploads/{filename}")
+async def get_uploads_root_file(filename: str):
+    local_path = UPLOAD_ROOT / filename
+    if local_path.exists():
+        return FileResponse(local_path)
+    try:
+        b2_url = b2_service.get_b2_download_url(filename)
+        return RedirectResponse(b2_url)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="File not found on server or Backblaze B2.")
+
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 app.include_router(uploads_router)
 app.add_middleware(
@@ -496,9 +521,16 @@ def _save_discussion_attachment(attachment: UploadFile | None) -> str | None:
         )
 
     filename = f"{uuid4().hex}{extension}"
-    file_path = DISCUSSION_UPLOAD_DIR / filename
-    with file_path.open("wb") as buffer:
-        copyfileobj(attachment.file, buffer)
+    
+    # Read attachment file content and upload to B2
+    try:
+        content = attachment.file.read()
+        b2_service.upload_to_b2(content, f"discussion/{filename}", attachment.content_type or "b2/x-auto")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload discussion attachment to Backblaze B2: {str(e)}"
+        )
 
     return f"/uploads/discussion/{filename}"
 
