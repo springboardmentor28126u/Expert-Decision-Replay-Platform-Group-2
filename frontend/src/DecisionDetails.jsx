@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import VersionHistory from "./VersionHistory";
 import AlternativesPanel from "./AlternativesPanel";
@@ -18,6 +18,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history"
   const [editError, setEditError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     setEditTitle(decision.title);
@@ -218,24 +220,30 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   };
 
   const handleSaveDecisionEdit = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
     setEditError("");
     try {
-    const res = await axios.put(
-      `http://127.0.0.1:8000/decisions/${decision.id}`,
-      {
-        title: editTitle,
-        problem_statement: editProblemStatement,
-        category: editCategory,
-        attachment_url: editAttachmentUrl || null,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (onStatusUpdated) onStatusUpdated(res.data);
-    setIsEditing(false);
-  } catch (err) {
-    setEditError(err?.response?.data?.detail || "Failed to save changes.");
-  }
-};
+      const res = await axios.put(
+        `http://127.0.0.1:8000/decisions/${decision.id}`,
+        {
+          title: editTitle,
+          problem_statement: editProblemStatement,
+          category: editCategory,
+          attachment_url: editAttachmentUrl || null,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (onStatusUpdated) onStatusUpdated(res.data);
+      setIsEditing(false);
+    } catch (err) {
+      setEditError(err?.response?.data?.detail || "Failed to save changes.");
+    } finally {
+      setIsSaving(false);
+      savingRef.current = false;
+    }
+  };
 
   // Format Dates nicely
   const formatDate = (dateStr) => {
@@ -555,7 +563,9 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             </div>
             {editError && <div className="auth-message error">{editError}</div>}
             <div style={{ display: "flex", gap: "10px" }}>
-              <button className="auth-button" onClick={handleSaveDecisionEdit}>Save Changes</button>
+              <button className="auth-button" onClick={handleSaveDecisionEdit} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
               <button
                 className="dash-back-btn"
                 onClick={() => {

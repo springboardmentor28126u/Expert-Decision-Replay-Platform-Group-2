@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 const FileUpload = ({ onUploadSuccess }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const uploadingRef = useRef(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -19,7 +20,8 @@ const FileUpload = ({ onUploadSuccess }) => {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || uploadingRef.current) return;
+    uploadingRef.current = true;
     setUploading(true);
     setError(null);
     const formData = new FormData();
@@ -42,6 +44,7 @@ const FileUpload = ({ onUploadSuccess }) => {
       setError(err.message);
     } finally {
       setUploading(false);
+      uploadingRef.current = false;
     }
   };
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
 import FileUpload from "./FileUpload";
 
@@ -9,9 +9,14 @@ function CreateDecision({ token, onCreated }) {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
   const [attachmentUrl, setAttachmentUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/decisions",
@@ -34,6 +39,9 @@ function CreateDecision({ token, onCreated }) {
       console.error("Error creating decision:", error);
       setIsError(true);
       setMessage("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -86,7 +94,9 @@ function CreateDecision({ token, onCreated }) {
              </p>
          )}
         </div>
-        <button type="submit" className="auth-button">Create decision</button>
+        <button type="submit" className="auth-button" disabled={isSubmitting}>
+          {isSubmitting ? "Creating..." : "Create decision"}
+        </button>
       </form>
       {message && (
         <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }}>
