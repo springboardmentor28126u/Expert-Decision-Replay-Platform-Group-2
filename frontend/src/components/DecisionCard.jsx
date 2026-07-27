@@ -5,8 +5,8 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
 
-  const canUpdateStatus = role === "manager" || role === "admin";
-  const isAdmin = role === "admin";
+  const canUpdateStatus = role === "manager" || role === "administrator";
+  const isAdmin = role === "administrator";
   const allStatuses = ["draft", "under_review", "approved", "rejected", "archived"];
 
   const statusStyle = (status) => {
@@ -23,8 +23,8 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
     setUpdating(true);
     setError("");
     try {
-      await axios.put(
-        `http://127.0.0.1:8000/decisions/${decision.id}/status`,
+      await axios.patch(
+        `http://127.0.0.1:8000/api/v1/decisions/${decision.id}/status`,
         { status: nextStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -39,7 +39,7 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
   const handleDelete = async () => {
     if (!window.confirm("Delete this decision permanently?")) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/decisions/${decision.id}`, {
+      await axios.delete(`http://127.0.0.1:8000/api/v1/decisions/${decision.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       onDeleted(decision.id);
@@ -113,7 +113,7 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
       >
         <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "var(--text-muted)" }}>
           <span>{decision.category || "Uncategorized"}</span>
-          <span>By {decision.creator_name || "Unknown"}</span>
+          <span>By {decision.created_by?.full_name || "Unknown"}</span>
           <span>{new Date(decision.created_at).toLocaleString()}</span>
         </div>
 

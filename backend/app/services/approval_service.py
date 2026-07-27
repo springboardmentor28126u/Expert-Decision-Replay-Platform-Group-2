@@ -27,6 +27,7 @@ from app.schemas.approval import (
 from app.utils.exceptions import (
     ConflictException,
     NotFoundException,
+    PermissionDeniedException,
 )
 
 
@@ -156,6 +157,7 @@ class ApprovalService:
         self,
         approval_id: uuid.UUID,
         payload: ApprovalDecision,
+        current_user: User,
     ) -> ApprovalOut:
 
         approval = await self.approvals.get_by_id(
@@ -165,6 +167,14 @@ class ApprovalService:
         if approval is None:
             raise NotFoundException(
                 "Approval not found."
+            )
+
+        if (
+            current_user.id != approval.reviewer_id
+            and current_user.role.name != "administrator"
+        ):
+            raise PermissionDeniedException(
+                "You do not have permission to review this approval."
             )
 
         approval.status = payload.status

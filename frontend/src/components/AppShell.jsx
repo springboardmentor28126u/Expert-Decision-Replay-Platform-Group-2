@@ -1,9 +1,10 @@
-import "./dashboard-shell.css";
+import "../styles/dashboard-shell.css";
 import ProfileMenu from "./ProfileMenu";
 
 function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
-  const isManagerOrAdmin = profile.role === "manager" || profile.role === "admin";
-  const isAdmin = profile.role === "admin";
+  const role = profile.role?.name;
+  const isManagerOrAdmin = role === "manager" || role === "administrator";
+  const isAdmin = role === "administrator";
 
   const navItems = [
     { key: "dashboard", label: "Dashboard", icon: "📊" },

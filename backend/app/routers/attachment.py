@@ -9,6 +9,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -99,10 +100,29 @@ async def upload_to_comment(
 )
 async def get_attachment(
     attachment_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: AttachmentService = Depends(get_attachment_service),
 ) -> AttachmentOut:
 
     return await service.get_attachment(attachment_id)
+
+
+@router.get(
+    "/{attachment_id}/download",
+)
+async def download_attachment(
+    attachment_id: uuid.UUID,
+    _: User = Depends(get_current_user),
+    service: AttachmentService = Depends(get_attachment_service),
+) -> FileResponse:
+
+    attachment = await service.get_attachment_for_download(attachment_id)
+
+    return FileResponse(
+        path=attachment.file_path,
+        filename=attachment.file_name,
+        media_type=attachment.file_type,
+    )
 
 
 @router.get(
@@ -111,6 +131,7 @@ async def get_attachment(
 )
 async def list_decision_attachments(
     decision_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: AttachmentService = Depends(get_attachment_service),
 ) -> list[AttachmentOut]:
 
@@ -123,6 +144,7 @@ async def list_decision_attachments(
 )
 async def list_alternative_attachments(
     alternative_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: AttachmentService = Depends(get_attachment_service),
 ) -> list[AttachmentOut]:
 
@@ -135,6 +157,7 @@ async def list_alternative_attachments(
 )
 async def list_comment_attachments(
     comment_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: AttachmentService = Depends(get_attachment_service),
 ) -> list[AttachmentOut]:
 
@@ -152,7 +175,8 @@ async def list_comment_attachments(
 )
 async def delete_attachment(
     attachment_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     service: AttachmentService = Depends(get_attachment_service),
 ) -> None:
 
-    await service.delete_attachment(attachment_id)
+    await service.delete_attachment(attachment_id, current_user)

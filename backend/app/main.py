@@ -21,6 +21,7 @@ from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
@@ -55,6 +56,38 @@ async def lifespan(app: FastAPI):
             "Database connection failed during startup."
         )
         raise
+
+    # --- TEMPORARY DIAGNOSTIC: confirm which physical database/roles
+    # table this running process is actually connected to. Remove once
+    # the registration "Default role is not configured" bug is closed.
+    try:
+        async with engine.connect() as conn:
+            identity = (
+                await conn.execute(
+                    text(
+                        "SELECT current_database(), current_user, "
+                        "inet_server_addr(), inet_server_port()"
+                    )
+                )
+            ).one()
+            logger.warning(
+                "[DIAGNOSTIC] current_database=%s current_user=%s "
+                "inet_server_addr=%s inet_server_port=%s",
+                identity[0], identity[1], identity[2], identity[3],
+            )
+
+            role_count = (
+                await conn.execute(text("SELECT COUNT(*) FROM roles"))
+            ).scalar_one()
+            logger.warning("[DIAGNOSTIC] roles count = %s", role_count)
+
+            role_rows = (
+                await conn.execute(text("SELECT id, name FROM roles"))
+            ).all()
+            logger.warning("[DIAGNOSTIC] roles rows = %s", role_rows)
+
+    except Exception:
+        logger.exception("[DIAGNOSTIC] role/database inspection query failed.")
 
     yield
 

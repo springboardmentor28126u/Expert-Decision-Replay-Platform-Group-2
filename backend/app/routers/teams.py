@@ -10,8 +10,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies.auth import require_role
+from app.dependencies.auth import get_current_user, require_role
 from app.models.enums import RoleName
+from app.models.user import User
 from app.schemas.common import PaginatedResponse, PaginationParams
 from app.schemas.team import TeamCreate, TeamDetailOut, TeamMemberAssign, TeamOut, TeamUpdate
 from app.services.team_service import TeamService
@@ -26,6 +27,7 @@ def get_team_service(db: AsyncSession = Depends(get_db)) -> TeamService:
 @router.get("/", response_model=PaginatedResponse[TeamOut])
 async def list_teams(
     pagination: PaginationParams = Depends(),
+    _: User = Depends(get_current_user),
     team_service: TeamService = Depends(get_team_service),
 ) -> PaginatedResponse[TeamOut]:
     return await team_service.list_teams(pagination=pagination)
@@ -47,6 +49,7 @@ async def create_team(
 @router.get("/{team_id}", response_model=TeamDetailOut)
 async def get_team(
     team_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     team_service: TeamService = Depends(get_team_service),
 ) -> TeamDetailOut:
     return await team_service.get_team(team_id=team_id)

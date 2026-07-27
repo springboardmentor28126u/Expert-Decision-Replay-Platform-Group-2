@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import "./styles.css";
+import "../styles/styles.css";
 
 function Login({ onLoginSuccess, onSwitch, onForgotPassword, onBackToLanding }) {
   const [email, setEmail] = useState("");
@@ -11,10 +11,13 @@ function Login({ onLoginSuccess, onSwitch, onForgotPassword, onBackToLanding }) 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://127.0.0.1:8000/login", {
-        email,
-        password,
-      });
+      const formBody = new URLSearchParams();
+      formBody.append("username", email);
+      formBody.append("password", password);
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/v1/auth/login",
+        formBody
+      );
       setMessage("Login successful!");
       setIsError(false);
       onLoginSuccess(response.data.access_token);

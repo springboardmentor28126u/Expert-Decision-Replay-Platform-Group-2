@@ -42,6 +42,7 @@ def get_comment_service(
 )
 async def list_comments(
     decision_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: CommentService = Depends(get_comment_service),
 ) -> list[CommentThreadOut]:
 
@@ -54,6 +55,7 @@ async def list_comments(
 )
 async def get_comment(
     comment_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: CommentService = Depends(get_comment_service),
 ) -> CommentOut:
 

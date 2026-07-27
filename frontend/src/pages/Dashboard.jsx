@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import AppShell from "./AppShell";
-import CreateDecision from "./CreateDecision";
-import DecisionsList from "./DecisionsList";
+import AppShell from "../components/AppShell";
+import CreateDecision from "../components/CreateDecision";
+import DecisionsList from "../components/DecisionsList";
 import DecisionDetails from "./DecisionDetails";
-import ChangePassword from "./ChangePassword";
-import "./dashboard.css";
+import ChangePassword from "../components/ChangePassword";
+import "../styles/dashboard.css";
 
 function Dashboard({ token, onLogout }) {
   const [profile, setProfile] = useState(null);
@@ -22,7 +22,7 @@ function Dashboard({ token, onLogout }) {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/me", {
+        const res = await axios.get("http://127.0.0.1:8000/api/v1/users/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setProfile(res.data);
@@ -37,10 +37,10 @@ function Dashboard({ token, onLogout }) {
   useEffect(() => {
     const fetchDecisions = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/decisions", {
+        const res = await axios.get("http://127.0.0.1:8000/api/v1/decisions", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setDecisions(res.data);
+        setDecisions(res.data.items);
       } catch (err) {
         console.log("Failed to load decisions for stats", err);
       }
@@ -50,7 +50,7 @@ function Dashboard({ token, onLogout }) {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (!profile || profile.role !== "admin") return;
+      if (!profile || profile.role?.name !== "administrator") return;
       try {
         const res = await axios.get("http://127.0.0.1:8000/users", {
           headers: { Authorization: `Bearer ${token}` },
@@ -162,7 +162,7 @@ function Dashboard({ token, onLogout }) {
             <DecisionsList
               token={token}
               refreshKey={refreshKey}
-              role={profile.role}
+              role={profile.role?.name}
               onSelectDecision={handleSelectDecision}
               pageSize={3}
               statusFilter="all"
@@ -234,7 +234,7 @@ function Dashboard({ token, onLogout }) {
           <DecisionsList
             token={token}
             refreshKey={refreshKey}
-            role={profile.role}
+            role={profile.role?.name}
             onSelectDecision={handleSelectDecision}
             pageSize={10}
             statusFilter={statusFilter}
@@ -253,13 +253,13 @@ function Dashboard({ token, onLogout }) {
         />
       )}
 
-      {activeView === "users" && profile.role === "admin" && (() => {
+      {activeView === "users" && profile.role?.name === "administrator" && (() => {
         const filteredUsers = (users || []).filter((u) => {
           const q = userSearchQuery.toLowerCase();
           return (
             u.full_name.toLowerCase().includes(q) ||
             u.email.toLowerCase().includes(q) ||
-            u.role.toLowerCase().includes(q)
+            u.role?.name?.toLowerCase().includes(q)
           );
         });
         const usersPerPage = 10;

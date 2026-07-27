@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import axios from 'axios';
 
-const FileUpload = ({ onUploadSuccess }) => {
+const FileUpload = ({ token, targetType, targetId, onUploadSuccess }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const uploadingRef = useRef(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -19,29 +21,32 @@ const FileUpload = ({ onUploadSuccess }) => {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || uploadingRef.current || !targetType || !targetId) return;
+    uploadingRef.current = true;
     setUploading(true);
     setError(null);
     const formData = new FormData();
     formData.append("file", selectedFile);
     try {
-      const response = await fetch("http://localhost:8000/api/uploads", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Upload failed");
-      }
-      const data = await response.json();
+      const response = await axios.post(
+        `http://127.0.0.1:8000/api/v1/attachments/${targetType}/${targetId}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       setSelectedFile(null);
       if (onUploadSuccess) {
-        onUploadSuccess(data.file_url);
+        onUploadSuccess(response.data);
       }
     } catch (err) {
-      setError(err.message);
+      setError(err?.response?.data?.detail || "Upload failed.");
     } finally {
       setUploading(false);
+      uploadingRef.current = false;
     }
   };
 

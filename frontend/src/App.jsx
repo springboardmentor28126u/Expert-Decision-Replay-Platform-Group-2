@@ -1,9 +1,9 @@
 import { useState } from "react";
-import Landing from "./Landing";
-import Login from "./Login";
-import Register from "./Register";
-import ForgotPassword from "./ForgotPassword";
-import Dashboard from "./Dashboard";
+import Landing from "./pages/Landing";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   const [showLanding, setShowLanding] = useState(true);

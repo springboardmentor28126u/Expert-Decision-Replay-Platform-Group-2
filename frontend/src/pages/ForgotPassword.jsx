@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./styles.css";
+import "../styles/styles.css";
 
 function ForgotPassword({ onSwitch }) {
   const [email, setEmail] = useState("");

@@ -10,10 +10,10 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
   useEffect(() => {
     const fetchDecisions = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/decisions", {
+        const res = await axios.get("http://127.0.0.1:8000/api/v1/decisions", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setDecisions(res.data);
+        setDecisions(res.data.items);
       } catch (err) {
         console.log("Failed to load decisions", err);
       } finally {

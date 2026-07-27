@@ -37,6 +37,7 @@ def get_decision_service(
 )
 async def list_decisions(
     pagination: PaginationParams = Depends(),
+    _: User = Depends(get_current_user),
     service: DecisionService = Depends(get_decision_service),
 ):
     return await service.list_decisions(pagination)
@@ -49,6 +50,7 @@ async def list_decisions(
 async def search_decisions(
     keyword: str = Query(...),
     pagination: PaginationParams = Depends(),
+    _: User = Depends(get_current_user),
     service: DecisionService = Depends(get_decision_service),
 ):
     return await service.search(keyword, pagination)
@@ -60,6 +62,7 @@ async def search_decisions(
 )
 async def get_decision(
     decision_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: DecisionService = Depends(get_decision_service),
 ):
     return await service.get_decision(decision_id)
@@ -118,6 +121,7 @@ async def update_status(
 )
 async def get_versions(
     decision_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: DecisionService = Depends(get_decision_service),
 ):
     return await service.get_versions(decision_id)
@@ -129,6 +133,7 @@ async def get_versions(
 )
 async def delete_decision(
     decision_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     service: DecisionService = Depends(get_decision_service),
 ):
-    await service.delete_decision(decision_id)
+    await service.delete_decision(decision_id, current_user)

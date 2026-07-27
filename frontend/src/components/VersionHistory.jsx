@@ -8,7 +8,7 @@ function VersionHistory({ token, decisionId, onRestored }) {
   const fetchVersions = useCallback(async () => {
     try {
       const res = await axios.get(
-        `http://127.0.0.1:8000/decisions/${decisionId}/versions`,
+        `http://127.0.0.1:8000/api/v1/decisions/${decisionId}/versions`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setVersions(res.data);
@@ -29,7 +29,7 @@ function VersionHistory({ token, decisionId, onRestored }) {
     }
     try {
       const res = await axios.put(
-        `http://127.0.0.1:8000/decisions/${decisionId}`,
+        `http://127.0.0.1:8000/api/v1/decisions/${decisionId}`,
         {
           title: v.title,
           problem_statement: v.problem_statement,

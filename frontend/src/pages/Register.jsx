@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import "./styles.css";
+import "../styles/styles.css";
 
 function Register({ onSwitch, onBackToLanding }) {
   const [fullName, setFullName] = useState("");
@@ -12,7 +12,7 @@ function Register({ onSwitch, onBackToLanding }) {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://127.0.0.1:8000/register", {
+      const response = await axios.post("http://127.0.0.1:8000/api/v1/auth/register", {
         full_name: fullName,
         email,
         password,

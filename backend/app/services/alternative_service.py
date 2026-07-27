@@ -231,6 +231,7 @@ class AlternativeService:
     async def delete_alternative(
         self,
         alternative_id: uuid.UUID,
+        current_user: User,
     ) -> None:
 
         alternative = await self.alternatives.get_by_id(
@@ -240,6 +241,14 @@ class AlternativeService:
         if alternative is None:
             raise NotFoundException(
                 "Alternative not found."
+            )
+
+        if (
+            current_user.id != alternative.created_by_id
+            and current_user.role.name != "administrator"
+        ):
+            raise PermissionDeniedException(
+                "You do not have permission to delete this alternative."
             )
 
         await self.alternatives.soft_delete(

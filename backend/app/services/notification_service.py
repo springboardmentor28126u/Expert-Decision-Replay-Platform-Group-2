@@ -13,7 +13,7 @@ from app.models.notification import Notification
 from app.models.user import User
 from app.repositories.notification_repository import NotificationRepository
 from app.schemas.notification import NotificationOut
-from app.utils.exceptions import NotFoundException
+from app.utils.exceptions import NotFoundException, PermissionDeniedException
 
 
 class NotificationService:
@@ -69,6 +69,7 @@ class NotificationService:
     async def get_notification(
         self,
         notification_id: uuid.UUID,
+        current_user: User,
     ) -> NotificationOut:
 
         notification = await self.notifications.get_by_id(
@@ -78,6 +79,11 @@ class NotificationService:
         if notification is None:
             raise NotFoundException(
                 "Notification not found."
+            )
+
+        if notification.recipient_id != current_user.id:
+            raise PermissionDeniedException(
+                "You do not have permission to access this notification."
             )
 
         return NotificationOut.model_validate(
@@ -124,6 +130,7 @@ class NotificationService:
     async def mark_as_read(
         self,
         notification_id: uuid.UUID,
+        current_user: User,
     ) -> NotificationOut:
 
         notification = await self.notifications.get_by_id(
@@ -133,6 +140,11 @@ class NotificationService:
         if notification is None:
             raise NotFoundException(
                 "Notification not found."
+            )
+
+        if notification.recipient_id != current_user.id:
+            raise PermissionDeniedException(
+                "You do not have permission to modify this notification."
             )
 
         notification.is_read = True
@@ -166,6 +178,7 @@ class NotificationService:
     async def delete_notification(
         self,
         notification_id: uuid.UUID,
+        current_user: User,
     ) -> None:
 
         notification = await self.notifications.get_by_id(
@@ -175,6 +188,11 @@ class NotificationService:
         if notification is None:
             raise NotFoundException(
                 "Notification not found."
+            )
+
+        if notification.recipient_id != current_user.id:
+            raise PermissionDeniedException(
+                "You do not have permission to delete this notification."
             )
 
         await self.notifications.soft_delete(notification)

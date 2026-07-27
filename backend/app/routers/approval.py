@@ -41,6 +41,7 @@ def get_approval_service(
 )
 async def list_approvals(
     decision_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: ApprovalService = Depends(get_approval_service),
 ):
 
@@ -55,6 +56,7 @@ async def list_approvals(
 )
 async def get_approval(
     approval_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: ApprovalService = Depends(get_approval_service),
 ):
 
@@ -98,13 +100,14 @@ async def assign_reviewer(
 async def review_decision(
     approval_id: uuid.UUID,
     payload: ApprovalDecision,
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     service: ApprovalService = Depends(get_approval_service),
 ):
 
     return await service.review_decision(
         approval_id,
         payload,
+        current_user,
     )
 
 

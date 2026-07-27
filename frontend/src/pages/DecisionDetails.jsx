@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import VersionHistory from "./VersionHistory";
-import AlternativesPanel from "./AlternativesPanel";
-import "./discussion.css";
-import "./dashboard.css";
-import FileUpload from "./FileUpload";
+import VersionHistory from "../components/VersionHistory";
+import AlternativesPanel from "../components/AlternativesPanel";
+import "../styles/discussion.css";
+import "../styles/dashboard.css";
+import FileUpload from "../components/FileUpload";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -14,10 +14,15 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const [editTitle, setEditTitle] = useState(decision.title);
   const [editProblemStatement, setEditProblemStatement] = useState(decision.problem_statement);
   const [editCategory, setEditCategory] = useState(decision.category || "");
-  const [editAttachmentUrl, setEditAttachmentUrl] = useState(decision.attachment_url || "");
   const [showVersionHistory, setShowVersionHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history"
+  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history" | "attachments"
   const [editError, setEditError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+
+  const [attachments, setAttachments] = useState([]);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [attachmentsError, setAttachmentsError] = useState("");
 
   useEffect(() => {
     setEditTitle(decision.title);
@@ -30,27 +35,27 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   // Form states for posting a new comment/meeting note
   const [newMessageType, setNewMessageType] = useState("comment"); // "comment" or "meeting_note"
   const [newMessageText, setNewMessageText] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
   // States for inline replies and inline edits
   const [replyToId, setReplyToId] = useState(null); // ID of comment being replied to
   const [replyText, setReplyText] = useState("");
-  const [replyFile, setReplyFile] = useState(null);
 
   const [editingId, setEditingId] = useState(null); // ID of comment being edited
   const [editText, setEditText] = useState("");
-  const [editFile, setEditFile] = useState(null);
 
-  // Fetch the discussion thread for this decision
+  // Fetch the discussion thread for this decision. backend/app returns
+  // top-level comments with their direct replies already nested one level
+  // deep (CommentThreadOut) — no client-side grouping needed.
   const fetchThread = useCallback(async () => {
     if (!decision?.id) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://127.0.0.1:8000/discussion/decision/${decision.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        `http://127.0.0.1:8000/api/v1/comments/decision/${decision.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setMessages(res.data);
       setError("");
     } catch (err) {
@@ -65,12 +70,71 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
     fetchThread();
   }, [fetchThread]);
 
+  // Fetch this decision's attachments.
+  const fetchAttachments = useCallback(async () => {
+    if (!decision?.id) return;
+    setAttachmentsLoading(true);
+    try {
+      const res = await axios.get(
+        `http://127.0.0.1:8000/api/v1/attachments/decision/${decision.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAttachments(res.data);
+      setAttachmentsError("");
+    } catch (err) {
+      console.error("Failed to load attachments", err);
+      setAttachmentsError("Could not load attachments. Please try again.");
+    } finally {
+      setAttachmentsLoading(false);
+    }
+  }, [decision?.id, token]);
+
+  useEffect(() => {
+    fetchAttachments();
+  }, [fetchAttachments]);
+
+  // Downloads stream through the API with an auth header, so a plain
+  // <a href> won't work — fetch the bytes and trigger a client-side save.
+  const handleDownloadAttachment = async (attachmentId, fileName) => {
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/v1/attachments/${attachmentId}/download`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download attachment", err);
+      alert("Failed to download attachment.");
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    if (!window.confirm("Delete this attachment?")) return;
+    try {
+      await axios.delete(
+        `http://127.0.0.1:8000/api/v1/attachments/${attachmentId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchAttachments();
+    } catch (err) {
+      console.error("Failed to delete attachment", err);
+      alert(err?.response?.data?.detail || "Failed to delete attachment.");
+    }
+  };
+
   // Handle decision status update (manager/admin only)
   const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
     try {
-      const res = await axios.put(
-        `http://127.0.0.1:8000/decisions/${decision.id}/status`,
+      const res = await axios.patch(
+        `http://127.0.0.1:8000/api/v1/decisions/${decision.id}/status`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -83,38 +147,25 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
     }
   };
 
-  // Helper to format attachment URLs
-  const getAttachmentUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `http://127.0.0.1:8000${url}`;
-  };
-
-  const isImageFile = (url) => {
-    if (!url) return false;
-    const extension = url.split(".").pop().toLowerCase();
-    return ["jpg", "jpeg", "png"].includes(extension);
-  };
-
   // Delete message handler
   const handleDelete = async (msgId) => {
     if (!window.confirm("Are you sure you want to delete this message?")) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/discussion/${msgId}`, {
+      await axios.delete(`http://127.0.0.1:8000/api/v1/comments/${msgId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchThread();
     } catch (err) {
       console.error("Failed to delete comment", err);
-      alert("Error: Failed to delete comment.");
+      alert(err?.response?.data?.detail || "Failed to delete comment.");
     }
   };
 
   // Post top-level comment/meeting note
   const handlePostMessage = async (e) => {
     e.preventDefault();
-    if (!newMessageText.trim() && !selectedFile) {
-      setFormError("Please enter a message or select an attachment.");
+    if (!newMessageText.trim()) {
+      setFormError("Please enter a message.");
       return;
     }
 
@@ -122,120 +173,101 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
     setFormError("");
 
     try {
-      const formData = new FormData();
-      formData.append("decision_id", decision.id);
-      formData.append("message", newMessageText);
-      if (selectedFile) {
-        formData.append("attachment", selectedFile);
-      }
-
-      const url =
-        newMessageType === "meeting_note"
-          ? "http://127.0.0.1:8000/discussion/meeting-note"
-          : "http://127.0.0.1:8000/discussion";
-
-      await axios.post(url, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
+      await axios.post(
+        `http://127.0.0.1:8000/api/v1/comments/decision/${decision.id}`,
+        {
+          content: newMessageText,
+          is_meeting_note: newMessageType === "meeting_note",
         },
-      });
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       setNewMessageText("");
-      setSelectedFile(null);
       fetchThread();
     } catch (err) {
       console.error("Error posting message", err);
-      setFormError("Failed to post message. Ensure attachments are PDF, DOCX, JPG, or PNG.");
+      setFormError(err?.response?.data?.detail || "Failed to post message.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Post nested reply
+  // Post a reply to a top-level comment/meeting note
   const handlePostReply = async (e, parentId) => {
     e.preventDefault();
-    if (!replyText.trim() && !replyFile) {
-      alert("Please enter a message or select an attachment.");
+    if (!replyText.trim()) {
+      alert("Please enter a message.");
       return;
     }
 
     try {
-      const formData = new FormData();
-      formData.append("parent_id", parentId);
-      formData.append("message", replyText);
-      if (replyFile) {
-        formData.append("attachment", replyFile);
-      }
-
-      await axios.post("http://127.0.0.1:8000/discussion/reply", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
+      await axios.post(
+        `http://127.0.0.1:8000/api/v1/comments/decision/${decision.id}`,
+        {
+          content: replyText,
+          parent_comment_id: parentId,
+          is_meeting_note: false,
         },
-      });
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       setReplyText("");
-      setReplyFile(null);
       setReplyToId(null);
       fetchThread();
     } catch (err) {
       console.error("Error posting reply", err);
-      alert("Failed to post reply. Verify attachment type (PDF, DOCX, JPG, PNG).");
+      alert(err?.response?.data?.detail || "Failed to post reply.");
     }
   };
 
   // Save inline edit
   const handleSaveEdit = async (e, msgId) => {
     e.preventDefault();
-    if (!editText.trim() && !editFile) {
-      alert("Message cannot be empty unless there is an attachment.");
+    if (!editText.trim()) {
+      alert("Message cannot be empty.");
       return;
     }
 
     try {
-      const formData = new FormData();
-      formData.append("message", editText);
-      if (editFile) {
-        formData.append("attachment", editFile);
-      }
-
-      await axios.put(`http://127.0.0.1:8000/discussion/${msgId}`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await axios.put(
+        `http://127.0.0.1:8000/api/v1/comments/${msgId}`,
+        { content: editText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       setEditingId(null);
       setEditText("");
-      setEditFile(null);
       fetchThread();
     } catch (err) {
       console.error("Error editing message", err);
-      alert("Failed to edit comment.");
+      alert(err?.response?.data?.detail || "Failed to edit comment.");
     }
   };
 
   const handleSaveDecisionEdit = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
     setEditError("");
     try {
-    const res = await axios.put(
-      `http://127.0.0.1:8000/decisions/${decision.id}`,
-      {
-        title: editTitle,
-        problem_statement: editProblemStatement,
-        category: editCategory,
-        attachment_url: editAttachmentUrl || null,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (onStatusUpdated) onStatusUpdated(res.data);
-    setIsEditing(false);
-  } catch (err) {
-    setEditError(err?.response?.data?.detail || "Failed to save changes.");
-  }
-};
+      const res = await axios.put(
+        `http://127.0.0.1:8000/api/v1/decisions/${decision.id}`,
+        {
+          title: editTitle,
+          problem_statement: editProblemStatement,
+          category: editCategory,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (onStatusUpdated) onStatusUpdated(res.data);
+      setIsEditing(false);
+    } catch (err) {
+      setEditError(err?.response?.data?.detail || "Failed to save changes.");
+    } finally {
+      setIsSaving(false);
+      savingRef.current = false;
+    }
+  };
 
   // Format Dates nicely
   const formatDate = (dateStr) => {
@@ -245,55 +277,36 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
     });
   };
 
-  // Build the hierarchical structure of comments
-  // Group all child replies by their parent_id
-  const topLevel = [];
-  const repliesByParent = {};
+  // backend/app already returns top-level comments with their direct
+  // replies nested one level deep, so no client-side grouping is needed.
+  const filteredTopLevel = messages.filter((msg) =>
+    newMessageType === "meeting_note" ? msg.is_meeting_note : !msg.is_meeting_note
+  );
 
-  messages.forEach((msg) => {
-    if (msg.parent_id) {
-      if (!repliesByParent[msg.parent_id]) {
-        repliesByParent[msg.parent_id] = [];
-      }
-      repliesByParent[msg.parent_id].push(msg);
-    } else {
-      topLevel.push(msg);
-    }
-  });
-
-  const filteredTopLevel = topLevel.filter((msg) => {
-    if (newMessageType === "comment") {
-      return msg.message_type === "comment";
-    } else if (newMessageType === "meeting_note") {
-      return msg.message_type === "meeting_note";
-    }
-    return true;
-  });
-
-  // Recursive component to render a single message card and its replies
-  const renderMessageNode = (msg) => {
-    const isOwner = msg.user_id === profile.id;
-    const canDelete = isOwner || profile.role === "manager" || profile.role === "admin";
-    const childReplies = repliesByParent[msg.id] || [];
+  // Renders a single message card. Replies only ever nest one level deep
+  // (matching what the backend returns), so the "Reply" action is only
+  // offered on top-level comments — replying to a reply would create a
+  // grandchild comment the list endpoint never returns.
+  const renderMessageNode = (msg, isReply = false) => {
+    const isOwner = msg.author?.id === profile.id;
+    const canDelete = isOwner || profile.role?.name === "manager" || profile.role?.name === "administrator";
+    const childReplies = msg.replies || [];
     const isEditing = editingId === msg.id;
 
     return (
-      <div 
-        key={msg.id} 
-        className={`discussion-message-node ${msg.parent_id ? "is-reply" : "is-root"}`}
+      <div
+        key={msg.id}
+        className={`discussion-message-node ${isReply ? "is-reply" : "is-root"}`}
        >
         <div className="msg-avatar">
-           {(msg.user?.full_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+           {(msg.author?.full_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
         </div>
         <div className="msg-body-col">
-          <div className={`message-card ${msg.message_type === "meeting_note" ? "is-meeting-note" : ""}`}>
+          <div className={`message-card ${msg.is_meeting_note ? "is-meeting-note" : ""}`}>
             <div className="message-header">
              <div className="message-author-info">
-               <span className="message-author-name">{msg.user?.full_name || "Unknown User"}</span>
-                <span className={`message-author-role ${msg.user?.role || "employee"}`}>
-                {msg.user?.role || "employee"}
-              </span>
-              {msg.message_type === "meeting_note" && (
+               <span className="message-author-name">{msg.author?.full_name || "Unknown User"}</span>
+              {msg.is_meeting_note && (
                 <span className="message-type-badge">Official Note</span>
               )}
             </div>
@@ -309,29 +322,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 rows={3}
                 required
               />
-              <div className="form-file-input-wrapper">
-                <label className="form-file-label">
-                  📎 Change Attachment (Optional)
-                  <input
-                    type="file"
-                    className="form-file-input"
-                    onChange={(e) => setEditFile(e.target.files[0])}
-                  />
-                </label>
-                {editFile && (
-                  <div className="form-selected-file">
-                    📄 {editFile.name}
-                    <button
-                      type="button"
-                      className="message-action-btn delete"
-                      onClick={() => setEditFile(null)}
-                      style={{ border: "none", background: "none", cursor: "pointer" }}
-                    >
-                      (remove)
-                    </button>
-                  </div>
-                )}
-              </div>
               <div className="form-actions-row">
                 <button type="submit" className="form-btn primary">Save Changes</button>
                 <button
@@ -340,7 +330,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   onClick={() => {
                     setEditingId(null);
                     setEditText("");
-                    setEditFile(null);
                   }}
                 >
                   Cancel
@@ -349,56 +338,27 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             </form>
           ) : (
             <>
-              <div className="message-body">{msg.message}</div>
-              {msg.attachment_url && (
-                <div className="message-attachment-section">
-                  {isImageFile(msg.attachment_url) ? (
-                    <a
-                      href={getAttachmentUrl(msg.attachment_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <img
-                        src={getAttachmentUrl(msg.attachment_url)}
-                        alt="Attachment preview"
-                        className="attachment-preview-img"
-                      />
-                    </a>
-                  ) : (
-                    <div className="message-attachment">
-                      📎{" "}
-                      <a
-                        href={getAttachmentUrl(msg.attachment_url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="attachment-link"
-                      >
-                        {msg.attachment_url.split("/").pop()}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="message-body">{msg.content}</div>
 
               {!isClosed && (
                 <div className="message-actions">
-                  <button
-                    className="message-action-btn"
-                    onClick={() => {
-                      setReplyToId(replyToId === msg.id ? null : msg.id);
-                      setReplyText("");
-                      setReplyFile(null);
-                    }}
-                  >
-                    💬 Reply
-                  </button>
+                  {!isReply && (
+                    <button
+                      className="message-action-btn"
+                      onClick={() => {
+                        setReplyToId(replyToId === msg.id ? null : msg.id);
+                        setReplyText("");
+                      }}
+                    >
+                      💬 Reply
+                    </button>
+                  )}
                   {isOwner && (
                     <button
                       className="message-action-btn"
                       onClick={() => {
                         setEditingId(msg.id);
-                        setEditText(msg.message);
-                        setEditFile(null);
+                        setEditText(msg.content);
                       }}
                     >
                       ✏️ Edit
@@ -416,32 +376,17 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
         </div>
 
         {/* Inline Reply Form */}
-        {replyToId === msg.id && !isClosed && (
+        {!isReply && replyToId === msg.id && !isClosed && (
           <form onSubmit={(e) => handlePostReply(e, msg.id)} className="reply-form-wrapper">
             <textarea
               className="form-textarea"
-              placeholder={`Replying to ${msg.user?.full_name || "comment"}...`}
+              placeholder={`Replying to ${msg.author?.full_name || "comment"}...`}
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               rows={2}
               required
             />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div className="form-file-input-wrapper" style={{ margin: 0 }}>
-                <label className="form-file-label">
-                  📎 Add Attachment
-                  <input
-                    type="file"
-                    className="form-file-input"
-                    onChange={(e) => setReplyFile(e.target.files[0])}
-                  />
-                </label>
-                {replyFile && (
-                  <span className="form-selected-file" style={{ display: "inline-flex", marginLeft: "8px" }}>
-                    📄 {replyFile.name}
-                  </span>
-                )}
-              </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
               <div className="form-actions-row">
                 <button type="submit" className="form-btn primary">Send Reply</button>
                 <button
@@ -450,7 +395,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   onClick={() => {
                     setReplyToId(null);
                     setReplyText("");
-                    setReplyFile(null);
                   }}
                 >
                   Cancel
@@ -460,14 +404,14 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           </form>
         )}
 
-        {/* Render nested replies recursively */}
+        {/* Render direct replies (one level only) */}
         {childReplies.length > 0 && (
           <div className="replies-container">
-            {childReplies.map((reply) => renderMessageNode(reply))}
+            {childReplies.map((reply) => renderMessageNode(reply, true))}
           </div>
         )}
       </div>
-    </div>
+      </div>
     );
   };
 
@@ -526,36 +470,11 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 onChange={(e) => setEditCategory(e.target.value)}
               />
             </div>
-            <div className="auth-field">
-              <FileUpload onUploadSuccess={(url) => setEditAttachmentUrl(url)} />
-              {editAttachmentUrl ? (
-                <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ color: "#4FD1B5", fontSize: "12px" }}>📎 File attached</span>
-                  {(profile.id === decision.created_by || profile.role === "admin") && (
-                    <button
-                      type="button"
-                      onClick={() => setEditAttachmentUrl("")}
-                      style={{
-                        background: "none",
-                        border: "1px solid #2E3646",
-                        color: "#FF6B6B",
-                        borderRadius: "6px",
-                        fontSize: "11px",
-                        padding: "2px 8px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      ✕ Remove
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <p style={{ color: "#6B7280", fontSize: "12px", marginTop: "4px" }}>No file attached</p>
-              )}
-            </div>
             {editError && <div className="auth-message error">{editError}</div>}
             <div style={{ display: "flex", gap: "10px" }}>
-              <button className="auth-button" onClick={handleSaveDecisionEdit}>Save Changes</button>
+              <button className="auth-button" onClick={handleSaveDecisionEdit} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
               <button
                 className="dash-back-btn"
                 onClick={() => {
@@ -577,10 +496,31 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   {decision.title}
                 </h1>
                 
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
-                  <button className="edit-decision-btn" onClick={() => setIsEditing(true)}>
-                    ✏️ Edit Decision
-                  </button>
+               <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+                 <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
+                   ✏️ Edit Decision
+                 </button>
+                 <a
+                  href={`http://127.0.0.1:8000/decisions/${decision.id}/export`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    fetch(`http://127.0.0.1:8000/decisions/${decision.id}/export`, {
+                      headers: { Authorization: `Bearer ${token}` },
+                    })
+                      .then((res) => res.blob())
+                      .then((blob) => {
+                         const url = window.URL.createObjectURL(blob);
+                         const a = document.createElement("a");
+                         a.href = url;
+                         a.download = `decision_${decision.id}.pdf`;
+                         a.click();
+                      });
+                  }}
+                  className="dash-back-btn"
+                  style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                >
+                  ⬇ Download PDF
+                 </a>
                 </div>
               </div>
 
@@ -630,7 +570,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 </span>
                 
                 <span className="decision-date" style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
-                  Created {new Date(decision.created_at).toLocaleString()} by <strong>{decision.creator_name || "Unknown"}</strong>
+                  Created {new Date(decision.created_at).toLocaleString()} by <strong>{decision.created_by?.full_name || "Unknown"}</strong>
                 </span>
               </div>
             </div>
@@ -641,19 +581,38 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             </div>
 
             {decision.attachment_url && (
-              <div style={{ marginTop: "16px", padding: "12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "8px", width: "fit-content", display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ marginTop: "12px", display: "flex", gap: "16px" }}>
                 <a
                   href={`http://127.0.0.1:8000${decision.attachment_url}`}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: "var(--accent)", fontSize: "13px", textDecoration: "none", fontWeight: "600" }}
+                  style={{ color: "#4FD1B5", fontSize: "13px", textDecoration: "none" }}
                 >
-                  📎 View attached file
+                 📎 View file
                 </a>
-              </div>
-            )}
 
-            {(profile.role === "manager" || profile.role === "admin") && (
+                <a
+                  href="#"
+                  onClick={(e) => {
+                   e.preventDefault();
+                   fetch(`http://127.0.0.1:8000${decision.attachment_url}?download=true`)
+                      .then((res) => res.blob())
+                      .then((blob) => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = decision.attachment_url.split("/").pop();
+                        a.click();
+                      });
+                    }}
+                    style={{ color: "#9AA5B5", fontSize: "13px", textDecoration: "none" }}
+                >
+                  ⬇ Download
+                </a>
+               </div>
+             )}
+
+            {(profile.role?.name === "manager" || profile.role?.name === "administrator") && (
               <div className="status-control-section">
                 <span className="status-control-label">Update Status:</span>
                 <select
@@ -686,6 +645,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
         {[
           { key: "alternatives", label: "Alternatives" },
           { key: "discussion", label: "Discussion" },
+          { key: "attachments", label: "Attachments" },
           { key: "history", label: "Version History" },
         ].map((tab) => (
           <button
@@ -709,7 +669,74 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
 
       {/* Tab content */}
       {activeTab === "alternatives" && (
-        <AlternativesPanel token={token} decisionId={decision.id} />
+        <AlternativesPanel token={token} decisionId={decision.id} decisionTitle={decision.title} />
+      )}
+
+      {activeTab === "attachments" && (
+        <div className="dash-card">
+          <p className="dash-card-label" style={{ marginBottom: 12 }}>Attachments</p>
+
+          <FileUpload
+            token={token}
+            targetType="decision"
+            targetId={decision.id}
+            onUploadSuccess={fetchAttachments}
+          />
+
+          {attachmentsError && (
+            <div className="dash-card-note" style={{ color: "#FF6B6B", marginTop: 12 }}>
+              {attachmentsError}
+            </div>
+          )}
+
+          {attachmentsLoading ? (
+            <p className="dash-card-note" style={{ marginTop: 12 }}>Loading attachments...</p>
+          ) : attachments.length === 0 ? (
+            <p className="dash-card-note" style={{ marginTop: 12 }}>No attachments yet.</p>
+          ) : (
+            <table className="dash-table" style={{ marginTop: 12 }}>
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Uploaded By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attachments.map((att) => (
+                  <tr key={att.id}>
+                    <td>{att.file_name}</td>
+                    <td>{att.file_type}</td>
+                    <td>{(att.file_size / 1024).toFixed(1)} KB</td>
+                    <td>{att.uploaded_by?.full_name || "Unknown"}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <button
+                          className="dash-logout"
+                          onClick={() => handleDownloadAttachment(att.id, att.file_name)}
+                          style={{ padding: "6px 10px" }}
+                          type="button"
+                        >
+                          ⬇ Download
+                        </button>
+                        <button
+                          className="dash-logout"
+                          onClick={() => handleDeleteAttachment(att.id)}
+                          style={{ padding: "6px 10px", borderColor: "#FF6B6B", color: "#FF6B6B" }}
+                          type="button"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       )}
 
       {activeTab === "history" && (
@@ -763,29 +790,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   required
                 />
 
-                <div className="form-file-input-wrapper">
-                  <label className="form-file-label">
-                    📎 Attach File (PDF, DOCX, JPG, PNG)
-                    <input
-                      type="file"
-                      className="form-file-input"
-                      onChange={(e) => setSelectedFile(e.target.files[0])}
-                    />
-                  </label>
-                  {selectedFile && (
-                    <div className="form-selected-file">
-                      📄 {selectedFile.name}
-                      <button
-                        type="button"
-                        className="message-action-btn delete"
-                        onClick={() => setSelectedFile(null)}
-                        style={{ border: "none", background: "none", cursor: "pointer", marginLeft: "4px" }}
-                      >
-                        (remove)
-                      </button>
-                    </div>
-                  )}
-                </div>
                 {formError && <div className="auth-message error" style={{ marginBottom: "12px" }}>{formError}</div>}
 
                 <div className="form-actions-row">

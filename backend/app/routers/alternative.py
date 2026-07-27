@@ -34,6 +34,7 @@ def get_alternative_service(
 )
 async def list_alternatives(
     decision_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: AlternativeService = Depends(get_alternative_service),
 ):
     return await service.list_alternatives(decision_id)
@@ -45,6 +46,7 @@ async def list_alternatives(
 )
 async def get_alternative(
     alternative_id: uuid.UUID,
+    _: User = Depends(get_current_user),
     service: AlternativeService = Depends(get_alternative_service),
 ):
     return await service.get_alternative(alternative_id)
@@ -104,8 +106,10 @@ async def select_alternative(
 )
 async def delete_alternative(
     alternative_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     service: AlternativeService = Depends(get_alternative_service),
 ):
     await service.delete_alternative(
         alternative_id,
+        current_user,
     )

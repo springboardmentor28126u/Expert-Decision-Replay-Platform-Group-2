@@ -14,12 +14,17 @@ from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.attachment import Attachment
+from app.models.user import User
 from app.repositories.alternative_repository import AlternativeRepository
 from app.repositories.attachment_repository import AttachmentRepository
 from app.repositories.comment_repository import CommentRepository
 from app.repositories.decision_repository import DecisionRepository
 from app.schemas.attachment import AttachmentOut
-from app.utils.exceptions import NotFoundException, ValidationException
+from app.utils.exceptions import (
+    NotFoundException,
+    PermissionDeniedException,
+    ValidationException,
+)
 
 UPLOAD_DIR = Path("uploads")
 
@@ -155,6 +160,23 @@ class AttachmentService:
 
         return AttachmentOut.model_validate(attachment)
 
+    async def get_attachment_for_download(
+        self,
+        attachment_id: uuid.UUID,
+    ) -> Attachment:
+        """
+        Returns the raw ORM object (not AttachmentOut) since the router
+        needs `file_path`/`file_name`/`file_type` to stream the file —
+        fields deliberately excluded from the public AttachmentOut schema.
+        """
+
+        attachment = await self.attachments.get_by_id(attachment_id)
+
+        if attachment is None:
+            raise NotFoundException("Attachment not found.")
+
+        return attachment
+
     async def list_for_decision(
         self,
         decision_id: uuid.UUID,
@@ -194,12 +216,21 @@ class AttachmentService:
     async def delete_attachment(
         self,
         attachment_id: uuid.UUID,
+        current_user: User,
     ) -> None:
 
         attachment = await self.attachments.get_by_id(attachment_id)
 
         if attachment is None:
             raise NotFoundException("Attachment not found.")
+
+        if (
+            current_user.id != attachment.uploaded_by_id
+            and current_user.role.name != "administrator"
+        ):
+            raise PermissionDeniedException(
+                "You do not have permission to delete this attachment."
+            )
 
         await self.attachments.soft_delete(attachment)
 

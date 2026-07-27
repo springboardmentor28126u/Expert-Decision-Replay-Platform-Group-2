@@ -274,6 +274,7 @@ class DecisionService:
     async def delete_decision(
         self,
         decision_id: uuid.UUID,
+        current_user: User,
     ) -> None:
 
         decision = await self.decisions.get_by_id(
@@ -283,6 +284,14 @@ class DecisionService:
         if decision is None:
             raise NotFoundException(
                 "Decision not found."
+            )
+
+        if (
+            current_user.id != decision.created_by_id
+            and current_user.role.name != "administrator"
+        ):
+            raise PermissionDeniedException(
+                "You do not have permission to delete this decision."
             )
 
         await self.decisions.soft_delete(

@@ -1,4 +1,4 @@
-import "./landing.css";
+import "../styles/landing.css";
 
 function Landing({ onLogin, onSignup }) {
   return (

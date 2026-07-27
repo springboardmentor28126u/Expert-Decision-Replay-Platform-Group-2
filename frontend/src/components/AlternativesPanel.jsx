@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
-function AlternativesPanel({ token, decisionId, onUpdated }) {
+const FEASIBILITY_SCORE_MAP = { Low: 3, Medium: 6, High: 9 };
+
+const feasibilityScoreToLabel = (score) => {
+  if (score === null || score === undefined) return "—";
+  if (score <= 4) return "Low";
+  if (score <= 7) return "Medium";
+  return "High";
+};
+
+function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
   const [alternatives, setAlternatives] = useState([]);
   const [loading, setLoading] = useState(false);
   const [panelError, setPanelError] = useState("");
@@ -16,15 +25,13 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
     description: "",
     pros: "",
     cons: "",
-    cost: "",
-    risk_level: "Low",
-    feasibility: "Low",
+    cost_estimate: "",
+    risk_assessment: "Low",
+    feasibility_score: "Low",
   });
 
-  // Compare view
+  // Compare view (client-side only — built from the alternatives already fetched)
   const [isComparing, setIsComparing] = useState(false);
-  const [comparison, setComparison] = useState(null);
-  const [compareLoading, setCompareLoading] = useState(false);
 
   const riskLevels = useMemo(() => ["Low", "Medium", "High"], []);
   const feasibilityLevels = useMemo(() => ["Low", "Medium", "High"], []);
@@ -36,7 +43,7 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
     setLoading(true);
     try {
       const res = await axios.get(
-        `http://127.0.0.1:8000/decisions/${decisionId}/alternatives`,
+        `http://127.0.0.1:8000/api/v1/alternatives/decision/${decisionId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAlternatives(res.data);
@@ -55,8 +62,6 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
 
     // Reset UI whenever decision/token changes
     setIsComparing(false);
-    setComparison(null);
-    setCompareLoading(false);
 
     setMode("create");
     setEditingId(null);
@@ -66,9 +71,9 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
       description: "",
       pros: "",
       cons: "",
-      cost: "",
-      risk_level: "Low",
-      feasibility: "Low",
+      cost_estimate: "",
+      risk_assessment: "Low",
+      feasibility_score: "Low",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [decisionId, token]);
@@ -82,9 +87,9 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
       description: "",
       pros: "",
       cons: "",
-      cost: "",
-      risk_level: "Low",
-      feasibility: "Low",
+      cost_estimate: "",
+      risk_assessment: "Low",
+      feasibility_score: "Low",
     });
   };
 
@@ -96,9 +101,11 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
       description: alt.description || "",
       pros: alt.pros || "",
       cons: alt.cons || "",
-      cost: alt.cost ?? "",
-      risk_level: alt.risk_level || "Low",
-      feasibility: alt.feasibility || "Low",
+      cost_estimate: alt.cost_estimate ?? "",
+      risk_assessment: alt.risk_assessment || "Low",
+      feasibility_score: feasibilityScoreToLabel(alt.feasibility_score) === "—"
+        ? "Low"
+        : feasibilityScoreToLabel(alt.feasibility_score),
     });
     setPanelError("");
     setShowForm(true);
@@ -113,31 +120,22 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
       description: form.description || null,
       pros: form.pros || null,
       cons: form.cons || null,
-      cost: form.cost === "" ? null : Number(form.cost),
-      risk_level: form.risk_level,
-      feasibility: form.feasibility,
-      decision_id: decisionId,
+      cost_estimate: form.cost_estimate === "" ? null : Number(form.cost_estimate),
+      risk_assessment: form.risk_assessment,
+      feasibility_score: FEASIBILITY_SCORE_MAP[form.feasibility_score],
     };
 
     try {
       if (mode === "create") {
         await axios.post(
-          "http://127.0.0.1:8000/alternatives",
+          `http://127.0.0.1:8000/api/v1/alternatives/decision/${decisionId}`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
         await axios.put(
-          `http://127.0.0.1:8000/alternatives/${editingId}`,
-          {
-            title: payload.title,
-            description: payload.description,
-            pros: payload.pros,
-            cons: payload.cons,
-            cost: payload.cost,
-            risk_level: payload.risk_level,
-            feasibility: payload.feasibility,
-          },
+          `http://127.0.0.1:8000/api/v1/alternatives/${editingId}`,
+          payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
       }
@@ -159,13 +157,11 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
 
     // If the user deletes while comparing, go back to manage view to prevent stale UI.
     setIsComparing(false);
-    setComparison(null);
-    setCompareLoading(false);
 
     setPanelError("");
     try {
       await axios.delete(
-        `http://127.0.0.1:8000/alternatives/${alternativeId}`,
+        `http://127.0.0.1:8000/api/v1/alternatives/${alternativeId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       await fetchAlternatives();
@@ -179,36 +175,29 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
     }
   };
 
-  const fetchComparison = async () => {
-    if (!decisionId || !token) return;
-
+  const handleSelect = async (alternativeId) => {
     setPanelError("");
-    setCompareLoading(true);
     try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/decisions/${decisionId}/compare`,
+      await axios.patch(
+        `http://127.0.0.1:8000/api/v1/alternatives/${alternativeId}/select`,
+        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setComparison(res.data);
+      await fetchAlternatives();
+      if (onUpdated) onUpdated();
     } catch (err) {
       setPanelError(
-        err?.response?.data?.detail || "Failed to load comparison."
+        err?.response?.data?.detail || "Failed to select alternative."
       );
-    } finally {
-      setCompareLoading(false);
     }
   };
 
   const onClickCompare = () => {
     setIsComparing(true);
-    setComparison(null);
-    fetchComparison();
   };
 
   const goBackToAlternatives = () => {
     setIsComparing(false);
-    setComparison(null);
-    setCompareLoading(false);
     resetForm();
   };
 
@@ -236,7 +225,9 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
         </div>
       )}
 
-      {/* COMPARISON MODE (only after clicking Compare) */}
+      {/* COMPARISON MODE (only after clicking Compare) — rendered client-side
+          from the alternatives already fetched; there is no backend /compare
+          endpoint. */}
       {isComparing && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -245,60 +236,54 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
               className="auth-button"
               style={{ marginTop: 12, flex: 1 }}
               onClick={goBackToAlternatives}
-              disabled={compareLoading}
             >
-              {compareLoading ? "Loading..." : "Go Back"}
+              Go Back
             </button>
           </div>
 
-          {comparison ? (
-            <>
-              <div
-                className="dash-card-note"
-                style={{ marginBottom: 6, marginTop: 12 }}
-              >
-                Decision: <b>{comparison.decision_title}</b>
-              </div>
-
-              <div className="dash-card-note">
-                {comparison.alternatives.length} alternative(s) available
-                for comparison.
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <table className="dash-table">
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Risk</th>
-                      <th>Feasibility</th>
-                      <th>Cost</th>
-                      <th>Description</th>
-                      <th>Pros</th>
-                      <th>Cons</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comparison.alternatives.map((alt) => (
-                      <tr key={alt.id ?? alt.title}>
-                        <td>{alt.title}</td>
-                        <td>{alt.risk_level ?? "—"}</td>
-                        <td>{alt.feasibility ?? "—"}</td>
-                        <td>{alt.cost ?? "—"}</td>
-                        <td>{alt.description ?? "—"}</td>
-                        <td>{alt.pros ?? "—"}</td>
-                        <td>{alt.cons ?? "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            <p className="dash-card-note" style={{ marginTop: 12 }}>
-              {compareLoading ? "Comparing..." : "Click Compare to load details."}
-            </p>
+          {decisionTitle && (
+            <div
+              className="dash-card-note"
+              style={{ marginBottom: 6, marginTop: 12 }}
+            >
+              Decision: <b>{decisionTitle}</b>
+            </div>
           )}
+
+          <div className="dash-card-note">
+            {alternatives.length} alternative(s) available for comparison.
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Risk</th>
+                  <th>Feasibility</th>
+                  <th>Cost</th>
+                  <th>Description</th>
+                  <th>Pros</th>
+                  <th>Cons</th>
+                  <th>Winner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alternatives.map((alt) => (
+                  <tr key={alt.id ?? alt.title}>
+                    <td>{alt.title}</td>
+                    <td>{alt.risk_assessment ?? "—"}</td>
+                    <td>{feasibilityScoreToLabel(alt.feasibility_score)}</td>
+                    <td>{alt.cost_estimate ?? "—"}</td>
+                    <td>{alt.description ?? "—"}</td>
+                    <td>{alt.pros ?? "—"}</td>
+                    <td>{alt.cons ?? "—"}</td>
+                    <td>{alt.is_selected ? "★ Winner" : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -317,9 +302,9 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
                     className="auth-button"
                     style={{ marginTop: 12, flex: 1 }}
                     onClick={onClickCompare}
-                    disabled={compareLoading || !decisionId}
+                    disabled={!decisionId || alternatives.length === 0}
                   >
-                    {compareLoading ? "Comparing..." : "Compare"}
+                    Compare
                   </button>
 
                   <button
@@ -335,9 +320,9 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
                         description: "",
                         pros: "",
                         cons: "",
-                        cost: "",
-                        risk_level: "Low",
-                        feasibility: "Low",
+                        cost_estimate: "",
+                        risk_assessment: "Low",
+                        feasibility_score: "Low",
                       });
                     }}
                   >
@@ -356,6 +341,7 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
                       <th>Risk</th>
                       <th>Feasibility</th>
                       <th>Cost</th>
+                      <th>Winner</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -363,9 +349,10 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
                     {alternatives.map((alt) => (
                       <tr key={alt.id}>
                         <td>{alt.title}</td>
-                        <td>{alt.risk_level}</td>
-                        <td>{alt.feasibility}</td>
-                        <td>{alt.cost ?? "—"}</td>
+                        <td>{alt.risk_assessment}</td>
+                        <td>{feasibilityScoreToLabel(alt.feasibility_score)}</td>
+                        <td>{alt.cost_estimate ?? "—"}</td>
+                        <td>{alt.is_selected ? "★ Winner" : "—"}</td>
                         <td>
                           <div
                             style={{
@@ -374,6 +361,20 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
                               flexWrap: "wrap",
                             }}
                           >
+                            {!alt.is_selected && (
+                              <button
+                                className="dash-logout"
+                                onClick={() => handleSelect(alt.id)}
+                                style={{
+                                  padding: "6px 10px",
+                                  borderColor: "#4FD1B5",
+                                  color: "#4FD1B5",
+                                }}
+                                type="button"
+                              >
+                                Select as Winner
+                              </button>
+                            )}
                             <button
                               className="dash-logout"
                               onClick={() => startEdit(alt)}
@@ -467,9 +468,9 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
                       type="number"
                       step="0.01"
                       placeholder="Cost (optional)"
-                      value={form.cost}
+                      value={form.cost_estimate}
                       onChange={(e) =>
-                        setForm((p) => ({ ...p, cost: e.target.value }))
+                        setForm((p) => ({ ...p, cost_estimate: e.target.value }))
                       }
                     />
                   </div>
@@ -477,9 +478,9 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
                   <div className="auth-field">
                     <select
                       className="dash-select"
-                      value={form.risk_level}
+                      value={form.risk_assessment}
                       onChange={(e) =>
-                        setForm((p) => ({ ...p, risk_level: e.target.value }))
+                        setForm((p) => ({ ...p, risk_assessment: e.target.value }))
                       }
                     >
                       {riskLevels.map((r) => (
@@ -493,11 +494,11 @@ function AlternativesPanel({ token, decisionId, onUpdated }) {
                   <div className="auth-field">
                     <select
                       className="dash-select"
-                      value={form.feasibility}
+                      value={form.feasibility_score}
                       onChange={(e) =>
                         setForm((p) => ({
                           ...p,
-                          feasibility: e.target.value,
+                          feasibility_score: e.target.value,
                         }))
                       }
                     >

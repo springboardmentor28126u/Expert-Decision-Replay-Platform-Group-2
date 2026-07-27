@@ -65,3 +65,9 @@ Thumbs.db
 
 # Misc
 tempCodeRunnerFile.py
+
+# Docs
+backend/uploads/*.jpeg
+backend/uploads/*.txt
+backend/uploads/*.pdf
+backend/uploads/discussion/*

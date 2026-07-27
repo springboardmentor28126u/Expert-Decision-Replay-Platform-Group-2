@@ -52,7 +52,7 @@ function ProfileMenu({ profile }) {
             {profile.full_name}
           </span>
           <span style={{ fontSize: "11.5px", color: "var(--text-secondary)", textTransform: "capitalize" }}>
-            {profile.role}
+            {profile.role?.name}
           </span>
         </div>
       </div>

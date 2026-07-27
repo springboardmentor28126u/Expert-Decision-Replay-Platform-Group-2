@@ -66,10 +66,11 @@ async def unread_count(
 )
 async def get_notification(
     notification_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     service: NotificationService = Depends(get_notification_service),
 ):
 
-    return await service.get_notification(notification_id)
+    return await service.get_notification(notification_id, current_user)
 
 
 @router.patch(
@@ -78,10 +79,11 @@ async def get_notification(
 )
 async def mark_as_read(
     notification_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     service: NotificationService = Depends(get_notification_service),
 ):
 
-    return await service.mark_as_read(notification_id)
+    return await service.mark_as_read(notification_id, current_user)
 
 
 @router.patch(
@@ -102,7 +104,8 @@ async def mark_all_as_read(
 )
 async def delete_notification(
     notification_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     service: NotificationService = Depends(get_notification_service),
 ):
 
-    await service.delete_notification(notification_id)
+    await service.delete_notification(notification_id, current_user)
