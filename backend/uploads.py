@@ -43,16 +43,32 @@ async def upload_file(file: UploadFile = File(...)):
         "file_url": file_url
     }
 
+import requests as http_requests
+from fastapi.responses import StreamingResponse
+import io
+
 @router.get("/{filename}")
-async def get_uploaded_file(filename: str):
-    """Serves an uploaded file by filename."""
+async def get_uploaded_file(filename: str, download: bool = False):
+    """Serves an uploaded file by filename. Pass ?download=true to force download instead of viewing."""
     file_path = os.path.join(UPLOAD_DIR, filename)
     if os.path.exists(file_path):
+        if download:
+            return FileResponse(file_path, filename=filename, media_type="application/octet-stream")
         return FileResponse(file_path)
-    
-    # If not found locally, redirect to Backblaze B2
+
     try:
         b2_url = b2_service.get_b2_download_url(f"uploads/{filename}")
+
+        if download:
+            # Fetch the file ourselves and hand it to the browser directly
+            file_response = http_requests.get(b2_url)
+            file_response.raise_for_status()
+            return StreamingResponse(
+                io.BytesIO(file_response.content),
+                media_type="application/octet-stream",
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
+
         return RedirectResponse(b2_url)
     except Exception as e:
         raise HTTPException(status_code=404, detail="File not found on server or Backblaze B2.")

@@ -361,32 +361,69 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
               {msg.attachment_url && (
                 <div className="message-attachment-section">
                   {isImageFile(msg.attachment_url) ? (
-                    <a
-                      href={getAttachmentUrl(msg.attachment_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                   <>
+                    <a href={getAttachmentUrl(msg.attachment_url)} target="_blank" rel="noopener noreferrer">
                       <img
                         src={getAttachmentUrl(msg.attachment_url)}
                         alt="Attachment preview"
                         className="attachment-preview-img"
                       />
                     </a>
-                  ) : (
-                    <div className="message-attachment">
-                      📎{" "}
+                    <div style={{ marginTop: "4px" }}>
                       <a
-                        href={getAttachmentUrl(msg.attachment_url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="attachment-link"
+                         href="#"
+                         onClick={(e) => {
+                           e.preventDefault();
+                           fetch(getAttachmentUrl(msg.attachment_url))
+                             .then((res) => res.blob())
+                             .then((blob) => {
+                               const url = window.URL.createObjectURL(blob);
+                               const a = document.createElement("a");
+                               a.href = url;
+                               a.download = msg.attachment_url.split("/").pop();
+                               a.click();
+                             });
+                        }}
+                        style={{ color: "#9AA5B5", fontSize: "11px", textDecoration: "none" }}
                       >
-                        {msg.attachment_url.split("/").pop()}
+                        ⬇ Download image
                       </a>
                     </div>
-                  )}
-                </div>
-              )}
+                  </>
+                ) : (
+                  <div className="message-attachment">
+                    📎{" "}
+                  <a
+                      href={getAttachmentUrl(msg.attachment_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="attachment-link"
+                  >
+                      {msg.attachment_url.split("/").pop()}
+                  </a>
+                  {" · "}
+                  <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        fetch(getAttachmentUrl(msg.attachment_url))
+                          .then((res) => res.blob())
+                          .then((blob) => {
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = msg.attachment_url.split("/").pop();
+                            a.click();
+                          });
+                     }}
+                     style={{ color: "#9AA5B5", fontSize: "11px", textDecoration: "none" }}
+                  >
+                     ⬇ Download
+                   </a>
+                 </div>
+               )}
+             </div>
+           )}
 
               {!isClosed && (
                 <div className="message-actions">
@@ -587,10 +624,31 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   {decision.title}
                 </h1>
                 
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
-                  <button className="edit-decision-btn" onClick={() => setIsEditing(true)}>
-                    ✏️ Edit Decision
-                  </button>
+               <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+                 <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
+                   ✏️ Edit Decision
+                 </button>
+                 <a
+                  href={`http://127.0.0.1:8000/decisions/${decision.id}/export`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    fetch(`http://127.0.0.1:8000/decisions/${decision.id}/export`, {
+                      headers: { Authorization: `Bearer ${token}` },
+                    })
+                      .then((res) => res.blob())
+                      .then((blob) => {
+                         const url = window.URL.createObjectURL(blob);
+                         const a = document.createElement("a");
+                         a.href = url;
+                         a.download = `decision_${decision.id}.pdf`;
+                         a.click();
+                      });
+                  }}
+                  className="dash-back-btn"
+                  style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                >
+                  ⬇ Download PDF
+                 </a>
                 </div>
               </div>
 
@@ -651,17 +709,36 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             </div>
 
             {decision.attachment_url && (
-              <div style={{ marginTop: "16px", padding: "12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "8px", width: "fit-content", display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ marginTop: "12px", display: "flex", gap: "16px" }}>
                 <a
                   href={`http://127.0.0.1:8000${decision.attachment_url}`}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: "var(--accent)", fontSize: "13px", textDecoration: "none", fontWeight: "600" }}
+                  style={{ color: "#4FD1B5", fontSize: "13px", textDecoration: "none" }}
                 >
-                  📎 View attached file
+                 📎 View file
                 </a>
-              </div>
-            )}
+
+                <a
+                  href="#"
+                  onClick={(e) => {
+                   e.preventDefault();
+                   fetch(`http://127.0.0.1:8000${decision.attachment_url}?download=true`)
+                      .then((res) => res.blob())
+                      .then((blob) => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = decision.attachment_url.split("/").pop();
+                        a.click();
+                      });
+                    }}
+                    style={{ color: "#9AA5B5", fontSize: "13px", textDecoration: "none" }}
+                >
+                  ⬇ Download
+                </a>
+               </div>
+             )}
 
             {(profile.role === "manager" || profile.role === "admin") && (
               <div className="status-control-section">

@@ -1,8 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
-import b2_service
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from pathlib import Path
@@ -29,29 +27,6 @@ DISCUSSION_UPLOAD_DIR = UPLOAD_ROOT / "discussion"
 ALLOWED_DISCUSSION_EXTENSIONS = {".pdf", ".docx", ".jpg", ".jpeg", ".png"}
 UPLOAD_ROOT.mkdir(exist_ok=True)
 DISCUSSION_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-@app.get("/uploads/{folder}/{filename}")
-async def get_uploads_folder_file(folder: str, filename: str):
-    local_path = UPLOAD_ROOT / folder / filename
-    if local_path.exists():
-        return FileResponse(local_path)
-    try:
-        b2_url = b2_service.get_b2_download_url(f"{folder}/{filename}")
-        return RedirectResponse(b2_url)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="File not found on server or Backblaze B2.")
-
-@app.get("/uploads/{filename}")
-async def get_uploads_root_file(filename: str):
-    local_path = UPLOAD_ROOT / filename
-    if local_path.exists():
-        return FileResponse(local_path)
-    try:
-        b2_url = b2_service.get_b2_download_url(filename)
-        return RedirectResponse(b2_url)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="File not found on server or Backblaze B2.")
-
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 app.include_router(uploads_router)
 app.add_middleware(
@@ -217,6 +192,81 @@ def get_decision(
     decision.creator_name = decision.creator.full_name if decision.creator else None
     return decision
 
+from fastapi.responses import StreamingResponse
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
+import io
+
+@app.get("/decisions/{decision_id}/export")
+def export_decision_pdf(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    alternatives = db.execute(
+        select(Alternative).where(Alternative.decision_id == decision_id)
+    ).scalars().all()
+
+    creator_name = decision.creator.full_name if decision.creator else "Unknown"
+
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = height - 1 * inch
+
+    def line(text, size=11, bold=False, gap=0.28):
+        nonlocal y
+        p.setFont("Helvetica-Bold" if bold else "Helvetica", size)
+        p.drawString(1 * inch, y, text)
+        y -= gap * inch
+
+    line("Expert Decision Replay Platform", size=10, bold=True)
+    line("Decision Record", size=16, bold=True, gap=0.4)
+
+    line(f"Title: {decision.title}", bold=True)
+    line(f"Status: {decision.status.value.replace('_', ' ').title()}")
+    line(f"Category: {decision.category or 'Uncategorized'}")
+    line(f"Created by: {creator_name}")
+    line(f"Created on: {decision.created_at.strftime('%d %b %Y, %I:%M %p')}", gap=0.4)
+
+    line("Problem Statement:", bold=True)
+    # wrap long text manually, simple version
+    statement = decision.problem_statement
+    words = statement.split()
+    current_line = ""
+    for word in words:
+        if len(current_line) + len(word) < 90:
+            current_line += word + " "
+        else:
+            line(current_line)
+            current_line = word + " "
+    if current_line:
+        line(current_line, gap=0.4)
+
+    if alternatives:
+        line("Alternatives Considered:", bold=True)
+        for alt in alternatives:
+            line(f"- {alt.title}  (Risk: {alt.risk_level.value}, Feasibility: {alt.feasibility.value}, Cost: {alt.cost})")
+        y -= 0.1 * inch
+
+    p.setFont("Helvetica-Oblique", 8)
+    p.drawString(1 * inch, 0.6 * inch, "Generated from Expert Decision Replay Platform")
+
+    p.save()
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=decision_{decision_id}.pdf"}
+    )
 
 @app.put("/decisions/{decision_id}/status", response_model=DecisionResponse)
 def update_decision_status(
@@ -521,16 +571,9 @@ def _save_discussion_attachment(attachment: UploadFile | None) -> str | None:
         )
 
     filename = f"{uuid4().hex}{extension}"
-    
-    # Read attachment file content and upload to B2
-    try:
-        content = attachment.file.read()
-        b2_service.upload_to_b2(content, f"discussion/{filename}", attachment.content_type or "b2/x-auto")
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to upload discussion attachment to Backblaze B2: {str(e)}"
-        )
+    file_path = DISCUSSION_UPLOAD_DIR / filename
+    with file_path.open("wb") as buffer:
+        copyfileobj(attachment.file, buffer)
 
     return f"/uploads/discussion/{filename}"
 
