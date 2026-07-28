@@ -42,7 +42,7 @@ def read_root():
     return {"message": "Expert Decision Replay Platform backend is running"}
 
 
-@app.post("/register", response_model=UserResponse)
+@app.post("/register", response_model=UserResponse, tags=["Authentication"])
 def register(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.execute(
         select(User).where(User.email == user.email)
@@ -65,7 +65,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@app.post("/login", response_model=Token)
+@app.post("/login", response_model=Token, tags=["Authentication"])
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
     user = db.execute(
         select(User).where(User.email == credentials.email)
@@ -79,7 +79,7 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/me", response_model=UserResponse)
+@app.get("/me", response_model=UserResponse, tags=["Authentication"])
 def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
@@ -103,7 +103,7 @@ def change_password(
     return {"message": "Password changed successfully"}
 
 
-@app.get("/users", response_model=List[UserResponse])
+@app.get("/users", response_model=List[UserResponse], tags=["User Management"])
 def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.admin))
@@ -113,7 +113,7 @@ def list_users(
 
 from schemas import RoleUpdate
 
-@app.put("/users/{user_id}/role", response_model=UserResponse)
+@app.put("/users/{user_id}/role", response_model=UserResponse, tags=["User Management"])
 def update_user_role(
     user_id: int,
     role_update: RoleUpdate,
@@ -147,7 +147,7 @@ def _with_creator_name(decision: Decision) -> Decision:
     decision.creator_name = decision.creator.full_name if decision.creator else None
     return decision
 
-@app.post("/decisions", response_model=DecisionResponse)
+@app.post("/decisions", response_model=DecisionResponse, tags=["Decision Management"])
 def create_decision(
     decision: DecisionCreate,
     db: Session = Depends(get_db),
@@ -166,8 +166,7 @@ def create_decision(
     new_decision.creator_name = new_decision.creator.full_name
     return new_decision
 
-
-@app.get("/decisions", response_model=ListType[DecisionResponse])
+@app.get("/decisions", response_model=ListType[DecisionResponse], tags=["Decision Management"])
 def list_decisions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -177,8 +176,7 @@ def list_decisions(
         d.creator_name = d.creator.full_name if d.creator else None
     return decisions
 
-
-@app.get("/decisions/{decision_id}", response_model=DecisionResponse)
+@app.get("/decisions/{decision_id}", response_model=DecisionResponse, tags=["Decision Management"])
 def get_decision(
     decision_id: int,
     db: Session = Depends(get_db),
@@ -192,13 +190,203 @@ def get_decision(
     decision.creator_name = decision.creator.full_name if decision.creator else None
     return decision
 
+
+@app.put("/decisions/{decision_id}/status", response_model=DecisionResponse, tags=["Decision Management"])
+def update_decision_status(
+    decision_id: int,
+    status_update: DecisionStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    decision.status = status_update.status
+    db.commit()
+    db.refresh(decision)
+    return decision
+
+from schemas import ApprovalCreate, ApprovalResponse
+from models import Approval, ApprovalAction
+
+@app.post("/decisions/{decision_id}/approve", response_model=ApprovalResponse, tags=["Approval Workflow"])
+def approve_decision(
+    decision_id: int,
+    approval: ApprovalCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    new_approval = Approval(
+        decision_id=decision_id,
+        reviewer_id=current_user.id,
+        action=ApprovalAction.approved,
+        comment=approval.comment,
+    )
+    db.add(new_approval)
+
+    decision.status = DecisionStatus.approved
+    db.commit()
+    db.refresh(new_approval)
+    return new_approval
+
+
+@app.post("/decisions/{decision_id}/reject", response_model=ApprovalResponse, tags=["Approval Workflow"])
+def reject_decision(
+    decision_id: int,
+    approval: ApprovalCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    if not approval.comment or not approval.comment.strip():
+        raise HTTPException(status_code=400, detail="A comment is required when rejecting a decision")
+
+    new_approval = Approval(
+        decision_id=decision_id,
+        reviewer_id=current_user.id,
+        action=ApprovalAction.rejected,
+        comment=approval.comment,
+    )
+    db.add(new_approval)
+
+    decision.status = DecisionStatus.rejected
+    db.commit()
+    db.refresh(new_approval)
+    return new_approval
+
+
+@app.get("/decisions/{decision_id}/approvals", response_model=ListType[ApprovalResponse], tags=["Approval Workflow"])
+def get_decision_approvals(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    approvals = db.execute(
+        select(Approval)
+        .where(Approval.decision_id == decision_id)
+        .order_by(Approval.created_at)
+    ).scalars().all()
+    return approvals
+
+from schemas import DecisionUpdate, DecisionVersionResponse
+from models import DecisionVersion
+
+@app.put("/decisions/{decision_id}", response_model=DecisionResponse, tags=["Decision Management"])
+def update_decision(
+    decision_id: int,
+    decision_update: DecisionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    # Only the creator or an admin can change/remove an EXISTING attachment
+    update_data = decision_update.model_dump(exclude_unset=True)
+    if "attachment_url" in update_data and decision.attachment_url:
+        if current_user.id != decision.created_by and current_user.role != UserRole.admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the decision's creator or an admin can change or remove its attachment"
+            )
+
+    # Save a version snapshot of the CURRENT state, before making changes
+    existing_versions = db.execute(
+        select(DecisionVersion).where(DecisionVersion.decision_id == decision_id)
+    ).scalars().all()
+    next_version_number = len(existing_versions) + 1
+
+    snapshot = DecisionVersion(
+        decision_id=decision.id,
+        version_number=next_version_number,
+        title=decision.title,
+        problem_statement=decision.problem_statement,
+        category=decision.category,
+        status=decision.status.value,
+        changed_by=current_user.id,
+    )
+    db.add(snapshot)
+
+    # Now apply the updates
+    update_data = decision_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(decision, key, value)
+
+    db.commit()
+    db.refresh(decision)
+    return decision
+
+
+@app.get("/decisions/{decision_id}/versions", response_model=ListType[DecisionVersionResponse], tags=["Version Tracking"])
+def get_decision_versions(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    versions = db.execute(
+        select(DecisionVersion)
+        .where(DecisionVersion.decision_id == decision_id)
+        .order_by(DecisionVersion.version_number)
+    ).scalars().all()
+
+    return versions
+
+@app.delete("/decisions/{decision_id}", tags=["Decision Management"])
+def delete_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.admin)),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    db.delete(decision)
+    db.commit()
+
+    return {"message": "Decision deleted successfully"}
+
 from fastapi.responses import StreamingResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
 import io
 
-@app.get("/decisions/{decision_id}/export")
+@app.get("/decisions/{decision_id}/export", tags=["Decision Management"])
 def export_decision_pdf(
     decision_id: int,
     db: Session = Depends(get_db),
@@ -268,123 +456,13 @@ def export_decision_pdf(
         headers={"Content-Disposition": f"attachment; filename=decision_{decision_id}.pdf"}
     )
 
-@app.put("/decisions/{decision_id}/status", response_model=DecisionResponse)
-def update_decision_status(
-    decision_id: int,
-    status_update: DecisionStatusUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
-):
-    decision = db.execute(
-        select(Decision).where(Decision.id == decision_id)
-    ).scalar_one_or_none()
-    if not decision:
-        raise HTTPException(status_code=404, detail="Decision not found")
-
-    decision.status = status_update.status
-    db.commit()
-    db.refresh(decision)
-    return decision
-
-from schemas import DecisionUpdate, DecisionVersionResponse
-from models import DecisionVersion
-
-@app.put("/decisions/{decision_id}", response_model=DecisionResponse)
-def update_decision(
-    decision_id: int,
-    decision_update: DecisionUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    decision = db.execute(
-        select(Decision).where(Decision.id == decision_id)
-    ).scalar_one_or_none()
-
-    if not decision:
-        raise HTTPException(status_code=404, detail="Decision not found")
-
-    # Only the creator or an admin can change/remove an EXISTING attachment
-    update_data = decision_update.model_dump(exclude_unset=True)
-    if "attachment_url" in update_data and decision.attachment_url:
-        if current_user.id != decision.created_by and current_user.role != UserRole.admin:
-            raise HTTPException(
-                status_code=403,
-                detail="Only the decision's creator or an admin can change or remove its attachment"
-            )
-
-    # Save a version snapshot of the CURRENT state, before making changes
-    existing_versions = db.execute(
-        select(DecisionVersion).where(DecisionVersion.decision_id == decision_id)
-    ).scalars().all()
-    next_version_number = len(existing_versions) + 1
-
-    snapshot = DecisionVersion(
-        decision_id=decision.id,
-        version_number=next_version_number,
-        title=decision.title,
-        problem_statement=decision.problem_statement,
-        category=decision.category,
-        status=decision.status.value,
-        changed_by=current_user.id,
-    )
-    db.add(snapshot)
-
-    # Now apply the updates
-    update_data = decision_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(decision, key, value)
-
-    db.commit()
-    db.refresh(decision)
-    return decision
-
-
-@app.get("/decisions/{decision_id}/versions", response_model=ListType[DecisionVersionResponse])
-def get_decision_versions(
-    decision_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    decision = db.execute(
-        select(Decision).where(Decision.id == decision_id)
-    ).scalar_one_or_none()
-
-    if not decision:
-        raise HTTPException(status_code=404, detail="Decision not found")
-
-    versions = db.execute(
-        select(DecisionVersion)
-        .where(DecisionVersion.decision_id == decision_id)
-        .order_by(DecisionVersion.version_number)
-    ).scalars().all()
-
-    return versions
-
-@app.delete("/decisions/{decision_id}")
-def delete_decision(
-    decision_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.admin)),
-):
-    decision = db.execute(
-        select(Decision).where(Decision.id == decision_id)
-    ).scalar_one_or_none()
-
-    if not decision:
-        raise HTTPException(status_code=404, detail="Decision not found")
-
-    db.delete(decision)
-    db.commit()
-
-    return {"message": "Decision deleted successfully"}
-
 
 # ===================== ALTERNATIVES ENDPOINTS =====================
 
 from schemas import AlternativeCreate, AlternativeResponse, AlternativeUpdate, AlternativeComparisonResponse
 from models import Alternative
 
-@app.post("/alternatives", response_model=AlternativeResponse)
+@app.post("/alternatives", response_model=AlternativeResponse, tags=["Alternative Comparison"])
 def create_alternative(
     alternative: AlternativeCreate,
     db: Session = Depends(get_db),
@@ -415,7 +493,7 @@ def create_alternative(
     return new_alternative
 
 
-@app.get("/decisions/{decision_id}/alternatives", response_model=ListType[AlternativeResponse])
+@app.get("/decisions/{decision_id}/alternatives", response_model=ListType[AlternativeResponse], tags=["Alternative Comparison"])
 def list_alternatives(
     decision_id: int,
     db: Session = Depends(get_db),
@@ -435,7 +513,7 @@ def list_alternatives(
     return alternatives
 
 
-@app.get("/alternatives/{alternative_id}", response_model=AlternativeResponse)
+@app.get("/alternatives/{alternative_id}", response_model=AlternativeResponse, tags=["Alternative Comparison"])
 def get_alternative(
     alternative_id: int,
     db: Session = Depends(get_db),
@@ -451,7 +529,7 @@ def get_alternative(
     return alternative
 
 
-@app.put("/alternatives/{alternative_id}", response_model=AlternativeResponse)
+@app.put("/alternatives/{alternative_id}", response_model=AlternativeResponse, tags=["Alternative Comparison"])
 def update_alternative(
     alternative_id: int,
     alternative_update: AlternativeUpdate,
@@ -475,7 +553,7 @@ def update_alternative(
     return alternative
 
 
-@app.delete("/alternatives/{alternative_id}")
+@app.delete("/alternatives/{alternative_id}", tags=["Alternative Comparison"])
 def delete_alternative(
     alternative_id: int,
     db: Session = Depends(get_db),
@@ -494,7 +572,7 @@ def delete_alternative(
     return {"message": "Alternative deleted successfully"}
 
 
-@app.get("/decisions/{decision_id}/compare", response_model=AlternativeComparisonResponse)
+@app.get("/decisions/{decision_id}/compare", response_model=AlternativeComparisonResponse, tags=["Alternative Comparison"])
 def compare_alternatives(
     decision_id: int,
     db: Session = Depends(get_db),
@@ -581,6 +659,7 @@ def _save_discussion_attachment(attachment: UploadFile | None) -> str | None:
 @app.post(
     "/discussion",
     response_model=DiscussionResponse,
+    tags=["Discussion Module"],
     openapi_extra={
         "requestBody": {
             "content": {
@@ -640,6 +719,7 @@ async def add_discussion_comment(
 @app.post(
     "/discussion/meeting-note",
     response_model=DiscussionResponse,
+    tags=["Discussion Module"],
     openapi_extra={
         "requestBody": {
             "content": {
@@ -697,6 +777,7 @@ async def add_discussion_meeting_note(
 @app.post(
     "/discussion/reply",
     response_model=DiscussionResponse,
+    tags=["Discussion Module"],
     openapi_extra={
         "requestBody": {
             "content": {
@@ -756,7 +837,7 @@ async def reply_to_discussion_comment(
     )
 
 
-@app.get("/discussion/decision/{decision_id}", response_model=ListType[DiscussionResponse])
+@app.get("/discussion/decision/{decision_id}", response_model=ListType[DiscussionResponse], tags=["Discussion Module"])
 def get_decision_discussion_thread(
     decision_id: int,
     db: Session = Depends(get_db),
@@ -769,7 +850,8 @@ def get_decision_discussion_thread(
 
 @app.put(
     "/discussion/{discussion_id}",
-    response_model=DiscussionResponse,
+    response_model=DiscussionResponse, 
+    tags=["Discussion Module"],
     openapi_extra={
         "requestBody": {
             "content": {
@@ -826,7 +908,7 @@ async def edit_discussion_comment(
     )
 
 
-@app.delete("/discussion/{discussion_id}")
+@app.delete("/discussion/{discussion_id}", tags=["Discussion Module"])
 def delete_discussion_comment(
     discussion_id: int,
     db: Session = Depends(get_db),

@@ -156,3 +156,19 @@ class DecisionVersionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+from models import ApprovalAction
+
+class ApprovalCreate(BaseModel):
+    comment: str | None = None
+
+class ApprovalResponse(BaseModel):
+    id: int
+    decision_id: int
+    reviewer_id: int
+    action: ApprovalAction
+    comment: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
