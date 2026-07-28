@@ -1,0 +1,213 @@
+:root {
+  --bg: #0F1115;
+  --surface: #171A21;
+  --surface-hover: #1E222B;
+  --border: #262B36;
+  --text-primary: #E8EAED;
+  --text-secondary: #9198A8;
+  --text-muted: #5B6272;
+  --accent: #4FD1B5;
+  --accent-soft: rgba(79, 209, 181, 0.12);
+  --accent-hover: #6EE0C8;
+  --success: #2DD4A7;
+  --success-soft: rgba(45, 212, 167, 0.12);
+  --warning: #F5A623;
+  --warning-soft: rgba(245, 166, 35, 0.12);
+  --danger: #F0555A;
+  --danger-soft: rgba(240, 85, 90, 0.12);
+  --neutral-soft: rgba(145, 152, 168, 0.12);
+}
+
+.shell-wrapper {
+  min-height: 100vh;
+  display: flex;
+  background: var(--bg);
+  font-family: "Segoe UI", -apple-system, sans-serif;
+  color: var(--text-primary);
+}
+
+/* ---------------- Sidebar ---------------- */
+.shell-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+}
+
+.shell-logo {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--accent);
+  letter-spacing: 0.03em;
+  padding: 0 8px;
+  margin-bottom: 32px;
+}
+
+.shell-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.shell-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.shell-nav-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.shell-nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.shell-nav-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.shell-nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 8px;
+}
+
+.shell-nav-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 8px 12px 4px;
+}
+
+/* ---------------- Top bar ---------------- */
+.shell-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.shell-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.shell-topbar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.shell-content {
+  flex: 1;
+  padding: 32px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ---------------- Stat cards ---------------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: var(--surface-hover);
+}
+
+.stat-card-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 8px;
+}
+
+.stat-card-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.stat-card.draft .stat-card-value { color: var(--text-muted); }
+.stat-card.under_review .stat-card-value { color: var(--warning); }
+.stat-card.approved .stat-card-value { color: var(--success); }
+.stat-card.rejected .stat-card-value { color: var(--danger); }
+.stat-card.archived .stat-card-value { color: var(--text-secondary); }
+
+/* ---------------- Generic section/card reused across app ---------------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+}
+
+@media (max-width: 860px) {
+  .shell-sidebar {
+    width: 72px;
+    padding: 20px 8px;
+  }
+  .shell-nav-item span.label,
+  .shell-logo span.full-name {
+    display: none;
+  }
+}

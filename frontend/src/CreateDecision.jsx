@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
+import FileUpload from "./FileUpload";
 
 function CreateDecision({ token, onCreated }) {
   const [title, setTitle] = useState("");
@@ -7,9 +8,15 @@ function CreateDecision({ token, onCreated }) {
   const [category, setCategory] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
     try {
       const response = await axios.post(
         "http://127.0.0.1:8000/decisions",
@@ -17,6 +24,7 @@ function CreateDecision({ token, onCreated }) {
           title,
           problem_statement: problemStatement,
           category,
+          attachment_url: attachmentUrl || null,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -25,10 +33,15 @@ function CreateDecision({ token, onCreated }) {
       setTitle("");
       setProblemStatement("");
       setCategory("");
+      setAttachmentUrl("");
       if (onCreated) onCreated(response.data);
     } catch (error) {
+      console.error("Error creating decision:", error);
       setIsError(true);
       setMessage("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -73,14 +86,26 @@ function CreateDecision({ token, onCreated }) {
             onChange={(e) => setCategory(e.target.value)}
           />
         </div>
-        <button type="submit" className="auth-button">Create decision</button>
+        <div className="auth-field">
+          <FileUpload onUploadSuccess={(url) => setAttachmentUrl(url)} />
+          {attachmentUrl && (
+             <p style={{ color: "#4FD1B5", fontSize: "12px", marginTop: "6px" }}>
+                File attached ✓
+             </p>
+         )}
+        </div>
+        <button type="submit" className="auth-button" disabled={isSubmitting}>
+          {isSubmitting ? "Creating..." : "Create decision"}
+        </button>
       </form>
       {message && (
         <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }}>
           {message}
         </div>
+        
       )}
     </div>
+       
   );
 }
 

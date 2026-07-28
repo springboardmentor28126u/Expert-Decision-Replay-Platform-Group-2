@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import "./styles.css";
 
-function Register({ onSwitch }) {
+function Register({ onSwitch, onBackToLanding }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,6 +32,9 @@ function Register({ onSwitch }) {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <button className="auth-back-btn" onClick={onBackToLanding}>
+          &larr; Back
+        </button>
         <p className="auth-brand">Expert Decision Replay Platform</p>
         <h2 className="auth-title">Create your account</h2>
 

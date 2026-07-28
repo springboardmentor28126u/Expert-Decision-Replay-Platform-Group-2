@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import "./styles.css";
 
-function Login({ onLoginSuccess, onSwitch }) {
+function Login({ onLoginSuccess, onSwitch, onForgotPassword, onBackToLanding }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -31,6 +31,9 @@ function Login({ onLoginSuccess, onSwitch }) {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <button className="auth-back-btn" onClick={onBackToLanding}>
+          &larr; Back
+        </button>
         <p className="auth-brand">Expert Decision Replay Platform</p>
         <h2 className="auth-title">Log in to your account</h2>
 
@@ -64,6 +67,9 @@ function Login({ onLoginSuccess, onSwitch }) {
 
         <div className="auth-switch">
           Don't have an account? <button onClick={onSwitch}>Register</button>
+        </div>
+        <div className="auth-switch" style={{ marginTop: "8px" }}>
+        <button onClick={onForgotPassword}>Forgot password?</button>
         </div>
       </div>
     </div>

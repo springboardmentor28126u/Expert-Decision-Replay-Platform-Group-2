@@ -50,11 +50,13 @@ class Decision(Base):
     category = Column(String, nullable=True)
     status = Column(Enum(DecisionStatus), default=DecisionStatus.draft, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    attachment_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    creator = relationship("User")
     
+    creator = relationship("User")
+
+
 class Alternative(Base):
     __tablename__ = "alternatives"
     id = Column(Integer, primary_key=True, index=True)
@@ -68,3 +70,47 @@ class Alternative(Base):
     feasibility = Column(Enum(FeasibilityLevel), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     decision = relationship("Decision")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    action = Column(String, nullable=False)
+    entity_type = Column(String, nullable=False)
+    entity_id = Column(Integer, nullable=False, index=True)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+
+
+class UploadedFile(Base):
+    __tablename__ = "uploaded_files"
+
+    id = Column(String, primary_key=True, index=True)
+    filename = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    uploader = relationship("User")
+
+
+class DecisionVersion(Base):
+    __tablename__ = "decision_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=False)
+    version_number = Column(Integer, nullable=False)
+    title = Column(String, nullable=False)
+    problem_statement = Column(Text, nullable=False)
+    category = Column(String, nullable=True)
+    status = Column(String, nullable=False)
+    changed_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    decision = relationship("Decision")
+    editor = relationship("User")
