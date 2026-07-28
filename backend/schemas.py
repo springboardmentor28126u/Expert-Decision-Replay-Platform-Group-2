@@ -166,6 +166,7 @@ class ApprovalResponse(BaseModel):
     id: int
     decision_id: int
     reviewer_id: int
+    reviewer_name: str | None = None
     action: ApprovalAction
     comment: str | None
     created_at: datetime

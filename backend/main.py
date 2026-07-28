@@ -242,6 +242,7 @@ def approve_decision(
     decision.status = DecisionStatus.approved
     db.commit()
     db.refresh(new_approval)
+    new_approval.reviewer_name = current_user.full_name
     return new_approval
 
 
@@ -272,8 +273,45 @@ def reject_decision(
     decision.status = DecisionStatus.rejected
     db.commit()
     db.refresh(new_approval)
+    new_approval.reviewer_name = current_user.full_name
     return new_approval
 
+@app.post("/decisions/{decision_id}/resubmit", response_model=DecisionResponse, tags=["Approval Workflow"])
+def resubmit_decision(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    if decision.status != DecisionStatus.rejected:
+        raise HTTPException(
+            status_code=400,
+            detail="Only a rejected decision can be resubmitted for review"
+        )
+
+    if current_user.id != decision.created_by and current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the decision's creator or an admin can resubmit it"
+        )
+    
+    resubmission_record = Approval(
+        decision_id=decision_id,
+        reviewer_id=current_user.id,
+        action=ApprovalAction.resubmitted,
+        comment="Resubmitted for review after rejection",
+    )
+    db.add(resubmission_record)
+
+    decision.status = DecisionStatus.under_review
+    db.commit()
+    db.refresh(decision)
+    return decision
 
 @app.get("/decisions/{decision_id}/approvals", response_model=ListType[ApprovalResponse], tags=["Approval Workflow"])
 def get_decision_approvals(
@@ -292,6 +330,8 @@ def get_decision_approvals(
         .where(Approval.decision_id == decision_id)
         .order_by(Approval.created_at)
     ).scalars().all()
+    for a in approvals:
+        a.reviewer_name = a.reviewer.full_name if a.reviewer else None
     return approvals
 
 from schemas import DecisionUpdate, DecisionVersionResponse

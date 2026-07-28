@@ -102,7 +102,7 @@ function ApprovalHistory({ token, decisionId, profile, onApprovalChanged }) {
             >
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                 <span style={{ fontSize: "12px", fontWeight: 700, color: a.action === "approved" ? "var(--success)" : "var(--danger)", textTransform: "uppercase" }}>
-                  {a.action}
+                  {a.action} by {a.reviewer_name || "Unknown"}
                 </span>
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                   {new Date(a.created_at).toLocaleString()}

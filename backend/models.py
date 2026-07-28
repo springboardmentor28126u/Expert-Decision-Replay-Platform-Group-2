@@ -118,6 +118,7 @@ class DecisionVersion(Base):
 class ApprovalAction(str, enum.Enum):
     approved = "approved"
     rejected = "rejected"
+    resubmitted = "resubmitted"
 
 class Approval(Base):
     __tablename__ = "approvals"
