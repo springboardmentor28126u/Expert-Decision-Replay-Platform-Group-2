@@ -204,6 +204,12 @@ def update_decision_status(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
+    if status_update.status in (DecisionStatus.approved, DecisionStatus.rejected):
+        raise HTTPException(
+            status_code=400,
+            detail="Use the /approve or /reject endpoints to move a decision to approved or rejected, so the review is properly recorded with a comment and reviewer."
+        )
+
     decision.status = status_update.status
     db.commit()
     db.refresh(decision)
