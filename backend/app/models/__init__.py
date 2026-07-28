@@ -8,3 +8,8 @@ from app.models.review import Review
 from app.models.replay import Replay
 from app.models.activity_log import ActivityLog
 from app.models.email_verification import EmailVerification
+from .attachment import Attachment
+from .comment import DiscussionThread, Comment
+from .meeting_note import MeetingNote
+from .notification import Notification
+from .decision_version import DecisionVersion

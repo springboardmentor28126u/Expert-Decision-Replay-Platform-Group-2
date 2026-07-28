@@ -549,12 +549,12 @@
         <ul class="nav-links">
             <li><a href="{{ url_for('dashboard') }}" class="nav-item active"><i data-lucide="layout-dashboard" style="width: 18px; height: 18px;"></i> Dashboard</a></li>
             <li><a href="{{ url_for('decisions') }}" class="nav-item"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i> My Decisions</a></li>
-            <li><a href="{{ url_for('decisions') }}" class="nav-item"><i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Create Decision</a></li>
-            <li><a href="{{ url_for('reviews') }}" class="nav-item"><i data-lucide="check-square" style="width: 18px; height: 18px;"></i> Pending Reviews <span class="nav-badge">2</span></a></li>
+            <li><a href="{{ url_for('create_decision') }}" class="nav-item"><i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Create Decision</a></li>
+            <li><a href="{{ url_for('reviews') }}" class="nav-item"><i data-lucide="check-square" style="width: 18px; height: 18px;"></i> Pending Reviews {% if pending_reviews > 0 %}<span class="nav-badge">{{ pending_reviews }}</span>{% endif %}</a></li>
             <div class="nav-divider"></div>
-            <li><a href="#" class="nav-item"><i data-lucide="message-square" style="width: 18px; height: 18px;"></i> Discussions</a></li>
+            <li><a href="{{ url_for('discussion') }}" class="nav-item"><i data-lucide="message-square" style="width: 18px; height: 18px;"></i> Discussions</a></li>
             <li><a href="{{ url_for('repository') }}" class="nav-item"><i data-lucide="database" style="width: 18px; height: 18px;"></i> Knowledge Repository</a></li>
-            <li><a href="#" class="nav-item"><i data-lucide="bell" style="width: 18px; height: 18px;"></i> Notifications</a></li>
+            <li><a href="{{ url_for('notifications_page') }}" class="nav-item"><i data-lucide="bell" style="width: 18px; height: 18px;"></i> Notifications <span class="nav-badge ms-auto sidebar-notif-count" style="display: none;">0</span></a></li>
             <div class="nav-divider"></div>
             <li><a href="#" class="nav-item"><i data-lucide="monitor" style="width: 18px; height: 18px;"></i> Local Device</a></li>
             <li><a href="#" class="nav-item"><i data-lucide="help-circle" style="width: 18px; height: 18px;"></i> Support Center</a></li>
@@ -582,9 +582,29 @@
                     <input type="text" placeholder="Search decisions...">
                     <div style="background: #F1F5F9; border-radius: 4px; padding: 2px 6px; font-size: 10px; color: #64748B; font-weight: 700;">⌘K</div>
                 </div>
-                <div style="position: relative;">
+                <div style="position: relative;" id="notification-dropdown-container">
+                    <div id="notification-bell" style="cursor: pointer; position: relative; width: 32px; height: 32px; border-radius: 50%; background: #EFF6FF; border: 1px solid #BFDBFE; display: flex; align-items: center; justify-content: center; color: #2563EB;">
+                        <i data-lucide="bell" style="width: 16px; height: 16px;"></i>
+                        {% if unread_notifications_count > 0 %}
+                        <div id="unread-badge" style="position: absolute; top: -2px; right: -2px; width: 14px; height: 14px; background: #EF4444; border-radius: 50%; border: 2px solid white; font-size: 8px; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">{{ unread_notifications_count }}</div>
+                        {% endif %}
+                    </div>
+                    <!-- Notification Dropdown -->
+                    <div id="notification-menu" style="display: none; position: absolute; top: 40px; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #E2E8F0; z-index: 1000; overflow: hidden;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #F1F5F9; background: #F8FAFC;">
+                            <span style="font-size: 13px; font-weight: 700; color: #0F172A;">Notifications</span>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="mark-read-btn" style="background: none; border: none; font-size: 11px; color: #2563EB; font-weight: 600; cursor: pointer;">Mark all read</button>
+                                <button id="clear-all-btn" style="background: none; border: none; font-size: 11px; color: #EF4444; font-weight: 600; cursor: pointer;">Clear All</button>
+                            </div>
+                        </div>
+                        <div id="notification-list" style="max-height: 300px; overflow-y: auto; padding: 0;">
+                            <!-- Dynamic Notifications Go Here -->
+                        </div>
+                    </div>
+                </div>
+                <div style="position: relative; margin-left: 12px;">
                     <div style="width: 32px; height: 32px; border-radius: 50%; background: #EFF6FF; border: 1px solid #BFDBFE; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #2563EB;">{{ session.get('initials', 'JD') }}</div>
-                    <div style="position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; background: #EF4444; border-radius: 50%; border: 2px solid white;"></div>
                 </div>
             </div>
         </div>
@@ -613,7 +633,7 @@
                         <div class="stat-icon bg-blue-light"><i data-lucide="file-text" style="width: 20px; height: 20px;"></i></div>
                         <i data-lucide="arrow-right" style="width: 16px; height: 16px; color: #CBD5E1;"></i>
                     </div>
-                    <div class="stat-value">{{ total_decisions|default('23') }}</div>
+                    <div class="stat-value">{{ total_decisions }}</div>
                     <div class="stat-label">My Decisions</div>
                     <div class="stat-desc">Total active</div>
                 </div>
@@ -622,7 +642,7 @@
                         <div class="stat-icon bg-orange-light"><i data-lucide="edit-3" style="width: 20px; height: 20px;"></i></div>
                         <i data-lucide="arrow-right" style="width: 16px; height: 16px; color: #CBD5E1;"></i>
                     </div>
-                    <div class="stat-value">5</div>
+                    <div class="stat-value">{{ draft_decisions }}</div>
                     <div class="stat-label">Draft Decisions</div>
                     <div class="stat-desc">In progress</div>
                 </div>
@@ -631,7 +651,7 @@
                         <div class="stat-icon bg-purple-light"><i data-lucide="clock" style="width: 20px; height: 20px;"></i></div>
                         <i data-lucide="arrow-right" style="width: 16px; height: 16px; color: #CBD5E1;"></i>
                     </div>
-                    <div class="stat-value">{{ pending_reviews|default('8') }}</div>
+                    <div class="stat-value">{{ pending_reviews }}</div>
                     <div class="stat-label">Pending Reviews</div>
                     <div class="stat-desc">Awaiting action</div>
                 </div>
@@ -640,7 +660,7 @@
                         <div class="stat-icon bg-green-light"><i data-lucide="check-square" style="width: 20px; height: 20px;"></i></div>
                         <i data-lucide="arrow-right" style="width: 16px; height: 16px; color: #CBD5E1;"></i>
                     </div>
-                    <div class="stat-value">12</div>
+                    <div class="stat-value">{{ approved_decisions }}</div>
                     <div class="stat-label">Approved Decisions</div>
                     <div class="stat-desc">This month</div>
                 </div>
@@ -656,46 +676,26 @@
                     <a href="#" class="view-all">View All <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i></a>
                 </div>
                 <div class="list-group">
-                    <div class="list-item">
-                        <div class="item-icon bg-orange-light"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-orange">Review Request</div>
-                            <div class="item-title">Remote Work Policy Revision Q1 2026</div>
-                            <div class="item-meta"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> Due in 3 hours</div>
+                    {% if recent_reviews %}
+                        {% for task in recent_reviews %}
+                        <div class="list-item" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="item-icon bg-orange-light"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i></div>
+                                <div class="item-content">
+                                    <div class="item-tag text-orange">Review Request</div>
+                                    <div class="item-title">{{ task.decision_title }}</div>
+                                    <div class="item-meta"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> {{ task.time_ago }}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn btn-sm btn-success px-2 py-1 fw-semibold" style="font-size: 11px;" onclick="quickReviewAction({{ task.decision_id }}, {{ session.get('user_id', 1) }}, 'Approved')">Accept</button>
+                                <button class="btn btn-sm btn-danger px-2 py-1 fw-semibold" style="font-size: 11px;" onclick="quickReviewAction({{ task.decision_id }}, {{ session.get('user_id', 1) }}, 'Rejected')">Reject</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="list-item">
-                        <div class="item-icon bg-blue-light"><i data-lucide="upload" style="width: 18px; height: 18px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-blue">Document Update</div>
-                            <div class="item-title">Security Compliance Framework — Attachments needed</div>
-                            <div class="item-meta"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> Due today</div>
-                        </div>
-                    </div>
-                    <div class="list-item">
-                        <div class="item-icon bg-purple-light"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-purple">Approval Pending</div>
-                            <div class="item-title">Product Roadmap Q1 2026 — Awaiting reviewer feedback</div>
-                            <div class="item-meta"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> Created yesterday</div>
-                        </div>
-                    </div>
-                    <div class="list-item">
-                        <div class="item-icon bg-blue-light"><i data-lucide="message-square" style="width: 18px; height: 18px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-blue">Comment Reply</div>
-                            <div class="item-title">Employee Benefits Package — Respond to discussion</div>
-                            <div class="item-meta"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> Created yesterday</div>
-                        </div>
-                    </div>
-                    <div class="list-item">
-                        <div class="item-icon bg-gray-light"><i data-lucide="edit-3" style="width: 18px; height: 18px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag" style="color: #64748B;">Draft Completion</div>
-                            <div class="item-title">Complete New Vendor Onboarding decision draft</div>
-                            <div class="item-meta"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> Created 2 days ago</div>
-                        </div>
-                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="font-size: 13px; color: #94A3B8; padding: 12px;">No pending tasks</div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -706,60 +706,36 @@
                         <div class="section-title">Recent Notifications</div>
                         <div class="section-subtitle">Latest updates and alerts</div>
                     </div>
-                    <div style="position: relative;">
-                        <i data-lucide="bell" style="color: #94A3B8; width: 20px; height: 20px;"></i>
-                        <div style="position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; background: #EF4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white;"></div>
+                    <div style="position: relative; cursor: pointer;" onclick="window.location.href='{{ url_for('notifications_page') }}'" title="View all notifications">
+                        <i data-lucide="bell" style="color: #475569; width: 20px; height: 20px;"></i>
+                        <div id="unread-badge" style="position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; background: #EF4444; border-radius: 50%; display: none; align-items: center; justify-content: center; border: 2px solid white; color: white; font-size: 8px;"></div>
                     </div>
                 </div>
-                <div class="list-group">
-                    <div class="list-item" style="border: none; border-bottom: 1px solid #F1F5F9; border-radius: 0; background: transparent; padding: 12px 0;">
-                        <div class="item-icon bg-blue-light" style="width: 32px; height: 32px; border-radius: 50%;"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-blue">Review Request</div>
-                            <div class="item-title" style="font-size: 13px; font-weight: 500;">Dr. A. Chen assigned you as reviewer on <span style="font-weight: 700;">Cloud Infrastructure Migration</span></div>
-                            <div class="item-meta">5 min ago</div>
+                <div class="list-group" id="widget-notification-list">
+                    {% if recent_notifications %}
+                        {% for notif in recent_notifications %}
+                        <div class="list-item" {% if not notif.is_read %}style="background-color: #F8FAFC;"{% endif %}>
+                            <div class="item-icon" style="background: white; border: 1px solid #E2E8F0;">
+                                {% if notif.type == 'success' %}
+                                <i data-lucide="check-circle" style="color: #10B981; width: 18px; height: 18px;"></i>
+                                {% elif notif.type == 'warning' %}
+                                <i data-lucide="alert-triangle" style="color: #F59E0B; width: 18px; height: 18px;"></i>
+                                {% elif notif.type == 'error' %}
+                                <i data-lucide="x-circle" style="color: #EF4444; width: 18px; height: 18px;"></i>
+                                {% else %}
+                                <i data-lucide="info" style="color: #3B82F6; width: 18px; height: 18px;"></i>
+                                {% endif %}
+                            </div>
+                            <div class="item-content">
+                                <div class="item-title">{{ notif.title }}</div>
+                                <div class="item-meta">{{ notif.message }}</div>
+                                <div class="item-meta" style="margin-top: 4px;"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> {{ notif.time_ago }}</div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="list-item" style="border: none; border-bottom: 1px solid #F1F5F9; border-radius: 0; background: transparent; padding: 12px 0;">
-                        <div class="item-icon bg-purple-light" style="width: 32px; height: 32px; border-radius: 50%;"><i data-lucide="user" style="width: 14px; height: 14px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-purple">Mention</div>
-                            <div class="item-title" style="font-size: 13px; font-weight: 500;">Jane Smith mentioned you in a discussion on <span style="font-weight: 700;">Q1 Budget Allocation</span></div>
-                            <div class="item-meta">1 hour ago</div>
-                        </div>
-                    </div>
-                    <div class="list-item" style="border: none; border-bottom: 1px solid #F1F5F9; border-radius: 0; background: transparent; padding: 12px 0;">
-                        <div class="item-icon bg-green-light" style="width: 32px; height: 32px; border-radius: 50%;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-green">System Update</div>
-                            <div class="item-title" style="font-size: 13px; font-weight: 500;">Your decision <span style="font-weight: 700;">Security Compliance Framework</span> has been approved</div>
-                            <div class="item-meta">2 hours ago</div>
-                        </div>
-                    </div>
-                    <div class="list-item" style="border: none; border-bottom: 1px solid #F1F5F9; border-radius: 0; background: transparent; padding: 12px 0;">
-                        <div class="item-icon bg-blue-light" style="width: 32px; height: 32px; border-radius: 50%;"><i data-lucide="message-square" style="width: 14px; height: 14px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-blue">Comment</div>
-                            <div class="item-title" style="font-size: 13px; font-weight: 500;">New comment on <span style="font-weight: 700;">Remote Work Policy Revision</span></div>
-                            <div class="item-meta">5 hours ago</div>
-                        </div>
-                    </div>
-                    <div class="list-item" style="border: none; border-bottom: 1px solid #F1F5F9; border-radius: 0; background: transparent; padding: 12px 0;">
-                        <div class="item-icon bg-orange-light" style="width: 32px; height: 32px; border-radius: 50%;"><i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-orange">Reminder</div>
-                            <div class="item-title" style="font-size: 13px; font-weight: 500;">Document upload required for <span style="font-weight: 700;">Security Compliance Framework</span></div>
-                            <div class="item-meta">Yesterday</div>
-                        </div>
-                    </div>
-                    <div class="list-item" style="border: none; border-radius: 0; background: transparent; padding: 12px 0;">
-                        <div class="item-icon bg-blue-light" style="width: 32px; height: 32px; border-radius: 50%;"><i data-lucide="arrow-up" style="width: 14px; height: 14px;"></i></div>
-                        <div class="item-content">
-                            <div class="item-tag text-blue">Approval</div>
-                            <div class="item-title" style="font-size: 13px; font-weight: 500;">Your decision <span style="font-weight: 700;">Q3 2025 Product Launch</span> reached final stage</div>
-                            <div class="item-meta">2 days ago</div>
-                        </div>
-                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="font-size: 13px; color: #94A3B8; padding: 12px;">No recent notifications</div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -770,44 +746,24 @@
                         <div class="section-title">Recent Activities</div>
                         <div class="section-subtitle">Your activity timeline</div>
                     </div>
-                    <a href="#" class="view-all">View All <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i></a>
                 </div>
-                <div class="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-icon" style="border: 1px solid #BFDBFE;"><i data-lucide="send" style="width: 14px; height: 14px; color: #2563EB;"></i></div>
-                        <div>
-                            <div class="timeline-text"><b class="text-blue">You</b> submitted <b class="text-blue">Cloud Infrastructure Migration Strategy</b></div>
-                            <div class="timeline-time">2 hours ago</div>
+                <div class="timeline" id="recent-activities-timeline">
+                    {% if recent_audit_logs %}
+                        {% for log in recent_audit_logs %}
+                        <div class="timeline-item">
+                            <div class="timeline-icon" style="border: 1px solid #BFDBFE;"><i data-lucide="activity" style="width: 14px; height: 14px; color: #2563EB;"></i></div>
+                            <div>
+                                <div class="timeline-text"><b class="text-blue">{{ log.user_name }}</b> {{ log.action }}</div>
+                                <div class="timeline-time" style="font-size: 11px; color: #64748B; margin-top: 2px;">
+                                    <i data-lucide="clock" style="width: 11px; height: 11px; display: inline-block; vertical-align: -1px;"></i>
+                                    {% if log.created_at_str %}{{ log.created_at_str }} ({{ log.time_ago }}){% else %}{{ log.time_ago }}{% endif %}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon" style="border: 1px solid #DDD6FE;"><i data-lucide="message-square" style="width: 14px; height: 14px; color: #8B5CF6;"></i></div>
-                        <div>
-                            <div class="timeline-text"><b class="text-blue">You</b> commented on <b class="text-purple">Remote Work Policy Revision Q1 2026</b></div>
-                            <div class="timeline-time">5 hours ago</div>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon" style="border: 1px solid #A7F3D0;"><i data-lucide="check" style="width: 14px; height: 14px; color: #10B981;"></i></div>
-                        <div>
-                            <div class="timeline-text"><b>Sarah Chen</b> approved <b>Q1 Budget Allocation - Engineering Team</b></div>
-                            <div class="timeline-time">1 day ago</div>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon" style="border: 1px solid #FDE68A;"><i data-lucide="edit-2" style="width: 14px; height: 14px; color: #F59E0B;"></i></div>
-                        <div>
-                            <div class="timeline-text"><b class="text-blue">You</b> updated <b>New Vendor Onboarding Process</b></div>
-                            <div class="timeline-time">2 days ago</div>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon" style="border: 1px solid #E2E8F0;"><i data-lucide="eye" style="width: 14px; height: 14px; color: #64748B;"></i></div>
-                        <div>
-                            <div class="timeline-text"><b>Dr. M. Lee</b> reviewed <b>Security Compliance Framework Update</b></div>
-                            <div class="timeline-time">3 days ago</div>
-                        </div>
-                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="font-size: 13px; color: #94A3B8; padding: 12px;">No recent activities</div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -818,7 +774,7 @@
                         <div class="section-title">Recent Decisions</div>
                         <div class="section-subtitle">Your recent decision submissions</div>
                     </div>
-                    <a href="#" class="view-all">View All <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i></a>
+                    <a href="{{ url_for('decisions') }}" class="view-all">View All <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i></a>
                 </div>
                 <div class="table-responsive">
                     <table class="decision-table">
@@ -834,121 +790,61 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Item 1 -->
-                            <tr>
-                                <td>
-                                    <div class="td-title">Cloud Infrastructure Migration Strategy</div>
-                                    <div class="td-id">DEC-1024</div>
-                                </td>
-                                <td><span class="badge-category">Technology</span></td>
-                                <td>
-                                    <div class="reviewer-pill">
-                                        <div class="reviewer-avatar" style="background: #2563EB;">DA</div>
-                                        <span style="font-size: 12px; color: #334155;">Dr. A. Chen</span>
-                                    </div>
-                                </td>
-                                <td><span class="status-badge bg-orange-light">Pending</span></td>
-                                <td><span class="priority-badge bg-orange-light">High</span></td>
-                                <td><span style="font-size: 12px; color: #64748B;">2 hours ago</span></td>
-                                <td>
-                                    <div style="display: flex; gap: 4px;">
-                                        <button class="action-btn"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
-                                        <button class="action-btn"><i data-lucide="more-horizontal" style="width: 14px; height: 14px;"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Item 2 -->
-                            <tr>
-                                <td>
-                                    <div class="td-title">Remote Work Policy Revision Q1 2026</div>
-                                    <div class="td-id">DEC-1033</div>
-                                </td>
-                                <td><span class="badge-category" style="background: #F0F9FF; color: #0284C7;">HR/Policy</span></td>
-                                <td>
-                                    <div class="reviewer-pill">
-                                        <div class="reviewer-avatar" style="background: #8B5CF6;">MJ</div>
-                                        <span style="font-size: 12px; color: #334155;">M. Johnson</span>
-                                    </div>
-                                </td>
-                                <td><span class="status-badge bg-purple-light">Review</span></td>
-                                <td><span class="priority-badge bg-purple-light">Medium</span></td>
-                                <td><span style="font-size: 12px; color: #64748B;">5 hours ago</span></td>
-                                <td>
-                                    <div style="display: flex; gap: 4px;">
-                                        <button class="action-btn"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
-                                        <button class="action-btn"><i data-lucide="more-horizontal" style="width: 14px; height: 14px;"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Item 3 -->
-                            <tr>
-                                <td>
-                                    <div class="td-title">Q1 Budget Allocation — Engineering Team</div>
-                                    <div class="td-id">DEC-1102</div>
-                                </td>
-                                <td><span class="badge-category" style="background: #EEF2FF; color: #4F46E5;">Finance</span></td>
-                                <td>
-                                    <div class="reviewer-pill">
-                                        <div class="reviewer-avatar" style="background: #4F46E5;">SC</div>
-                                        <span style="font-size: 12px; color: #334155;">S. Chan</span>
-                                    </div>
-                                </td>
-                                <td><span class="status-badge bg-green-light">Approved</span></td>
-                                <td><span class="priority-badge bg-orange-light">High</span></td>
-                                <td><span style="font-size: 12px; color: #64748B;">1 day ago</span></td>
-                                <td>
-                                    <div style="display: flex; gap: 4px;">
-                                        <button class="action-btn"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
-                                        <button class="action-btn"><i data-lucide="more-horizontal" style="width: 14px; height: 14px;"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Item 4 -->
-                            <tr>
-                                <td>
-                                    <div class="td-title">New Vendor Onboarding Process</div>
-                                    <div class="td-id">DEC-2014</div>
-                                </td>
-                                <td><span class="badge-category" style="background: #F5F3FF; color: #7C3AED;">Procurement</span></td>
-                                <td>
-                                    <div class="reviewer-pill">
-                                        <div class="reviewer-avatar" style="background: #EC4899;">LP</div>
-                                        <span style="font-size: 12px; color: #334155;">L. Park</span>
-                                    </div>
-                                </td>
-                                <td><span class="status-badge bg-gray-light">Draft</span></td>
-                                <td><span class="priority-badge bg-gray-light">Low</span></td>
-                                <td><span style="font-size: 12px; color: #64748B;">2 days ago</span></td>
-                                <td>
-                                    <div style="display: flex; gap: 4px;">
-                                        <button class="action-btn"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
-                                        <button class="action-btn"><i data-lucide="more-horizontal" style="width: 14px; height: 14px;"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Item 5 -->
-                            <tr>
-                                <td>
-                                    <div class="td-title">Security Compliance Framework Update</div>
-                                    <div class="td-id">DEC-3135</div>
-                                </td>
-                                <td><span class="badge-category">Security</span></td>
-                                <td>
-                                    <div class="reviewer-pill">
-                                        <div class="reviewer-avatar" style="background: #0EA5E9;">YW</div>
-                                        <span style="font-size: 12px; color: #334155;">Y. Wright</span>
-                                    </div>
-                                </td>
-                                <td><span class="status-badge bg-green-light">Approved</span></td>
-                                <td><span class="priority-badge bg-red-light">Critical</span></td>
-                                <td><span style="font-size: 12px; color: #64748B;">3 days ago</span></td>
-                                <td>
-                                    <div style="display: flex; gap: 4px;">
-                                        <button class="action-btn"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
-                                        <button class="action-btn"><i data-lucide="more-horizontal" style="width: 14px; height: 14px;"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
+                            {% if recent_decisions %}
+                                {% for decision in recent_decisions %}
+                                <tr>
+                                    <td>
+                                        <div class="td-title">{{ decision.title }}</div>
+                                        <div class="td-id">DEC-{{ decision.id }}</div>
+                                    </td>
+                                    <td><span class="badge-category">{{ decision.category_name }}</span></td>
+                                    <td>
+                                        {% if decision.reviewer_name %}
+                                        <div class="reviewer-pill">
+                                            <div class="reviewer-avatar" style="background: #0EA5E9;">{{ decision.reviewer_name[:2].upper() }}</div>
+                                            <span style="font-size: 12px; color: #334155;">{{ decision.reviewer_name }}</span>
+                                        </div>
+                                        {% else %}
+                                        <span style="font-size: 12px; color: #94A3B8;">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if decision.status == 'Draft' %}
+                                        <span class="status-badge bg-gray-light">Draft</span>
+                                        {% elif decision.status == 'Pending' %}
+                                        <span class="status-badge bg-orange-light">Pending</span>
+                                        {% elif decision.status == 'Approved' %}
+                                        <span class="status-badge bg-green-light">Approved</span>
+                                        {% elif decision.status == 'Rejected' %}
+                                        <span class="status-badge bg-red-light">Rejected</span>
+                                        {% else %}
+                                        <span class="status-badge bg-blue-light">{{ decision.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if decision.priority == 'Critical' %}
+                                        <span class="priority-badge bg-red-light">Critical</span>
+                                        {% elif decision.priority == 'High' %}
+                                        <span class="priority-badge bg-orange-light">High</span>
+                                        {% elif decision.priority == 'Medium' %}
+                                        <span class="priority-badge bg-blue-light">Medium</span>
+                                        {% else %}
+                                        <span class="priority-badge bg-gray-light">{{ decision.priority }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><span style="font-size: 12px; color: #64748B;">{{ decision.updated_at.strftime('%b %d, %Y') if decision.updated_at else 'N/A' }}</span></td>
+                                    <td>
+                                        <div style="display: flex; gap: 4px;">
+                                            <button class="action-btn" onclick="window.location.href=this.dataset.url;" data-url="{{ url_for('decision_details', id=decision.id) }}"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: #94A3B8; font-size: 13px; padding: 24px;">No recent decisions found.</td>
+                                </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -959,29 +855,233 @@
                 <div class="section-title">Quick Actions</div>
             </div>
             <div class="quick-actions">
-                <div class="qa-card" onclick="window.location.href=this.dataset.url;" data-url="{{ url_for('decisions') }}">
+                <div class="qa-card" onclick="window.location.href=this.dataset.url;" data-url="{{ url_for('create_decision') }}" style="cursor: pointer;">
                     <div class="qa-icon bg-blue-light"><i data-lucide="plus" style="width: 24px; height: 24px;"></i></div>
                     <div class="qa-title">Create Decision</div>
                 </div>
-                <div class="qa-card">
+                <div class="qa-card" onclick="openSearchModal()" style="cursor: pointer;">
                     <div class="qa-icon bg-purple-light"><i data-lucide="search" style="width: 24px; height: 24px;"></i></div>
                     <div class="qa-title">Search Decisions</div>
                 </div>
-                <div class="qa-card">
-                    <div class="qa-icon bg-green-light"><i data-lucide="upload-cloud" style="width: 24px; height: 24px;"></i></div>
-                    <div class="qa-title">Upload Document</div>
-                </div>
-                <div class="qa-card" onclick="window.location.href=this.dataset.url;" data-url="{{ url_for('repository') }}">
+                <div class="qa-card" onclick="window.location.href=this.dataset.url;" data-url="{{ url_for('repository') }}" style="cursor: pointer;">
                     <div class="qa-icon bg-blue-light"><i data-lucide="database" style="width: 24px; height: 24px;"></i></div>
                     <div class="qa-title">Knowledge Repository</div>
                 </div>
             </div>
-
         </div>
     </main>
 
+    <!-- Search Decision Modal -->
+    <div id="search-decision-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); z-index: 1050; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; width: 90%; max-width: 550px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 17px; font-weight: 800; color: #0F172A; margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="search" style="width: 20px; height: 20px; color: #6366F1;"></i> Search Decisions
+                </h3>
+                <button onclick="closeSearchModal()" style="background: none; border: none; font-size: 22px; color: #94A3B8; cursor: pointer; padding: 4px; line-height: 1;">&times;</button>
+            </div>
+            
+            <div style="position: relative; margin-bottom: 16px;">
+                <i data-lucide="search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #94A3B8;"></i>
+                <input type="text" id="search-modal-input" placeholder="Type decision title or ID (e.g. DEC-20)..." oninput="handleDecisionSearch()" style="width: 100%; padding: 10px 12px 10px 38px; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 14px; outline: none;" />
+            </div>
+
+            <div id="search-modal-results" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                <div style="text-align: center; color: #94A3B8; padding: 24px; font-size: 13px;">Type above to search decisions...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
+
+        let allDecisionsCache = null;
+
+        function openSearchModal() {
+            const modal = document.getElementById('search-decision-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                const input = document.getElementById('search-modal-input');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+                handleDecisionSearch();
+            }
+        }
+
+        function closeSearchModal() {
+            const modal = document.getElementById('search-decision-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function handleDecisionSearch() {
+            const query = (document.getElementById('search-modal-input').value || '').trim().toLowerCase();
+            const resultsContainer = document.getElementById('search-modal-results');
+
+            if (!allDecisionsCache) {
+                try {
+                    const res = await fetch('/api/decisions');
+                    if (res.ok) {
+                        allDecisionsCache = await res.json();
+                    }
+                } catch (e) {
+                    allDecisionsCache = [];
+                }
+            }
+
+            const decisionsList = (allDecisionsCache && allDecisionsCache.length > 0) 
+                ? allDecisionsCache 
+                : ({{ recent_decisions | tojson | safe }} || []);
+
+            let filtered = decisionsList;
+            if (query) {
+                filtered = decisionsList.filter(d => 
+                    (d.title && d.title.toLowerCase().includes(query)) || 
+                    `dec-${d.id}`.includes(query) || 
+                    `${d.id}`.includes(query)
+                );
+            }
+
+            if (filtered.length === 0) {
+                resultsContainer.innerHTML = '<div style="text-align: center; color: #94A3B8; padding: 20px; font-size: 13px;">No matching decisions found</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = filtered.map(d => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 700; color: #0F172A;">${d.title || 'Untitled Decision'}</div>
+                        <div style="font-size: 12px; color: #64748B;">DEC-${d.id} • <span style="font-weight: 600; color: #3B82F6;">${d.status || 'Draft'}</span></div>
+                    </div>
+                    <a href="/decision/${d.id}" class="btn btn-sm btn-primary" style="font-size: 12px; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: 600;">View Decision</a>
+                </div>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const userId = parseInt("{{ session.get('user_id', 0) }}", 10);
+            const list = document.getElementById('notification-list');
+            const unreadBadge = document.getElementById('unread-badge');
+
+            function fetchDashboardLiveData() {
+                fetch('/api/dashboard')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data) return;
+
+                        // Live update Recent Activities
+                        const activitiesTimeline = document.getElementById('recent-activities-timeline');
+                        if (activitiesTimeline && data.recent_audit_logs) {
+                            if (data.recent_audit_logs.length === 0) {
+                                activitiesTimeline.innerHTML = '<div style="font-size: 13px; color: #94A3B8; padding: 12px;">No recent activities</div>';
+                            } else {
+                                activitiesTimeline.innerHTML = data.recent_audit_logs.map(log => `
+                                    <div class="timeline-item">
+                                        <div class="timeline-icon" style="border: 1px solid #BFDBFE;"><i data-lucide="activity" style="width: 14px; height: 14px; color: #2563EB;"></i></div>
+                                        <div>
+                                            <div class="timeline-text"><b class="text-blue">${log.user_name}</b> ${log.action}</div>
+                                            <div class="timeline-time" style="font-size: 11px; color: #64748B; margin-top: 2px;">
+                                                <i data-lucide="clock" style="width: 11px; height: 11px; display: inline-block; vertical-align: -1px;"></i>
+                                                ${log.created_at_str ? `${log.created_at_str} (${log.time_ago})` : log.time_ago}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('');
+                            }
+                        }
+
+                        // Live update Stats
+                        const statValues = document.querySelectorAll('.stat-value');
+                        if (statValues && statValues.length >= 4 && data.total_decisions !== undefined) {
+                            statValues[0].textContent = data.total_decisions;
+                            statValues[1].textContent = data.draft_decisions || 0;
+                            statValues[2].textContent = data.pending_reviews || 0;
+                            statValues[3].textContent = data.approved_decisions || 0;
+                        }
+
+                        if (window.lucide) lucide.createIcons();
+                    }).catch(console.error);
+            }
+
+            function fetchNotifications() {
+                if (!userId) return;
+                fetch(`/notifications/${userId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        const widgetList = document.getElementById('widget-notification-list');
+                        if (widgetList) widgetList.innerHTML = '';
+
+                        let unreadCount = 0;
+                        data.forEach(n => { if(!n.is_read) unreadCount++; });
+
+                        if (data.length === 0) {
+                            if (widgetList) widgetList.innerHTML = '<div style="font-size: 13px; color: #94A3B8; padding: 12px;">No recent notifications</div>';
+                            return;
+                        }
+
+                        data.forEach(n => {
+                            if (widgetList) {
+                                const widgetDiv = document.createElement('div');
+                                widgetDiv.className = 'list-item';
+                                widgetDiv.style.border = 'none';
+                                widgetDiv.style.borderBottom = '1px solid #F1F5F9';
+                                widgetDiv.style.borderRadius = '0';
+                                widgetDiv.style.background = 'transparent';
+                                widgetDiv.style.padding = '12px 0';
+                                widgetDiv.innerHTML = `
+                                    <div class="item-icon bg-blue-light" style="width: 32px; height: 32px; border-radius: 50%;"><i data-lucide="bell" style="width: 14px; height: 14px;"></i></div>
+                                    <div class="item-content">
+                                        <div class="item-tag text-blue">${n.notification_type || 'Update'}</div>
+                                        <div class="item-title" style="font-size: 13px; font-weight: 500;">${n.message}</div>
+                                    </div>
+                                `;
+                                widgetList.appendChild(widgetDiv);
+                            }
+                        });
+                        
+                        if (unreadBadge) {
+                            if (unreadCount > 0) {
+                                unreadBadge.textContent = unreadCount;
+                                unreadBadge.style.display = 'flex';
+                            } else {
+                                unreadBadge.style.display = 'none';
+                            }
+                        }
+                        if (window.lucide) lucide.createIcons();
+                    }).catch(console.error);
+            }
+
+            fetchNotifications();
+            fetchDashboardLiveData();
+            setInterval(fetchNotifications, 5000);
+            setInterval(fetchDashboardLiveData, 5000);
+        });
+
+        async function quickReviewAction(decisionId, reviewerId, status) {
+            const comments = prompt(`Enter comments for marking this decision as ${status} (optional):`) || "";
+            try {
+                const res = await fetch("http://127.0.0.1:8000/reviews/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        decision_id: decisionId,
+                        reviewer_id: reviewerId,
+                        status: status,
+                        comments: comments
+                    })
+                });
+                if (res.ok) {
+                    alert(`Review decision marked as ${status}!`);
+                    window.location.reload();
+                } else {
+                    alert("Failed to submit review action.");
+                }
+            } catch (e) {
+                alert("Network error occurred.");
+            }
+        }
     </script>
 </body>
 </html>
