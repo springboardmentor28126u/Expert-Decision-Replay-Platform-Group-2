@@ -7,7 +7,10 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
 
   const canUpdateStatus = role === "manager" || role === "administrator";
   const isAdmin = role === "administrator";
-  const allStatuses = ["draft", "under_review", "approved", "rejected", "archived"];
+  // "approved"/"rejected" are intentionally excluded — those transitions
+  // belong to the Approval workflow (see ApprovalHistory), not this
+  // free-form status selector.
+  const allStatuses = ["draft", "under_review", "archived"];
 
   const statusStyle = (status) => {
     if (status === "approved") return { bg: "var(--success-soft)", color: "var(--success)" };

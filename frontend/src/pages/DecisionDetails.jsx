@@ -5,6 +5,7 @@ import AlternativesPanel from "../components/AlternativesPanel";
 import "../styles/discussion.css";
 import "../styles/dashboard.css";
 import FileUpload from "../components/FileUpload";
+import ApprovalHistory from "../components/ApprovalHistory";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -14,8 +15,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const [editTitle, setEditTitle] = useState(decision.title);
   const [editProblemStatement, setEditProblemStatement] = useState(decision.problem_statement);
   const [editCategory, setEditCategory] = useState(decision.category || "");
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history" | "attachments"
+  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "alternatives" | "discussion" | "history" | "attachments" | "approvals"
   const [editError, setEditError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const savingRef = useRef(false);
@@ -143,7 +143,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
       }
     } catch (err) {
       console.error("Failed to update status", err);
-      alert("Error: You might not have permission to update the decision status.");
+      alert(err?.response?.data?.detail || "Failed to update status.");
     }
   };
 
@@ -622,8 +622,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 >
                   <option value="draft">Draft</option>
                   <option value="under_review">Under Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
                   <option value="archived">Archived</option>
                 </select>
               </div>
@@ -647,6 +645,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           { key: "discussion", label: "Discussion" },
           { key: "attachments", label: "Attachments" },
           { key: "history", label: "Version History" },
+          { key: "approvals", label: "Approval History" },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -748,6 +747,14 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
               onStatusUpdated(updatedDecision);
             }
           }}
+        />
+      )}
+
+      {activeTab === "approvals" && (
+        <ApprovalHistory
+          token={token}
+          decisionId={decision.id}
+          profile={profile}
         />
       )}
 
