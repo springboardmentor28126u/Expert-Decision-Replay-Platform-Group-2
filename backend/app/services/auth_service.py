@@ -151,25 +151,39 @@ class AuthService:
     def authenticate_user(db: Session, login_data: LoginRequest) -> Tuple[str, str]:
         """Authenticate user and return tokens."""
         user = db.query(User).filter(User.email == login_data.email.lower()).first()
-        
+
         if not user or not verify_password(login_data.password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-            
+
         if user.status != UserStatus.ACTIVE:
              raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is not active.",
             )
-             
+
+        # Validate login_context against user's role
+        if login_data.login_context:
+            user_role = (user.role or "").lower()
+            if login_data.login_context == "admin" and user_role != "admin":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This account does not have admin privileges.",
+                )
+            if login_data.login_context == "employee" and user_role == "admin":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Please use the Admin Login tab.",
+                )
+
         # Generate tokens (lightweight payload — sub: user_id)
         token_data = {"sub": str(user.id)}
         access_token = create_access_token(data=token_data)
         refresh_token = create_refresh_token(data=token_data)
-        
+
         return access_token, refresh_token
 
     @staticmethod

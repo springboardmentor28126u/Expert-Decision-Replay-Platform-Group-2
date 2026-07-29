@@ -4,6 +4,7 @@ import { authService } from '../services/authService';
 import api, { setAccessToken, setOnAuthFailure, setCompanyId, setDefaultGroupId } from '../services/api';
 import { companyService, CompanyWithRole } from '../services/companyService';
 import { groupService, Group } from '../services/groupService';
+import { getDashboardPathForRole } from '../utils/roles';
 
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true';
 
@@ -17,23 +18,9 @@ const mockUser = {
   updated_at: new Date().toISOString(),
 };
 
-const roleHierarchy: Record<string, number> = {
-  employee: 0,
-  reviewer: 1,
-  manager: 2,
-  admin: 3,
-};
-
-function getDashboardPath(roleName: string | undefined): string {
-  const level = roleHierarchy[roleName ?? ''] ?? 0;
-  if (level >= 3) return '/dashboard/admin';
-  if (level >= 2) return '/dashboard/manager';
-  return '/dashboard/employee';
-}
-
 interface AuthContextType extends AuthState {
-  login: (credentials: any) => Promise<void>;
-  register: (userData: any) => Promise<void>;
+  login: (credentials: any) => Promise<string>;
+  register: (userData: any) => Promise<string>;
   logout: () => Promise<void>;
   getDashboardPath: () => string;
   companies: CompanyWithRole[];
@@ -42,6 +29,7 @@ interface AuthContextType extends AuthState {
   currentGroupId: string | null;
   switchCompany: (companyId: string) => Promise<void>;
   switchGroup: (groupId: string) => void;
+  refreshGroups: () => Promise<void>;
 }
 
 const initialState: AuthState = {
@@ -121,17 +109,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const firstCompany = companiesList[0];
         setCurrentCompanyId(firstCompany.id);
         setCompanyId(firstCompany.id);
-        const groupsList = await groupService.list(firstCompany.id);
-        setGroups(groupsList);
-        if (groupsList.length > 0) {
-          setCurrentGroupId(groupsList[0].id);
-          setDefaultGroupId(groupsList[0].id);
+        try {
+          const groupsList = await groupService.list(firstCompany.id);
+          setGroups(groupsList);
+          if (groupsList.length > 0) {
+            setCurrentGroupId(groupsList[0].id);
+            setDefaultGroupId(groupsList[0].id);
+          }
+        } catch (groupErr) {
+          console.warn('Failed to fetch groups (non-fatal):', groupErr);
         }
       }
     } catch (err) {
       console.warn('Failed to fetch company info:', err);
     }
   };
+
+  const refreshGroups = useCallback(async () => {
+    if (!currentCompanyId) return;
+    try {
+      const groupsList = await groupService.list(currentCompanyId);
+      setGroups(groupsList);
+      if (groupsList.length > 0) {
+        const stillValid = currentGroupId && groupsList.some((group) => group.id === currentGroupId);
+        const nextGroupId = stillValid ? currentGroupId : groupsList[0].id;
+        setCurrentGroupId(nextGroupId);
+        setDefaultGroupId(nextGroupId);
+      } else {
+        setCurrentGroupId(null);
+        setDefaultGroupId(null);
+      }
+    } catch (err) {
+      console.warn('Failed to refresh groups:', err);
+    }
+  }, [currentCompanyId, currentGroupId]);
 
   const switchCompany = useCallback(async (companyId: string) => {
     setCurrentCompanyId(companyId);
@@ -167,21 +178,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isLoading: false,
         error: null,
       });
-      return;
+      return getDashboardPathForRole(mockUser.role);
     }
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       const response = await authService.login(credentials);
       setAccessToken(response.access_token);
 
-        const user = await authService.getCurrentUser();
-        await fetchAndSetCompany();
-        setState({
-          isAuthenticated: true,
-          user,
-          isLoading: false,
-          error: null,
-        });
+      const user = await authService.getCurrentUser();
+      await fetchAndSetCompany();
+      setState({
+        isAuthenticated: true,
+        user,
+        isLoading: false,
+        error: null,
+      });
+      return getDashboardPathForRole(user.role);
     } catch (error: any) {
       // Extract the real error message from the backend response
       const detail = error.response?.data?.detail;
@@ -207,7 +219,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isLoading: false,
         error: null,
       });
-      return;
+      return getDashboardPathForRole(mockUser.role);
     }
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
@@ -226,6 +238,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           isLoading: false,
           error: null,
         });
+        return getDashboardPathForRole(user.role);
       } catch (meError) {
         // Registration succeeded but fetching /me failed.
         // Still mark as authenticated so the user isn't shown an error.
@@ -236,6 +249,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           isLoading: false,
           error: null,
         });
+        return '/dashboard/employee';
       }
     } catch (error: any) {
       // The register API call itself failed — show the real reason
@@ -290,13 +304,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       login,
       register,
       logout,
-      getDashboardPath: () => getDashboardPath(state.user?.role),
+      getDashboardPath: () => getDashboardPathForRole(state.user?.role),
       companies,
       groups,
       currentCompanyId,
       currentGroupId,
       switchCompany,
       switchGroup,
+      refreshGroups,
     }}>
       {children}
     </AuthContext.Provider>

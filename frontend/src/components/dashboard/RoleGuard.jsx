@@ -1,18 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-
-const roleHierarchy = {
-  employee: 0,
-  reviewer: 1,
-  manager: 2,
-  admin: 3,
-};
-
-const dashboardRoles = {
-  '/dashboard/employee': 0,
-  '/dashboard/manager': 2,
-  '/dashboard/admin': 3,
-};
+import { getDashboardPathForRole, getRoleLevel } from '../../utils/roles';
 
 export function RoleGuard({ children, requiredRole = 'employee' }) {
   const { user, isLoading } = useAuth();
@@ -29,19 +17,16 @@ export function RoleGuard({ children, requiredRole = 'employee' }) {
     return <Navigate to="/login" replace />;
   }
 
-  const userRoleLevel = roleHierarchy[user.role] ?? -1;
-  const requiredLevel = roleHierarchy[requiredRole.toLowerCase()] ?? 0;
+  const userRoleLevel = getRoleLevel(user.role);
+  const requiredLevel = getRoleLevel(requiredRole);
 
   if (userRoleLevel < requiredLevel) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={getDashboardPathForRole(user.role)} replace />;
   }
 
   return children;
 }
 
 export function getDashboardPath(roleName) {
-  const level = roleHierarchy[roleName] ?? 0;
-  if (level >= 3) return '/dashboard/admin';
-  if (level >= 2) return '/dashboard/manager';
-  return '/dashboard/employee';
+  return getDashboardPathForRole(roleName);
 }

@@ -18,6 +18,7 @@ import {
   IconCheck,
 } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getRoleLabel, normalizeRole } from '../../utils/roles';
 
 const roleBadgeStyles = {
   admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -74,8 +75,8 @@ export function Topbar({ onToggleSidebar }) {
         .slice(0, 2)
     : 'U';
 
-  const roleName = user?.role || 'User';
-  const badgeStyle = roleBadgeStyles[roleName] || roleBadgeStyles.employee;
+  const roleName = getRoleLabel(user?.role);
+  const badgeStyle = roleBadgeStyles[normalizeRole(user?.role)] || roleBadgeStyles.employee;
 
   const currentCompany = companies.find(c => c.id === currentCompanyId);
   const currentGroup = groups.find(g => g.id === currentGroupId);

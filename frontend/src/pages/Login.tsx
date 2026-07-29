@@ -19,7 +19,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const Login = () => {
-  const { login, error: authError, getDashboardPath } = useAuth();
+  const { login, error: authError } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginMode, setLoginMode] = useState<"employee" | "admin">("employee");
   const navigate = useNavigate();
@@ -31,8 +31,8 @@ export const Login = () => {
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmitting(true);
     try {
-      await login({ ...data, login_context: loginMode });
-      navigate(getDashboardPath());
+      const dashboardPath = await login({ ...data, login_context: loginMode });
+      navigate(dashboardPath);
     } catch (err) {
       // Error is handled in context
     } finally {

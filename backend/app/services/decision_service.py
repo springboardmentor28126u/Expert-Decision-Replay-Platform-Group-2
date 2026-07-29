@@ -65,17 +65,20 @@ class DecisionService:
         if not membership:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this company")
 
-        if membership.role != CompanyRole.ADMIN:
-            gm = (
-                db.query(GroupMembership)
-                .filter(GroupMembership.group_id == data.group_id, GroupMembership.user_id == user_id)
-                .first()
+        gm = (
+            db.query(GroupMembership)
+            .filter(
+                GroupMembership.group_id == data.group_id,
+                GroupMembership.user_id == user_id,
+                GroupMembership.is_active == True,  # noqa: E712
             )
-            if not gm:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Cannot create a decision in a group you are not a member of",
-                )
+            .first()
+        )
+        if not gm:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot create a decision in a group you have not joined",
+            )
 
         # Validate impact level
         impact = ImpactLevel.MEDIUM
@@ -188,7 +191,10 @@ class DecisionService:
             # Filter by groups where current_user has a GroupMembership
             user_group_ids = (
                 db.query(GroupMembership.group_id)
-                .filter(GroupMembership.user_id == current_user.id)
+                .filter(
+                    GroupMembership.user_id == current_user.id,
+                    GroupMembership.is_active == True,  # noqa: E712
+                )
                 .subquery()
             )
             query = query.filter(Decision.group_id.in_(user_group_ids))
@@ -285,17 +291,16 @@ class DecisionService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid group_id for this company",
                 )
-            # Re-verify user membership in the new group
-            if current_user.id != decision.created_by:
-                gm = db.query(GroupMembership).filter(
-                    GroupMembership.group_id == update_data["group_id"],
-                    GroupMembership.user_id == current_user.id,
-                ).first()
-                if not gm:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="You are not a member of the target group",
-                    )
+            gm = db.query(GroupMembership).filter(
+                GroupMembership.group_id == update_data["group_id"],
+                GroupMembership.user_id == current_user.id,
+                GroupMembership.is_active == True,  # noqa: E712
+            ).first()
+            if not gm:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are not an active member of the target group",
+                )
 
         if "stakeholder_ids" in update_data and update_data["stakeholder_ids"] is not None:
             update_data["stakeholder_ids"] = [
@@ -677,4 +682,3 @@ class DecisionService:
             by_status[s.value] = count
 
         return {"total": total, "by_status": by_status}
-

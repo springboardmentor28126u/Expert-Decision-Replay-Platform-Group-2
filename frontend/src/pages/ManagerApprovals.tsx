@@ -15,6 +15,7 @@ const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/manager' },
   { label: 'Team Decisions', icon: IconUsers, path: '/decisions' },
   { label: 'Pending Approvals', icon: IconChecklist, path: '/dashboard/manager/approvals' },
+  { label: 'Requests', icon: IconUsers, path: '/dashboard/manager/requests' },
 ];
 
 export default function ManagerApprovals() {

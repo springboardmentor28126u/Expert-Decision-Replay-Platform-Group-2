@@ -88,15 +88,26 @@ def register(
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
-def login(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    request: Request,
+    response: Response,
+    username: str = Form(...),
+    password: str = Form(...),
+    login_context: str | None = Form(default=None),
+    db: Session = Depends(get_db),
+):
     """Login and return tokens (using OAuth2 standard form)."""
     from app.schemas.auth import LoginRequest
-    login_data = LoginRequest(email=form_data.username, password=form_data.password)
-    
+    login_data = LoginRequest(
+        email=username,
+        password=password,
+        login_context=login_context if login_context in ("employee", "admin") else None,
+    )
+
     access_token, refresh_token = AuthService.authenticate_user(db, login_data)
-    
+
     _set_refresh_cookie(response, refresh_token)
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer"

@@ -1,8 +1,9 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { motion } from 'framer-motion';
+import type { ReactNode } from 'react';
 
-export const AuthLayout = () => {
+export const AuthLayout = ({ children }: { children?: ReactNode }) => {
   const { isAuthenticated, isLoading, getDashboardPath } = useAuth();
 
   if (isLoading) {
@@ -63,7 +64,7 @@ export const AuthLayout = () => {
       {/* Right side - Forms */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 z-10 relative bg-background/50 backdrop-blur-xl">
         <div className="w-full max-w-md">
-          <Outlet />
+          {children ?? <Outlet />}
         </div>
       </div>
     </div>

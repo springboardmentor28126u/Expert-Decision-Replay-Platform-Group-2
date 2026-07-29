@@ -15,13 +15,13 @@ import {
   IconFileText,
   IconMessageCircle,
   IconUserCog,
-  IconBuildingCommunity,
   IconFileSpreadsheet,
   IconChartBar,
   IconUsers,
   IconChecklist,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
+import { getRoleLabel, normalizeRole } from '../utils/roles';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -37,46 +37,50 @@ const itemVariants = {
 };
 
 const getSidebarItems = (roleName: string = '') => {
-  if (roleName === 'admin' || roleName === 'Administrator') {
+  const role = normalizeRole(roleName);
+  if (role === 'admin') {
     return [
       { label: 'Dashboard', icon: IconHome, path: '/dashboard/admin' },
       { label: 'Users', icon: IconUserCog, path: '/dashboard/admin/users' },
-      { label: 'Teams', icon: IconBuildingCommunity, path: '/dashboard/admin/teams' },
+      { label: 'Requests', icon: IconUsers, path: '/dashboard/admin/requests' },
     ];
   }
-  if (roleName === 'manager' || roleName === 'Manager') {
+  if (role === 'manager') {
     return [
       { label: 'Dashboard', icon: IconHome, path: '/dashboard/manager' },
       { label: 'Team Decisions', icon: IconUsers, path: '/decisions' },
       { label: 'Pending Approvals', icon: IconChecklist, path: '/dashboard/manager/approvals' },
+      { label: 'Requests', icon: IconUsers, path: '/dashboard/manager/requests' },
     ];
   }
   // Default for Employee / Reviewer
   return [
     { label: 'Dashboard', icon: IconHome, path: '/dashboard/employee' },
     { label: 'My Decisions', icon: IconFileText, path: '/decisions' },
+    { label: 'Groups', icon: IconUsers, path: '/dashboard/employee/groups' },
     { label: 'Discussions', icon: IconMessageCircle, path: '/dashboard/employee/discussions' },
     { label: 'Profile', icon: IconUser, path: '/profile' },
   ];
 };
 
 const roleBadgeStyles: Record<string, string> = {
-  Administrator: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  Manager: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  Reviewer: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-  Employee: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+  admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  manager: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  reviewer: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+  employee: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
 };
 
 export default function Profile() {
   const { user } = useAuth();
-  const roleName = user?.role || 'User';
+  const role = normalizeRole(user?.role);
+  const roleName = getRoleLabel(user?.role);
   const sidebarItems = getSidebarItems(roleName);
   
   const initials = user?.full_name
     ? user.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
     
-  const badgeStyle = roleBadgeStyles[roleName] || roleBadgeStyles.Employee;
+  const badgeStyle = roleBadgeStyles[role] || roleBadgeStyles.employee;
   
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A';
@@ -104,7 +108,7 @@ export default function Profile() {
   const [pendingReviewCount, setPendingReviewCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (roleName === 'Employee' || roleName === 'Reviewer') {
+    if (role === 'employee' || role === 'reviewer') {
       decisionService.getStats().then((stats) => {
         setDecisionCount(stats.total || 0);
       }).catch(() => {});
@@ -114,7 +118,7 @@ export default function Profile() {
         }).catch(() => {});
       });
     }
-  }, []);
+  }, [role]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -229,13 +233,13 @@ export default function Profile() {
             {/* Role-Specific Content section */}
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {roleName === 'Administrator' && "Administrative Privileges"}
-                {roleName === 'Manager' && "Team Overview"}
-                {(roleName === 'Employee' || roleName === 'Reviewer') && "Your Activity Summary"}
+                {role === 'admin' && "Administrative Privileges"}
+                {role === 'manager' && "Team Overview"}
+                {(role === 'employee' || role === 'reviewer') && "Your Activity Summary"}
               </h2>
               
               <div className="text-sm text-gray-600 dark:text-gray-300">
-                {roleName === 'Administrator' && (
+                {role === 'admin' && (
                   <div className="space-y-4">
                     <p>As an Administrator, you have full control over the Expert Decision Replay Platform.</p>
                     <ul className="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-400">
@@ -246,7 +250,7 @@ export default function Profile() {
                   </div>
                 )}
                 
-                {roleName === 'Manager' && (
+                {role === 'manager' && (
                   <div className="space-y-4">
                     <p>As a Manager, you oversee the decision-making workflows for your designated team.</p>
                     <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
@@ -256,7 +260,7 @@ export default function Profile() {
                   </div>
                 )}
                 
-                {(roleName === 'Employee' || roleName === 'Reviewer') && (
+                {(role === 'employee' || role === 'reviewer') && (
                   <div className="space-y-4">
                     <p>You are an active contributor to the decision-making process.</p>
                     <div className="grid grid-cols-2 gap-4 mt-2">

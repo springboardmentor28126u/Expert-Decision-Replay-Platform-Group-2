@@ -80,7 +80,7 @@ def seed_admin(db: Session) -> None:
     )
     db.add(membership)
 
-    group = Group(company_id=company.id, name="Default Group")
+    group = Group(company_id=company.id, name="Default Group", owner_id=admin_user.id)
     db.add(group)
     db.flush()
 
@@ -138,7 +138,13 @@ def seed_demo_users(db: Session) -> None:
         profile = UserProfile(user_id=user.id)
         db.add(profile)
 
-        membership_role = CompanyRole.ADMIN if user_data["role"] == UserRole.ADMIN else CompanyRole.EMPLOYEE
+        _role_map = {
+            UserRole.ADMIN: CompanyRole.ADMIN,
+            UserRole.MANAGER: CompanyRole.MANAGER,
+            UserRole.REVIEWER: CompanyRole.EMPLOYEE,
+            UserRole.EMPLOYEE: CompanyRole.EMPLOYEE,
+        }
+        membership_role = _role_map.get(user_data["role"], CompanyRole.EMPLOYEE)
         membership = Membership(user_id=user.id, company_id=default_company.id, role=membership_role)
         db.add(membership)
 

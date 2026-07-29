@@ -199,7 +199,11 @@ def can_access_decision(user: User, decision: Decision, db: Session) -> bool:
 
     group_membership = (
         db.query(GroupMembership)
-        .filter(GroupMembership.user_id == user.id, GroupMembership.group_id == decision.group_id)
+        .filter(
+            GroupMembership.user_id == user.id,
+            GroupMembership.group_id == decision.group_id,
+            GroupMembership.is_active == True,  # noqa: E712
+        )
         .first()
     )
     if group_membership:
@@ -221,4 +225,3 @@ def require_company_role(*allowed_roles: CompanyRole):
             )
         return ctx
     return checker
-

@@ -55,25 +55,36 @@ class UserService:
         
     @staticmethod
     def create_user(db: Session, user_data: UserCreate) -> User:
-        """Create a new user."""
+        """Create a new user with optional role assignment."""
         existing_user = db.query(User).filter(User.email == user_data.email.lower()).first()
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
-            
+
+        role = UserRole.EMPLOYEE
+        if user_data.role:
+            try:
+                role = UserRole(user_data.role.lower())
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid role: {user_data.role}. Must be one of: {[r.value for r in UserRole]}",
+                )
+
         new_user = User(
             full_name=user_data.full_name,
             email=user_data.email.lower(),
             password_hash=hash_password(user_data.password),
+            role=role,
         )
         db.add(new_user)
         db.flush()
-        
+
         new_profile = UserProfile(user_id=new_user.id)
         db.add(new_profile)
-        
+
         db.commit()
         db.refresh(new_user)
         return new_user

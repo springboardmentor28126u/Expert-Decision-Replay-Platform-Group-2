@@ -26,7 +26,7 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export const Register = () => {
-  const { register: registerUser, error: authError, getDashboardPath } = useAuth();
+  const { register: registerUser, error: authError } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,8 +37,8 @@ export const Register = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     setIsSubmitting(true);
     try {
-      await registerUser(data);
-      navigate(getDashboardPath());
+      const dashboardPath = await registerUser(data);
+      navigate(dashboardPath);
     } catch (err) {
       // Error handled in context
     } finally {

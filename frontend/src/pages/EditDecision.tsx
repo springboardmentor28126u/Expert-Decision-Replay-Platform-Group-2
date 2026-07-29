@@ -23,11 +23,13 @@ import {
   IconStar,
   IconStarFilled,
   IconDeviceFloppy,
+  IconUsers,
 } from '@tabler/icons-react';
 
 const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/employee' },
   { label: 'My Decisions', icon: IconFileText, path: '/decisions' },
+  { label: 'Groups', icon: IconUsers, path: '/dashboard/employee/groups' },
   { label: 'Discussions', icon: IconMessageCircle, path: '/dashboard/employee/discussions' },
   { label: 'Profile', icon: IconUser, path: '/profile' },
 ];

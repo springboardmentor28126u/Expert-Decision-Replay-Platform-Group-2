@@ -11,6 +11,7 @@ import {
   IconHome,
   IconFileText,
   IconChecklist,
+  IconUsers,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 
@@ -31,6 +32,7 @@ const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/manager' },
   { label: 'Team Decisions', icon: IconFileText, path: '/decisions' },
   { label: 'Approvals', icon: IconChecklist, path: '/dashboard/manager/approvals' },
+  { label: 'Requests', icon: IconUsers, path: '/dashboard/manager/requests' },
 ];
 
 export default function ManagerDashboard() {

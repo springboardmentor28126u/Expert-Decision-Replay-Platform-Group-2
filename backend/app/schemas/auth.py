@@ -20,6 +20,7 @@ class LoginRequest(BaseModel):
     """Schema for user login."""
     email: EmailStr = Field(..., examples=["john.doe@example.com"])
     password: str = Field(..., min_length=1, examples=["StrongP@ss1"])
+    login_context: Optional[str] = Field(None, pattern="^(employee|admin)$")
 
 
 

@@ -5,7 +5,8 @@ import type { User } from '../types/user';
 import {
   IconHome,
   IconUserCog,
-  IconBuildingCommunity,
+  IconUsers,
+  IconUsersGroup,
   IconSearch,
   IconPlus,
   IconTrash,
@@ -17,7 +18,8 @@ import {
 const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/admin' },
   { label: 'Users', icon: IconUserCog, path: '/dashboard/admin/users' },
-  { label: 'Teams', icon: IconBuildingCommunity, path: '/dashboard/admin/teams' },
+  { label: 'Groups', icon: IconUsersGroup, path: '/dashboard/admin/groups' },
+  { label: 'Requests', icon: IconUsers, path: '/dashboard/admin/requests' },
 ];
 
 const roleColors: Record<string, string> = {
@@ -40,6 +42,7 @@ export default function AdminUsers() {
   const [createName, setCreateName] = useState('');
   const [createEmail, setCreateEmail] = useState('');
   const [createPassword, setCreatePassword] = useState('');
+  const [createRole, setCreateRole] = useState('employee');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
@@ -81,11 +84,12 @@ export default function AdminUsers() {
     setCreating(true);
     setCreateError('');
     try {
-      await userService.createUser({ full_name: createName, email: createEmail, password: createPassword });
+      await userService.createUser({ full_name: createName, email: createEmail, password: createPassword, role: createRole });
       setShowCreate(false);
       setCreateName('');
       setCreateEmail('');
       setCreatePassword('');
+      setCreateRole('employee');
       fetchUsers();
     } catch (err: any) {
       setCreateError(err.response?.data?.detail || 'Failed to create user');
@@ -164,6 +168,13 @@ export default function AdminUsers() {
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
                 <input type="password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="Password"
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                <select value={createRole} onChange={(e) => setCreateRole(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                  <option value="employee">Employee</option>
+                  <option value="reviewer">Reviewer</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
                 <div className="flex items-center justify-end gap-3">
                   <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Cancel</button>
                   <button onClick={handleCreate} disabled={creating} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium transition-colors">{creating ? 'Creating...' : 'Create'}</button>

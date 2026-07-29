@@ -1,24 +1,40 @@
 """
 Expert Decision Replay Platform - Request Logging Middleware
+
+Pure ASGI middleware — does NOT extend BaseHTTPMiddleware, which is known
+to interfere with CORSMiddleware by intercepting exception responses
+before outer middleware can add headers.
 """
 
 import time
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.logging import logger
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+
+class RequestLoggingMiddleware:
+    """Lightweight ASGI middleware that logs request method, path, and duration."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
         start_time = time.time()
-        
-        # Log request
-        client_ip = request.client.host if request.client else "unknown"
-        logger.info(f"Request: {request.method} {request.url.path} from {client_ip}")
-        
-        response = await call_next(request)
-        
-        # Log response
+        method = scope.get("method", "")
+        path = scope.get("path", "")
+        client = scope.get("client")
+        client_ip = client[0] if client else "unknown"
+
+        logger.info("Request: %s %s from %s", method, path, client_ip)
+
+        async def send_wrapper(message):
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
         process_time = (time.time() - start_time) * 1000
-        logger.info(f"Response: {response.status_code} for {request.method} {request.url.path} completed in {process_time:.2f}ms")
-        
-        return response
+        logger.info(
+            "Response: %s %s completed in %.2fms",
+            method, path, process_time,
+        )

@@ -44,6 +44,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema for creating a new user."""
     password: str = Field(..., min_length=8, max_length=128)
+    role: Optional[str] = Field(None, description="Optional role: employee, reviewer, manager, admin")
 
 
 class UserUpdate(BaseModel):

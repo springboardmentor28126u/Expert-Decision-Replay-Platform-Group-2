@@ -28,7 +28,7 @@ export const userService = {
     return response.data;
   },
 
-  createUser: async (data: { full_name: string; email: string; password: string }): Promise<User> => {
+  createUser: async (data: { full_name: string; email: string; password: string; role?: string }): Promise<User> => {
     const response = await api.post('/users', data);
     return response.data;
   },

@@ -10,7 +10,7 @@ import {
   IconReport,
   IconHome,
   IconUserCog,
-  IconBuildingCommunity,
+  IconUsersGroup,
   IconFileSpreadsheet,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
@@ -31,7 +31,8 @@ const itemVariants = {
 const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/admin' },
   { label: 'Users', icon: IconUserCog, path: '/dashboard/admin/users' },
-  { label: 'Teams', icon: IconBuildingCommunity, path: '/dashboard/admin/teams' },
+  { label: 'Groups', icon: IconUsersGroup, path: '/dashboard/admin/groups' },
+  { label: 'Requests', icon: IconUsers, path: '/dashboard/admin/requests' },
 ];
 
 export default function AdminDashboard() {

@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { decisionService } from '../services/decisionService';
 import { alternativeService } from '../services/alternativeService';
 import { categoryService } from '../services/categoryService';
-import api, { getDefaultGroupId } from '../services/api';
-import type { User } from '../types/user';
 import type {
   DecisionCategory,
   DecisionCreatePayload,
@@ -25,11 +24,13 @@ import {
   IconAlertCircle,
   IconStar,
   IconStarFilled,
+  IconUsers,
 } from '@tabler/icons-react';
 
 const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/employee' },
   { label: 'My Decisions', icon: IconFileText, path: '/decisions' },
+  { label: 'Groups', icon: IconUsers, path: '/dashboard/employee/groups' },
   { label: 'Discussions', icon: IconMessageCircle, path: '/dashboard/employee/discussions' },
   { label: 'Profile', icon: IconUser, path: '/profile' },
 ];
@@ -44,6 +45,7 @@ interface AlternativeForm extends AlternativeCreatePayload {
 
 export default function CreateDecision() {
   const navigate = useNavigate();
+  const { groups, currentGroupId, switchGroup } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [categories, setCategories] = useState<DecisionCategory[]>([]);
   const [saving, setSaving] = useState(false);
@@ -53,7 +55,6 @@ export default function CreateDecision() {
   const [decisionId, setDecisionId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState('');
-  const [companyAdmins, setCompanyAdmins] = useState<User[]>([]);
   const [sessionExpired, setSessionExpired] = useState(false);
 
   // Step 1 — Basic Info
@@ -98,17 +99,12 @@ export default function CreateDecision() {
   }, [loadCategories]);
 
   useEffect(() => {
-    const gid = getDefaultGroupId();
-    if (gid) setGroupId(gid);
-  }, []);
-
-  useEffect(() => {
-    if (!groupId) {
-      api.get('/users/admins')
-        .then(res => setCompanyAdmins(res.data))
-        .catch(() => {});
+    if (currentGroupId) {
+      setGroupId(currentGroupId);
+    } else if (groups.length > 0) {
+      setGroupId(groups[0].id);
     }
-  }, [groupId]);
+  }, [currentGroupId, groups]);
 
   // ─── Step navigation ──────────────────────────────────────
   const canProceedStep1 = title.length >= 3 && problemStatement.length >= 10 && categoryId && groupId;
@@ -436,36 +432,12 @@ export default function CreateDecision() {
                 You need to be a member of a group before you can create decisions.
               </p>
 
-              {companyAdmins.length > 0 && (
-                <div className="mb-6 text-left">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                    Contact your company admin:
-                  </p>
-                  <ul className="space-y-2.5">
-                    {companyAdmins.map((admin) => (
-                      <li key={admin.id}>
-                        <a
-                          href={`mailto:${admin.email}?subject=${encodeURIComponent('Group Access Request for Decision Creation')}&body=${encodeURIComponent(`Hi ${admin.full_name},\n\nI need to be assigned to a group to create decisions in the platform. Could you please add me to a group?\n\nThank you.`)}`}
-                          className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-                        >
-                          <span className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-medium text-xs">
-                            {admin.full_name.charAt(0).toUpperCase()}
-                          </span>
-                          <span>{admin.full_name}</span>
-                          <span className="text-gray-400 text-xs ml-auto">→</span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               <button
-                onClick={() => navigate('/')}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                onClick={() => navigate('/dashboard/employee/groups')}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors"
               >
-                <IconArrowLeft size={16} />
-                Back to Dashboard
+                <IconUsers size={16} />
+                Join a Group
               </button>
             </div>
           </div>
@@ -495,6 +467,25 @@ export default function CreateDecision() {
                 placeholder="e.g., Q3 Budget Allocation"
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               />
+            </div>
+
+            <div>
+              <label htmlFor="group-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Group <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="group-select"
+                value={groupId || ''}
+                onChange={(e) => {
+                  setGroupId(e.target.value);
+                  switchGroup(e.target.value);
+                }}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>{group.name}</option>
+                ))}
+              </select>
             </div>
 
             <div>
