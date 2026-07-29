@@ -14,9 +14,10 @@ from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
 
-from schemas import UserCreate, UserLogin, UserResponse, Token
+from schemas import UserCreate, UserLogin, UserResponse, Token, AuditLogResponse
 
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_role
+from audit_helper import log_activity, log_security, log_access
 # Create all tables (safe to keep, won't duplicate existing ones)
 Base.metadata.create_all(bind=engine)
 
@@ -62,6 +63,15 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
+    log_security(
+        db,
+        action="register",
+        entity_type="user",
+        entity_id=new_user.id,
+        user_id=new_user.id,
+        details=f"User registered with email: {new_user.email}",
+    )
+
     return new_user
 
 
@@ -75,6 +85,15 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     access_token = create_access_token(data={"sub": user.email, "role": user.role.value})
+
+    log_security(
+        db,
+        action="login",
+        entity_type="user",
+        entity_id=user.id,
+        user_id=user.id,
+        details=f"User logged in successfully: {user.email}",
+    )
 
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -100,6 +119,15 @@ def change_password(
     current_user.hashed_password = hash_password(payload.new_password)
     db.commit()
 
+    log_security(
+        db,
+        action="change_password",
+        entity_type="user",
+        entity_id=current_user.id,
+        user_id=current_user.id,
+        details="User changed password",
+    )
+
     return {"message": "Password changed successfully"}
 
 
@@ -109,6 +137,14 @@ def list_users(
     current_user: User = Depends(require_role(UserRole.admin))
 ):
     users = db.execute(select(User)).scalars().all()
+    log_access(
+        db,
+        action="list",
+        entity_type="user",
+        entity_id=None,
+        user_id=current_user.id,
+        details="Admin listed all users",
+    )
     return users
 
 from schemas import RoleUpdate
@@ -133,9 +169,19 @@ def update_user_role(
             detail="You cannot change your own role"
         )
 
+    old_role = target_user.role.value
     target_user.role = role_update.role
     db.commit()
     db.refresh(target_user)
+
+    log_security(
+        db,
+        action="update_role",
+        entity_type="user",
+        entity_id=target_user.id,
+        user_id=current_user.id,
+        details=f"Admin updated role of user {target_user.email} from {old_role} to {target_user.role.value}",
+    )
 
     return target_user
 
@@ -164,6 +210,15 @@ def create_decision(
     db.commit()
     db.refresh(new_decision)
     new_decision.creator_name = new_decision.creator.full_name
+    
+    log_activity(
+        db,
+        action="create",
+        entity_type="decision",
+        entity_id=new_decision.id,
+        user_id=current_user.id,
+        details=f"Created decision: {new_decision.title}",
+    )
     return new_decision
 
 @app.get("/decisions", response_model=ListType[DecisionResponse], tags=["Decision Management"])
@@ -174,6 +229,15 @@ def list_decisions(
     decisions = db.execute(select(Decision)).scalars().all()
     for d in decisions:
         d.creator_name = d.creator.full_name if d.creator else None
+        
+    log_access(
+        db,
+        action="list",
+        entity_type="decision",
+        entity_id=None,
+        user_id=current_user.id,
+        details="Listed decisions",
+    )
     return decisions
 
 @app.get("/decisions/{decision_id}", response_model=DecisionResponse, tags=["Decision Management"])
@@ -188,6 +252,15 @@ def get_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
     decision.creator_name = decision.creator.full_name if decision.creator else None
+    
+    log_access(
+        db,
+        action="view",
+        entity_type="decision",
+        entity_id=decision.id,
+        user_id=current_user.id,
+        details=f"Viewed decision: {decision.title}",
+    )
     return decision
 
 
@@ -210,9 +283,19 @@ def update_decision_status(
             detail="Use the /approve or /reject endpoints to move a decision to approved or rejected, so the review is properly recorded with a comment and reviewer."
         )
 
+    old_status = decision.status.value
     decision.status = status_update.status
     db.commit()
     db.refresh(decision)
+    
+    log_activity(
+        db,
+        action="update_status",
+        entity_type="decision",
+        entity_id=decision.id,
+        user_id=current_user.id,
+        details=f"Updated status of decision {decision.id} from {old_status} to {decision.status.value}",
+    )
     return decision
 
 from schemas import ApprovalCreate, ApprovalResponse
@@ -243,6 +326,15 @@ def approve_decision(
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
+    
+    log_activity(
+        db,
+        action="approve",
+        entity_type="decision",
+        entity_id=decision.id,
+        user_id=current_user.id,
+        details=f"Approved decision {decision.id} with comment: {approval.comment or ''}",
+    )
     return new_approval
 
 
@@ -274,6 +366,15 @@ def reject_decision(
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
+    
+    log_activity(
+        db,
+        action="reject",
+        entity_type="decision",
+        entity_id=decision.id,
+        user_id=current_user.id,
+        details=f"Rejected decision {decision.id} with comment: {approval.comment}",
+    )
     return new_approval
 
 @app.post("/decisions/{decision_id}/resubmit", response_model=DecisionResponse, tags=["Approval Workflow"])
@@ -311,6 +412,15 @@ def resubmit_decision(
     decision.status = DecisionStatus.under_review
     db.commit()
     db.refresh(decision)
+    
+    log_activity(
+        db,
+        action="resubmit",
+        entity_type="decision",
+        entity_id=decision.id,
+        user_id=current_user.id,
+        details=f"Resubmitted decision {decision.id} for review",
+    )
     return decision
 
 @app.get("/decisions/{decision_id}/approvals", response_model=ListType[ApprovalResponse], tags=["Approval Workflow"])
@@ -332,6 +442,15 @@ def get_decision_approvals(
     ).scalars().all()
     for a in approvals:
         a.reviewer_name = a.reviewer.full_name if a.reviewer else None
+        
+    log_access(
+        db,
+        action="view_approvals",
+        entity_type="decision",
+        entity_id=decision_id,
+        user_id=current_user.id,
+        details=f"Viewed approvals for decision {decision_id}",
+    )
     return approvals
 
 from schemas import DecisionUpdate, DecisionVersionResponse
@@ -384,6 +503,15 @@ def update_decision(
 
     db.commit()
     db.refresh(decision)
+    
+    log_activity(
+        db,
+        action="update",
+        entity_type="decision",
+        entity_id=decision.id,
+        user_id=current_user.id,
+        details=f"Updated decision {decision.id} (version snapshot v{next_version_number} saved)",
+    )
     return decision
 
 
@@ -406,6 +534,14 @@ def get_decision_versions(
         .order_by(DecisionVersion.version_number)
     ).scalars().all()
 
+    log_access(
+        db,
+        action="view_versions",
+        entity_type="decision",
+        entity_id=decision_id,
+        user_id=current_user.id,
+        details=f"Viewed versions for decision {decision_id}",
+    )
     return versions
 
 @app.delete("/decisions/{decision_id}", tags=["Decision Management"])
@@ -421,9 +557,18 @@ def delete_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
+    decision_title = decision.title
     db.delete(decision)
     db.commit()
 
+    log_activity(
+        db,
+        action="delete",
+        entity_type="decision",
+        entity_id=decision_id,
+        user_id=current_user.id,
+        details=f"Deleted decision: {decision_title}",
+    )
     return {"message": "Decision deleted successfully"}
 
 from fastapi.responses import StreamingResponse
@@ -496,6 +641,15 @@ def export_decision_pdf(
     p.save()
     buffer.seek(0)
 
+    log_access(
+        db,
+        action="export_pdf",
+        entity_type="decision",
+        entity_id=decision_id,
+        user_id=current_user.id,
+        details=f"Exported decision {decision_id} as PDF",
+    )
+
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
@@ -536,6 +690,14 @@ def create_alternative(
     db.commit()
     db.refresh(new_alternative)
 
+    log_activity(
+        db,
+        action="create",
+        entity_type="alternative",
+        entity_id=new_alternative.id,
+        user_id=current_user.id,
+        details=f"Created alternative: {new_alternative.title} for decision {new_alternative.decision_id}",
+    )
     return new_alternative
 
 
@@ -556,6 +718,14 @@ def list_alternatives(
         select(Alternative).where(Alternative.decision_id == decision_id)
     ).scalars().all()
 
+    log_access(
+        db,
+        action="list_alternatives",
+        entity_type="decision",
+        entity_id=decision_id,
+        user_id=current_user.id,
+        details=f"Viewed alternatives list for decision {decision_id}",
+    )
     return alternatives
 
 
@@ -572,6 +742,14 @@ def get_alternative(
     if not alternative:
         raise HTTPException(status_code=404, detail="Alternative not found")
 
+    log_access(
+        db,
+        action="view",
+        entity_type="alternative",
+        entity_id=alternative_id,
+        user_id=current_user.id,
+        details=f"Viewed alternative {alternative_id}",
+    )
     return alternative
 
 
@@ -596,6 +774,14 @@ def update_alternative(
     db.commit()
     db.refresh(alternative)
 
+    log_activity(
+        db,
+        action="update",
+        entity_type="alternative",
+        entity_id=alternative_id,
+        user_id=current_user.id,
+        details=f"Updated alternative {alternative_id}",
+    )
     return alternative
 
 
@@ -612,9 +798,18 @@ def delete_alternative(
     if not alternative:
         raise HTTPException(status_code=404, detail="Alternative not found")
 
+    alternative_title = alternative.title
     db.delete(alternative)
     db.commit()
 
+    log_activity(
+        db,
+        action="delete",
+        entity_type="alternative",
+        entity_id=alternative_id,
+        user_id=current_user.id,
+        details=f"Deleted alternative: {alternative_title}",
+    )
     return {"message": "Alternative deleted successfully"}
 
 
@@ -635,6 +830,14 @@ def compare_alternatives(
         select(Alternative).where(Alternative.decision_id == decision_id)
     ).scalars().all()
 
+    log_access(
+        db,
+        action="compare_alternatives",
+        entity_type="decision",
+        entity_id=decision_id,
+        user_id=current_user.id,
+        details=f"Compared alternatives for decision {decision_id}",
+    )
     return {
         "decision_id": decision.id,
         "decision_title": decision.title,
@@ -891,6 +1094,15 @@ def get_decision_discussion_thread(
 ):
     if not get_decision_or_none(db, decision_id):
         raise HTTPException(status_code=404, detail="Decision not found")
+
+    log_access(
+        db,
+        action="view_discussion",
+        entity_type="decision",
+        entity_id=decision_id,
+        user_id=current_user.id,
+        details=f"Viewed discussion thread for decision {decision_id}",
+    )
     return get_comments_for_decision(db, decision_id)
 
 
@@ -973,3 +1185,86 @@ def delete_discussion_comment(
 
     delete_comment(db, comment=comment, user=current_user)
     return {"message": "Comment deleted successfully"}
+
+
+# ===================== AUDIT LOGGING ENDPOINTS =====================
+
+from models import AuditLog
+import csv
+
+@app.get("/audit-logs", response_model=ListType[AuditLogResponse], tags=["Audit & Compliance"])
+def get_audit_logs(
+    log_type: str | None = None,
+    user_id: int | None = None,
+    action: str | None = None,
+    entity_type: str | None = None,
+    entity_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
+):
+    query = select(AuditLog)
+    if log_type:
+        query = query.where(AuditLog.log_type == log_type)
+    if user_id:
+        query = query.where(AuditLog.user_id == user_id)
+    if action:
+        query = query.where(AuditLog.action == action)
+    if entity_type:
+        query = query.where(AuditLog.entity_type == entity_type)
+    if entity_id:
+        query = query.where(AuditLog.entity_id == entity_id)
+        
+    query = query.order_by(AuditLog.created_at.desc())
+    logs = db.execute(query).scalars().all()
+    return logs
+
+
+@app.get("/audit-logs/export", tags=["Reports & Export"])
+def export_audit_report(
+    log_type: str | None = None,
+    user_id: int | None = None,
+    action: str | None = None,
+    entity_type: str | None = None,
+    entity_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
+):
+    query = select(AuditLog)
+    if log_type:
+        query = query.where(AuditLog.log_type == log_type)
+    if user_id:
+        query = query.where(AuditLog.user_id == user_id)
+    if action:
+        query = query.where(AuditLog.action == action)
+    if entity_type:
+        query = query.where(AuditLog.entity_type == entity_type)
+    if entity_id:
+        query = query.where(AuditLog.entity_id == entity_id)
+        
+    query = query.order_by(AuditLog.created_at.desc())
+    logs = db.execute(query).scalars().all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Log ID", "Timestamp", "User ID", "User Name", "Log Type", "Action", "Entity Type", "Entity ID", "Details"])
+    
+    for log in logs:
+        user_name = log.user.full_name if log.user else "Unknown"
+        writer.writerow([
+            log.id,
+            log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "",
+            log.user_id,
+            user_name,
+            log.log_type,
+            log.action,
+            log.entity_type,
+            log.entity_id or "",
+            log.details or ""
+        ])
+        
+    output.seek(0)
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode("utf-8")),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=audit_report.csv"}
+    )
