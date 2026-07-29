@@ -10,7 +10,8 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, require_role
+from app.models.enums import RoleName
 from app.models.user import User
 from app.schemas.common import PaginatedResponse, PaginationParams
 from app.schemas.decision import (
@@ -101,6 +102,7 @@ async def update_decision(
 @router.patch(
     "/{decision_id}/status",
     response_model=DecisionOut,
+    dependencies=[Depends(require_role(RoleName.MANAGER, RoleName.ADMINISTRATOR))],
 )
 async def update_status(
     decision_id: uuid.UUID,

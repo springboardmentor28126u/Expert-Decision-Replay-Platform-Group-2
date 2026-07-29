@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.role import Role
 from app.models.user import User
 from app.repositories.base_repository import BaseRepository
 
@@ -45,5 +46,19 @@ class UserRepository(BaseRepository[User]):
 
     async def list_paginated(self, offset: int, limit: int) -> Sequence[User]:
         result = await self.db.execute(self._base_query().offset(offset).limit(limit))
+        return result.scalars().all()
+
+    async def list_active_by_role_name(self, role_name: str) -> Sequence[User]:
+        """
+        Used for role-based notification fan-out (e.g. escalation falling
+        back to Administrators when a Decision has no Team manager) —
+        there's no single "the administrator", so callers need every
+        active user holding that role.
+        """
+        result = await self.db.execute(
+            self._base_query()
+            .join(Role, Role.id == User.role_id)
+            .where(Role.name == role_name, User.is_active.is_(True))
+        )
         return result.scalars().all()
 

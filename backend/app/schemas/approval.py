@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.enums import ApprovalStatus
 from app.schemas.common import ORMBase
@@ -35,6 +35,16 @@ class ApprovalDecision(BaseModel):
         description="Must be one of: approved, rejected, escalated"
     )
     comments: Optional[str] = Field(default=None, max_length=2000)
+
+    @field_validator("status")
+    @classmethod
+    def status_must_not_be_pending(cls, value: ApprovalStatus) -> ApprovalStatus:
+        if value == ApprovalStatus.PENDING:
+            raise ValueError(
+                "PENDING is not a valid review outcome. "
+                "Use PATCH /approvals/{approval_id}/reset instead."
+            )
+        return value
 
     @property
     def is_terminal_decision(self) -> bool:

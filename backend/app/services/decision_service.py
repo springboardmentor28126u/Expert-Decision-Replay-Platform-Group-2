@@ -46,9 +46,25 @@ from app.schemas.decision_version import (
 )
 
 from app.utils.exceptions import (
+    ConflictException,
     NotFoundException,
     PermissionDeniedException,
+    ValidationException,
 )
+
+# Legal targets for a *manual* status transition (PATCH /decisions/{id}/status),
+# keyed by the Decision's current status. APPROVED and REJECTED never appear
+# as a key's value here — leaving those states is only ever done by
+# ApprovalService's derived-state sync (resetting/re-reviewing approvals),
+# not through this endpoint. ARCHIVED is a terminal administrative state with
+# no legal manual way out.
+_MANUAL_STATUS_TRANSITIONS: dict[DecisionStatus, frozenset[DecisionStatus]] = {
+    DecisionStatus.DRAFT: frozenset({DecisionStatus.UNDER_REVIEW, DecisionStatus.ARCHIVED}),
+    DecisionStatus.UNDER_REVIEW: frozenset({DecisionStatus.DRAFT, DecisionStatus.ARCHIVED}),
+    DecisionStatus.APPROVED: frozenset({DecisionStatus.ARCHIVED}),
+    DecisionStatus.REJECTED: frozenset({DecisionStatus.ARCHIVED}),
+    DecisionStatus.ARCHIVED: frozenset(),
+}
 
 
 class DecisionService:
@@ -222,6 +238,25 @@ class DecisionService:
         if decision is None:
             raise NotFoundException(
                 "Decision not found."
+            )
+
+        # Defense-in-depth: DecisionStatusUpdate already rejects APPROVED/
+        # REJECTED at the schema level, so this is unreachable through the
+        # API today. This endpoint must never be the mechanism that
+        # reaches those two states — only ApprovalService's derived-state
+        # sync (Phase 3) may set them.
+        if payload.status in (DecisionStatus.APPROVED, DecisionStatus.REJECTED):
+            raise ValidationException(
+                "APPROVED and REJECTED cannot be set directly; they are only "
+                "reachable by completing the Approval Workflow."
+            )
+
+        legal_targets = _MANUAL_STATUS_TRANSITIONS.get(decision.status, frozenset())
+
+        if payload.status not in legal_targets:
+            raise ConflictException(
+                f"Cannot transition a decision from {decision.status.value} "
+                f"to {payload.status.value}."
             )
 
         await self.versions.create_snapshot(

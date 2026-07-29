@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 from app.schemas.decision_version import DecisionVersionOut
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.enums import DecisionStatus
 from app.schemas.common import ORMBase
@@ -38,13 +38,25 @@ class DecisionUpdate(BaseModel):
 
 class DecisionStatusUpdate(BaseModel):
     """
-    Dedicated schema for explicit status transitions
-    (PATCH /decisions/{id}/status), kept separate from DecisionUpdate so
-    routers/services can apply workflow validation (allowed transitions,
-    required approval state) distinctly from a plain content edit.
+    Dedicated schema for explicit *manual* status transitions
+    (PATCH /decisions/{id}/status) — draft/under_review/archived only.
+    APPROVED and REJECTED are workflow outcomes, reachable exclusively
+    through the Approval Workflow (ApprovalService), never as a
+    client-provided target here — see the validator below and
+    DecisionService.update_status's defense-in-depth check.
     """
     status: DecisionStatus
     reason: Optional[str] = Field(default=None, max_length=1000)
+
+    @field_validator("status")
+    @classmethod
+    def status_must_be_manually_settable(cls, value: DecisionStatus) -> DecisionStatus:
+        if value in (DecisionStatus.APPROVED, DecisionStatus.REJECTED):
+            raise ValueError(
+                "APPROVED and REJECTED cannot be set directly; they are only "
+                "reachable by completing the Approval Workflow."
+            )
+        return value
 
 
 class DecisionCreatorSummary(ORMBase):
