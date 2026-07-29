@@ -20,6 +20,7 @@ from app.api.v1 import (
     alternatives,
     categories,
     approvals,
+    decision_comments,
 )
 
 api_router = APIRouter()
@@ -36,4 +37,5 @@ api_router.include_router(admin_groups.router, prefix="/admin/groups", tags=["Ad
 api_router.include_router(decisions.router, prefix="/decisions", tags=["Decisions"])
 api_router.include_router(alternatives.router, prefix="/decisions", tags=["Alternatives"])
 api_router.include_router(approvals.router, prefix="/decisions", tags=["Approvals"])
+api_router.include_router(decision_comments.router, prefix="/decisions", tags=["Decision Comments"])
 api_router.include_router(categories.router, prefix="/categories", tags=["Decision Categories"])

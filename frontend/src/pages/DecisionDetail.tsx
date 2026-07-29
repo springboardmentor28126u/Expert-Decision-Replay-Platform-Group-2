@@ -8,6 +8,7 @@ import { decisionService } from '../services/decisionService';
 import { approvalService } from '../services/approvalService';
 import type { Decision, DecisionVersion } from '../types/decision';
 import type { ApprovalRow } from '../types/approval';
+import { CommentThread } from '../components/comments/CommentThread';
 import {
   IconArrowLeft,
   IconEdit,
@@ -52,7 +53,7 @@ const riskColors: Record<string, string> = {
   high: 'text-red-600 dark:text-red-400',
 };
 
-type Tab = 'overview' | 'alternatives' | 'versions' | 'approvals';
+type Tab = 'overview' | 'alternatives' | 'versions' | 'approvals' | 'comments';
 
 export default function DecisionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -234,6 +235,7 @@ export default function DecisionDetail() {
     { key: 'alternatives', label: `Alternatives (${decision.alternatives?.length || 0})`, icon: IconListDetails },
     { key: 'versions', label: 'Version History', icon: IconHistory },
     { key: 'approvals', label: `Approvals (${approvals.length})`, icon: IconCircleCheck, show: decision.status === 'under_review' || approvals.length > 0 },
+    { key: 'comments', label: 'Discussion', icon: IconMessageCircle },
   ];
 
   return (
@@ -716,6 +718,12 @@ export default function DecisionDetail() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'comments' && (
+          <div>
+            <CommentThread decisionId={id!} />
           </div>
         )}
       </div>
