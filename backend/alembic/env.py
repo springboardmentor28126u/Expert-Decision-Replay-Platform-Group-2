@@ -12,6 +12,7 @@ from app.database import Base
 from app.models import (  # noqa: F401
     User, Decision, Alternative, Discussion,
     DecisionHistory, FileAttachment, Replay,
+    AuditLog,
 )
 
 config = context.config

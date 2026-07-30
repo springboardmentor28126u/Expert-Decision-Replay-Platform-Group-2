@@ -12,7 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.middleware.error_handler import error_handler_middleware
 from app.middleware.logging import logging_middleware
-from app.routers import auth, users, decisions, alternatives, discussions, files
+from app.middleware.audit_middleware import audit_middleware
+from app.routers import auth, users, decisions, alternatives, discussions, files, audit
 
 # Configure logging
 logging.basicConfig(
@@ -55,6 +56,7 @@ app.add_middleware(
 # Custom middleware
 app.middleware("http")(logging_middleware)
 app.middleware("http")(error_handler_middleware)
+app.middleware("http")(audit_middleware)
 
 # Register routers
 app.include_router(auth.router)
@@ -63,6 +65,7 @@ app.include_router(decisions.router)
 app.include_router(alternatives.router)
 app.include_router(discussions.router)
 app.include_router(files.router)
+app.include_router(audit.router)
 
 
 @app.get("/", tags=["Health"])
