@@ -34,5 +34,5 @@ async def error_handler_middleware(request: Request, call_next: Callable) -> Res
         logger.error(f"Unhandled error: {exc}", exc_info=True)
         return JSONResponse(
             status_code=500,
-            content={"detail": "An unexpected error occurred."},
+            content={"detail": f"An error occurred: {str(exc)}"},
         )

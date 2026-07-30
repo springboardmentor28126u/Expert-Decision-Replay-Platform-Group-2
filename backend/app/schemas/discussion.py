@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.user import UserResponse
 
@@ -30,6 +30,15 @@ class DiscussionResponse(BaseModel):
     comment: str
     created_at: Optional[datetime] = None
     user: Optional[UserResponse] = None
-    replies: List["DiscussionResponse"] = []
+    replies: Optional[List["DiscussionResponse"]] = Field(default_factory=list)
+
+    @field_validator("replies", mode="before")
+    @classmethod
+    def ensure_replies_list(cls, v):
+        if v is None:
+            return []
+        if not isinstance(v, (list, set, tuple)):
+            return [v]
+        return list(v)
 
     model_config = {"from_attributes": True}

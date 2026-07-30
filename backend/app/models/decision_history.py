@@ -20,11 +20,11 @@ class DecisionHistory(Base):
     decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=True)
     old_title = Column(String, nullable=True)
     old_description = Column(Text, nullable=True)
-    changed_fields = Column(JSONB, nullable=True)  # NEW — stores all changed field data
+    changed_fields = Column(JSONB, nullable=True)  
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
+    
     decision = relationship("Decision", back_populates="history")
     updater = relationship("User", back_populates="history_entries")
 

@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.discussion import Discussion
 from app.repositories.base import BaseRepository
@@ -27,7 +27,10 @@ class DiscussionRepository(BaseRepository[Discussion]):
         """
         query = (
             self.db.query(Discussion)
-            .options(joinedload(Discussion.user), joinedload(Discussion.replies))
+            .options(
+                joinedload(Discussion.user),
+                selectinload(Discussion.replies).joinedload(Discussion.user),
+            )
             .filter(
                 Discussion.decision_id == decision_id,
                 Discussion.parent_id.is_(None),  # Top-level only
@@ -43,7 +46,10 @@ class DiscussionRepository(BaseRepository[Discussion]):
         """Get a discussion by ID with user data loaded."""
         return (
             self.db.query(Discussion)
-            .options(joinedload(Discussion.user), joinedload(Discussion.replies))
+            .options(
+                joinedload(Discussion.user),
+                selectinload(Discussion.replies).joinedload(Discussion.user),
+            )
             .filter(Discussion.id == id)
             .first()
         )

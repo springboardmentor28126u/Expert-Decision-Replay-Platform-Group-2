@@ -18,6 +18,23 @@ const FileList: React.FC<FileListProps> = ({ files, onDelete, canDelete }) => {
     );
   }
 
+  const handleDownload = async (decisionId: number, fileId: number, filename: string) => {
+    try {
+      const blob = await filesApi.download(decisionId, fileId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to download file', error);
+      alert('Failed to download file. Please ensure you are logged in.');
+    }
+  };
+
   return (
     <div className="space-y-2">
       {files.map((file) => (
@@ -54,10 +71,10 @@ const FileList: React.FC<FileListProps> = ({ files, onDelete, canDelete }) => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <a
-              href={filesApi.getDownloadUrl(file.decision_id, file.id)}
-              download
-              className="rounded p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text transition-all"
+            <button
+              type="button"
+              onClick={() => handleDownload(file.decision_id, file.id, file.filename)}
+              className="rounded p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text transition-all cursor-pointer"
               title="Download File"
             >
               <svg
@@ -74,7 +91,7 @@ const FileList: React.FC<FileListProps> = ({ files, onDelete, canDelete }) => {
                   d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
                 />
               </svg>
-            </a>
+            </button>
 
             {canDelete && (
               <button

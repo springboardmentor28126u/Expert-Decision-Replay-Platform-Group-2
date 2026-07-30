@@ -50,7 +50,7 @@ class DiscussionService:
             f"Discussion created: {discussion.id} (type={data.type}) "
             f"for decision {decision_id}"
         )
-        return discussion
+        return self.disc_repo.get_by_id_with_user(discussion.id) or discussion
 
     def get_discussions(
         self, decision_id: int, type_filter: Optional[str] = None

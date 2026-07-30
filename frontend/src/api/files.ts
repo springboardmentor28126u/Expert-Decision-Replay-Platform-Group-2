@@ -29,7 +29,18 @@ export const filesApi = {
     return `/api/decisions/${decisionId}/files/${fileId}/download`;
   },
 
+  download: async (decisionId: number, fileId: number): Promise<Blob> => {
+    const response = await client.get<Blob>(
+      `/api/decisions/${decisionId}/files/${fileId}/download`,
+      {
+        responseType: 'blob',
+      }
+    );
+    return response.data;
+  },
+
   delete: async (decisionId: number, fileId: number): Promise<void> => {
     await client.delete(`/api/decisions/${decisionId}/files/${fileId}`);
   },
 };
+

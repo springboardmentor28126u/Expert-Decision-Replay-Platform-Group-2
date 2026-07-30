@@ -95,8 +95,9 @@ const DecisionDetailPage: React.FC = () => {
 
   const isAdmin = user?.role === 'Administrator';
   const isManager = user?.role === 'Manager' || isAdmin;
+  const isReviewer = user?.role === 'Reviewer' || isManager;
   const isAuthor = decision.created_by === user?.id;
-  const canModify = isAuthor || isManager;
+  const canModify = isAuthor || isReviewer;
 
   const handleUpdateDecision = async (formData: any) => {
     setEditLoading(true);
@@ -177,8 +178,9 @@ const DecisionDetailPage: React.FC = () => {
       await discussionsApi.create(decisionId, { comment, type });
       const updatedDiscs = await discussionsApi.list(decisionId);
       setDiscussions(updatedDiscs);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to add discussion', err);
+      alert(err.response?.data?.detail || 'Failed to post discussion message.');
     } finally {
       setCommentLoading(false);
     }
@@ -189,8 +191,9 @@ const DecisionDetailPage: React.FC = () => {
       await discussionsApi.create(decisionId, { comment, parent_id: parentId, type });
       const updatedDiscs = await discussionsApi.list(decisionId);
       setDiscussions(updatedDiscs);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to add reply', err);
+      alert(err.response?.data?.detail || 'Failed to post reply.');
     }
   };
 
@@ -200,8 +203,9 @@ const DecisionDetailPage: React.FC = () => {
         await discussionsApi.delete(decisionId, discId);
         const updatedDiscs = await discussionsApi.list(decisionId);
         setDiscussions(updatedDiscs);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to delete discussion', err);
+        alert(err.response?.data?.detail || 'Failed to delete discussion comment.');
       }
     }
   };
@@ -352,7 +356,7 @@ const DecisionDetailPage: React.FC = () => {
             <div className="lg:col-span-4 space-y-8">
               <Card className="border border-border/80 bg-surface-elevated/20">
                 <h3 className="text-sm font-bold text-text mb-3">Attached Documents</h3>
-                <FileList files={files.slice(0, 3)} onDelete={handleDeleteFile} canDelete={canModify} />
+                <FileList files={files.slice(0, 3)} onDelete={handleDeleteFile} canDelete={!!user} />
                 {files.length > 3 && (
                   <button
                     onClick={() => setActiveTab('files')}
@@ -370,7 +374,7 @@ const DecisionDetailPage: React.FC = () => {
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <h3 className="text-base font-bold text-text">Alternatives Comparison</h3>
-              {canModify && (
+              {user && (
                 <Button
                   variant="primary"
                   size="sm"
@@ -390,7 +394,7 @@ const DecisionDetailPage: React.FC = () => {
               alternatives={alternatives}
               onEdit={handleEditAlternative}
               onDelete={handleDeleteAlternative}
-              canEdit={canModify}
+              canEdit={!!user}
             />
           </div>
         )}
@@ -450,11 +454,11 @@ const DecisionDetailPage: React.FC = () => {
                 <h3 className="text-base font-bold text-text mb-4 border-b border-border/40 pb-2">
                   Documents Attached
                 </h3>
-                <FileList files={files} onDelete={handleDeleteFile} canDelete={canModify} />
+                <FileList files={files} onDelete={handleDeleteFile} canDelete={!!user} />
               </Card>
             </div>
 
-            {canModify && (
+            {user && (
               <div className="lg:col-span-4">
                 <Card className="border border-border/80 bg-surface-elevated/20">
                   <h3 className="text-sm font-bold text-text mb-3">Upload Document</h3>

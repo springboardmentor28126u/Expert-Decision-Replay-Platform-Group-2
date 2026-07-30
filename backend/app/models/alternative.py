@@ -18,14 +18,14 @@ class Alternative(Base):
     id = Column(Integer, primary_key=True, index=True)
     decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=True)
     name = Column(String, nullable=False)
-    pros = Column(Text, nullable=True)       # NEW — added via migration
-    cons = Column(Text, nullable=True)       # NEW — added via migration
+    pros = Column(Text, nullable=True)       
+    cons = Column(Text, nullable=True)       
     cost = Column(Integer, nullable=True)
     quality = Column(Integer, nullable=True)
     risk = Column(Integer, nullable=True)
-    feasibility = Column(Integer, nullable=True)  # NEW — added via migration
+    feasibility = Column(Integer, nullable=True)  
 
-    # Relationships
+    
     decision = relationship("Decision", back_populates="alternatives")
 
     def __repr__(self) -> str:

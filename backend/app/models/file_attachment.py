@@ -23,7 +23,7 @@ class FileAttachment(Base):
     uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
+    
     decision = relationship("Decision", back_populates="files")
     uploader = relationship("User", back_populates="uploaded_files")
 

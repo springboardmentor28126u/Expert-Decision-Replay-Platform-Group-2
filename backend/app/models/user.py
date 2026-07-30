@@ -20,7 +20,7 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=True)
 
-    # Relationships
+    
     decisions = relationship("Decision", back_populates="creator", foreign_keys="Decision.created_by")
     discussions = relationship("Discussion", back_populates="user")
     history_entries = relationship("DecisionHistory", back_populates="updater")
