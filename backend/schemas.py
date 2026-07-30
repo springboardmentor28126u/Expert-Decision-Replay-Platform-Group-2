@@ -174,3 +174,17 @@ class ApprovalResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class AuditLogResponse(BaseModel):
+    id: int
+    user_id: int
+    log_type: str
+    action: str
+    entity_type: str
+    entity_id: int | None = None
+    details: str | None = None
+    created_at: datetime
+    user: UserResponse | None = None
+
+    class Config:
+        from_attributes = True

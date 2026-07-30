@@ -77,9 +77,10 @@ class AuditLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    log_type = Column(String, nullable=False, default="activity", index=True)  # 'activity', 'security', 'access'
     action = Column(String, nullable=False)
     entity_type = Column(String, nullable=False)
-    entity_id = Column(Integer, nullable=False, index=True)
+    entity_id = Column(Integer, nullable=True, index=True)
     details = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

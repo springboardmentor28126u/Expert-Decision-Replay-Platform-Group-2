@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from discussion import DiscussionMessage, DiscussionMessageType
 from models import AuditLog, Decision, User
+from audit_helper import log_activity
 
 
 def log_discussion_activity(
@@ -13,15 +14,15 @@ def log_discussion_activity(
     discussion_id: int,
     details: str | None = None,
 ) -> AuditLog:
-    audit_log = AuditLog(
-        user_id=user_id,
+    return log_activity(
+        db,
         action=action,
         entity_type="discussion_message",
         entity_id=discussion_id,
+        user_id=user_id,
         details=details,
+        commit=False,
     )
-    db.add(audit_log)
-    return audit_log
 
 
 def get_decision_or_none(db: Session, decision_id: int) -> Decision | None:
