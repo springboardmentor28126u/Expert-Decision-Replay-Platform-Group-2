@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-function ApprovalHistory({ token, decisionId, profile, onApprovalChanged }) {
+function ApprovalHistory({ token, decisionId, profile, onApprovalChanged, decisionStatus, decisionCreatedBy }) {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const canReview = profile.role === "manager" || profile.role === "admin";
+  const canReview = profile.role === "reviewer" || profile.role === "manager" || profile.role === "admin";
+  const canResubmit = decisionStatus === "rejected" && (profile.id === decisionCreatedBy || profile.role === "admin");
 
   const fetchApprovals = async () => {
     try {
@@ -47,14 +48,62 @@ function ApprovalHistory({ token, decisionId, profile, onApprovalChanged }) {
     }
   };
 
+  const handleResubmit = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      await axios.post(
+        `http://127.0.0.1:8000/decisions/${decisionId}/resubmit`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchApprovals();
+      if (onApprovalChanged) onApprovalChanged();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Failed to resubmit.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) return <p style={{ color: "var(--text-muted)" }}>Loading approval history...</p>;
 
   return (
     <div>
+      {canResubmit && (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
+          <p style={{ fontSize: "13px", color: "var(--text-primary)", marginBottom: "8px" }}>
+            This decision was rejected. Please address the feedback below, edit the decision, then resubmit.
+          </p>
+          {(() => {
+            const lastRejection = [...approvals].reverse().find((a) => a.action === "rejected");
+            return lastRejection?.comment ? (
+             <div style={{ background: "var(--danger-soft)", borderLeft: "3px solid var(--danger)", padding: "8px 12px", borderRadius: "6px", marginBottom: "10px" }}>
+               <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "0 0 4px" }}>Rejection reason:</p>
+               <p style={{ fontSize: "13px", color: "var(--text-primary)", margin: 0 }}>{lastRejection.comment}</p>
+             </div>
+            ) : null;
+          })()}
+          <button
+            onClick={handleResubmit}
+            disabled={submitting}
+            style={{ background: "var(--accent)", color: "#0A1410", border: "none", padding: "7px 16px", borderRadius: "6px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
+          >
+            ↻ Resubmit for Review
+          </button>
+          {error && <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "8px" }}>{error}</p>}
+        </div>
+      )}
+
       {canReview && (
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
-          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "10px" }}>
+          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>
             Review this decision
+          </p>
+          <p style={{ fontSize: "11.5px", color: "var(--text-muted)", marginBottom: "10px" }}>
+            {approvals.filter(a => a.action === "approved").length === 0
+              ? "Stage 1 of 2 — initial review (Reviewer, Manager, or Admin)"
+              : "Stage 2 of 2 — final approval (Manager or Admin only)"}
           </p>
           <textarea
             placeholder="Add a comment (required for rejection)"

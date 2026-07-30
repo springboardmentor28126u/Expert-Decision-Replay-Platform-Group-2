@@ -816,6 +816,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           token={token}
           decisionId={decision.id}
           profile={profile}
+          decisionStatus={decision.status}
+          decisionCreatedBy={decision.created_by}
           onApprovalChanged={() => {
             // refresh the decision's status shown at the top after approve/reject
             if (onStatusUpdated) {

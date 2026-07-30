@@ -169,6 +169,7 @@ class ApprovalResponse(BaseModel):
     reviewer_name: str | None = None
     action: ApprovalAction
     comment: str | None
+    stage: int
     created_at: datetime
 
     class Config:

@@ -223,7 +223,7 @@ def approve_decision(
     decision_id: int,
     approval: ApprovalCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
+    current_user: User = Depends(get_current_user),
 ):
     decision = db.execute(
         select(Decision).where(Decision.id == decision_id)
@@ -231,15 +231,39 @@ def approve_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
+     # Find the highest approval stage reached so far for this decision
+    last_approval = db.execute(
+        select(Approval)
+        .where(Approval.decision_id == decision_id, Approval.action == ApprovalAction.approved)
+        .order_by(Approval.stage.desc())
+    ).scalars().first()
+
+    next_stage = 1 if not last_approval else last_approval.stage + 1
+
+    if next_stage == 1:
+        # Stage 1: Reviewer, Manager, or Admin can approve
+        if current_user.role not in (UserRole.reviewer, UserRole.manager, UserRole.admin):
+            raise HTTPException(status_code=403, detail="Only a Reviewer, Manager, or Admin can give the initial approval")
+    elif next_stage == 2:
+        # Stage 2 (final): only Manager or Admin
+        if current_user.role not in (UserRole.manager, UserRole.admin):
+            raise HTTPException(status_code=403, detail="Only a Manager or Admin can give final approval")
+    else:
+        raise HTTPException(status_code=400, detail="This decision has already completed both approval stages")
+    
     new_approval = Approval(
         decision_id=decision_id,
         reviewer_id=current_user.id,
         action=ApprovalAction.approved,
         comment=approval.comment,
+        stage=next_stage,
     )
     db.add(new_approval)
 
-    decision.status = DecisionStatus.approved
+    # Only mark the decision as fully "approved" once stage 2 is done
+    if next_stage == 2:
+        decision.status = DecisionStatus.approved
+
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
@@ -251,7 +275,7 @@ def reject_decision(
     decision_id: int,
     approval: ApprovalCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(UserRole.manager, UserRole.admin)),
+    current_user: User = Depends(require_role(UserRole.reviewer, UserRole.manager, UserRole.admin)),
 ):
     decision = db.execute(
         select(Decision).where(Decision.id == decision_id)
@@ -262,11 +286,19 @@ def reject_decision(
     if not approval.comment or not approval.comment.strip():
         raise HTTPException(status_code=400, detail="A comment is required when rejecting a decision")
 
+    last_approval = db.execute(
+        select(Approval)
+        .where(Approval.decision_id == decision_id, Approval.action == ApprovalAction.approved)
+        .order_by(Approval.stage.desc())
+    ).scalars().first()
+    current_stage = 1 if not last_approval else last_approval.stage + 1
+
     new_approval = Approval(
         decision_id=decision_id,
         reviewer_id=current_user.id,
         action=ApprovalAction.rejected,
         comment=approval.comment,
+        stage=current_stage,
     )
     db.add(new_approval)
 
@@ -299,6 +331,24 @@ def resubmit_decision(
             status_code=403,
             detail="Only the decision's creator or an admin can resubmit it"
         )
+
+    last_rejection = db.execute(
+        select(Approval)
+        .where(Approval.decision_id == decision_id, Approval.action == ApprovalAction.rejected)
+        .order_by(Approval.created_at.desc())
+    ).scalars().first()
+
+    if last_rejection:
+        edited_after_rejection = db.execute(
+            select(DecisionVersion)
+            .where(DecisionVersion.decision_id == decision_id, DecisionVersion.created_at > last_rejection.created_at)
+        ).scalars().first()
+
+        if not edited_after_rejection:
+            raise HTTPException(
+                status_code=400,
+                detail="Please edit the decision to address the rejection feedback before resubmitting."
+            )
     
     resubmission_record = Approval(
         decision_id=decision_id,
