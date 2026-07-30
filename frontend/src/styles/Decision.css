@@ -1,0 +1,163 @@
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,
+td{
+    border:1px solid #ddd;
+    padding:10px;
+}
+
+th{
+    background:#0077cc;
+    color:white;
+}
+
+button{
+    padding:8px 15px;
+    margin:5px;
+    cursor:pointer;
+}
+
+.decision-container,
+.form-container,
+.details-container{
+    width:90%;
+    margin:30px auto;
+}
+
+.decision-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.decision-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.decision-table th,
+.decision-table td{
+    border:1px solid #ddd;
+    padding:10px;
+    text-align:left;
+}
+
+.decision-table th{
+    background:#2563eb;
+    color:white;
+}
+
+.details-card{
+    background:#f8f9fa;
+    border-radius:8px;
+    padding:20px;
+    margin-top:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+.details-card p{
+    margin:10px 0;
+}
+
+.button-group{
+    margin-top:20px;
+}
+
+.add-btn,
+.save-btn,
+.view-btn,
+.edit-btn,
+.alternative-btn,
+.delete-btn,
+.back-btn,
+.cancel-btn{
+    padding:12px 18px;
+    margin-right:5px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    color:white;
+}
+
+.add-btn{
+    background:#2563eb;
+}
+
+.save-btn{
+    background:#16a34a;
+}
+
+.view-btn{
+    background:#0ea5e9;
+}
+
+.edit-btn{
+    background:#f59e0b;
+}
+.alternative-btn{
+    background: grey;
+}
+.delete-btn{
+    background:#dc2626;
+}
+
+.back-btn,
+.cancel-btn{
+    background:#6b7280;
+}
+
+input,
+textarea,
+select{
+    width:100%;
+    padding:10px;
+    margin:8px 0 16px;
+    border:1px solid #ccc;
+    border-radius:5px;
+    box-sizing:border-box;
+}
+
+.decision-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.header-buttons{
+    display:flex;
+    gap:12px;
+}
+
+.dashboard-btn{
+    background:green;
+    color:#fff;
+    border:none;
+    padding:10px 20px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:15px;
+    transition:0.3s;
+}
+
+.dashboard-btn:hover{
+    background:burlywood;
+}
+
+.add-btn{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:10px 20px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:15px;
+}
+
+.add-btn:hover{
+    background:#1d4ed8;
+}

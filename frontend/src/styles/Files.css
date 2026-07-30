@@ -1,0 +1,13 @@
+.upload-btn{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:10px 20px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:15px;
+}
+
+.upload-btn:hover{
+    background:#1d4ed8;
+}

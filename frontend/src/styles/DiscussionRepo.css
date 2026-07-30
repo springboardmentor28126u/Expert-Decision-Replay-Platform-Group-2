@@ -1,0 +1,57 @@
+.discussion-container{
+    width:95%;
+    margin:40px auto;
+}
+
+.discussion-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.dashboard-btn{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:10px 18px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.dashboard-btn:hover{
+    background:#1d4ed8;
+}
+
+.discussion-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.discussion-table th{
+    background:#2563eb;
+    color:white;
+    padding:14px;
+}
+
+.discussion-table td{
+    border:1px solid #ddd;
+    padding:14px;
+}
+
+.discussion-table tr:nth-child(even){
+    background:#f8f8f8;
+}
+
+.delete-btn{
+    background:red;
+    color:white;
+    border:none;
+    padding:8px 15px;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+.delete-btn:hover{
+    background:darkred;
+}

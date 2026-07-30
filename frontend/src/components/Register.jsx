@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import API from "../services/api";
 import "../styles/Register.css";
 
@@ -11,12 +11,9 @@ function Register() {
     full_name: "",
     email: "",
     password: "",
-    department: "",
-    team: "",
     role: "Employee",
   });
 
-  // Handle input changes
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -24,40 +21,33 @@ function Register() {
     });
   };
 
-  // Register user
   const handleRegister = async (e) => {
     e.preventDefault();
 
     try {
-      const response = await API.post("/register", formData);
 
-      alert("User Registered Successfully!");
+      await API.post("/auth/register", formData);
 
-      console.log(response.data);
+      alert("Registration Successful!");
 
-      // Clear form
-      setFormData({
-        full_name: "",
-        email: "",
-        password: "",
-        department: "",
-        team: "",
-        role: "Employee",
-      });
-
-      // Redirect to Login page
       navigate("/login");
 
     } catch (error) {
+
       alert(error.response?.data?.detail || "Registration Failed");
+
     }
   };
 
   return (
     <div className="register-container">
-      <form className="register-form" onSubmit={handleRegister}>
 
-        <h2>Register</h2>
+      <form
+        className="register-form"
+        onSubmit={handleRegister}
+      >
+
+        <h2>Create Account</h2>
 
         <input
           type="text"
@@ -86,29 +76,10 @@ function Register() {
           required
         />
 
-        <input
-          type="text"
-          name="department"
-          placeholder="Department"
-          value={formData.department}
-          onChange={handleChange}
-          required
-        />
-
-        <input
-          type="text"
-          name="team"
-          placeholder="Team"
-          value={formData.team}
-          onChange={handleChange}
-          required
-        />
-
         <select
           name="role"
           value={formData.role}
           onChange={handleChange}
-          required
         >
           <option value="Employee">Employee</option>
           <option value="Reviewer">Reviewer</option>
@@ -116,9 +87,19 @@ function Register() {
           <option value="Administrator">Administrator</option>
         </select>
 
-        <button type="submit">Register</button>
+        <button type="submit">
+          Register
+        </button>
+
+        <p className="login-link">
+          Already have an account?{" "}
+          <Link to="/login">
+            Login
+          </Link>
+        </p>
 
       </form>
+
     </div>
   );
 }

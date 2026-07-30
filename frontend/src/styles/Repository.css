@@ -1,0 +1,107 @@
+.repository-container{
+
+    padding:40px;
+
+    background:#f4f6fb;
+
+    min-height:100vh;
+
+}
+
+.repository-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:30px;
+
+}
+
+.repository-header h1{
+
+    color:#1e3a8a;
+
+}
+
+.dashboard-btn{
+
+    background:#2563eb;
+
+    color:white;
+
+    border:none;
+
+    padding:10px 20px;
+
+    border-radius:6px;
+
+    cursor:pointer;
+
+}
+
+.dashboard-btn:hover{
+
+    background:#1d4ed8;
+
+}
+
+.repository-table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    background:white;
+
+    box-shadow:0px 3px 10px rgba(0,0,0,.15);
+
+}
+
+.repository-table th{
+
+    background:#2563eb;
+
+    color:white;
+
+    padding:15px;
+
+}
+
+.repository-table td{
+
+    padding:15px;
+
+    border-bottom:1px solid #ddd;
+
+}
+
+.repository-table tr:hover{
+
+    background:#f3f4f6;
+
+}
+
+.delete-btn{
+
+    background:red;
+
+    color:white;
+
+    border:none;
+
+    padding:8px 15px;
+
+    border-radius:5px;
+
+    cursor:pointer;
+
+}
+
+.delete-btn:hover{
+
+    background:#f01717;
+
+}

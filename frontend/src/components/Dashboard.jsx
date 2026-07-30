@@ -1,71 +1,227 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../services/api";
 import "../styles/Dashboard.css";
+import { useEffect, useState } from "react";
+import API from "../services/api";
 
 function Dashboard() {
-
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch logged-in user details
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    recent: [],
+  });
+
   useEffect(() => {
+    loadDashboard();
+  }, []);
 
-    const fetchUser = async () => {
+  const loadDashboard = async () => {
+  try {
+    // Dashboard statistics
+    const statsResponse = await API.get("/dashboard/stats");
+    setStats(statsResponse.data);
 
-      try {
+    // Logged-in user profile
+    const profileResponse = await API.get("/profile/");
+    setUser(profileResponse.data);
 
-        const response = await API.get("/me");
+  } catch (error) {
+    console.log("Dashboard Error:", error);
+  }
+};
 
-        setUser(response.data);
-
-      } catch (error) {
-
-        alert("Session expired. Please login again.");
-
-        localStorage.removeItem("token");
-
-        navigate("/login");
-
-      }
-
-    };
-
-    fetchUser();
-
-  }, [navigate]);
-
-  // Logout
   const handleLogout = () => {
-
     localStorage.removeItem("token");
-
     navigate("/login");
-
   };
 
-  if (!user) {
-    return <h2>Loading...</h2>;
-  }
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard">
 
-      <h1>Dashboard</h1>
+      {/* Sidebar */}
 
-      <h2>Welcome {user.full_name}</h2>
+      <div className="sidebar">
 
-      <p><strong>Role:</strong> {user.role}</p>
+        <h1>EDRP</h1>
 
-      <p><strong>Email:</strong> {user.email}</p>
+        <ul>
 
-      <p><strong>Department:</strong> {user.department}</p>
+          <li>🏠 Dashboard</li>
 
-      <p><strong>Team:</strong> {user.team}</p>
+          <li onClick={() => navigate("/decisions")}>
+            📁 Decisions
+          </li>
 
-      <button onClick={handleLogout}>
-        Logout
-      </button>
+          <li onClick={() => navigate("/repository")}>
+    📚 Repository
+</li>
+<li onClick={() => navigate("/discussions")}>
+    💬 Discussions
+</li>
+<li onClick={() => navigate("/version-history")}>
+    🕘 Version History
+</li>
+<li onClick={() => navigate("/reports")}>
+    📊 Reports
+</li>
+
+          <li onClick={() => navigate("/profile")}>
+    👤 Profile
+</li>
+
+          <li onClick={handleLogout}>
+            🚪 Logout
+          </li>
+
+        </ul>
+
+      </div>
+
+      {/* Main Content */}
+
+      <div className="main-content">
+
+        {/* Top Bar */}
+
+        <div className="topbar">
+
+          <h2>Expert Decision Replay Platform</h2>
+            <button
+        className="login-btn"
+        onClick={() => navigate("/login")}
+    >
+        Login
+    </button>
+
+        </div>
+
+        {/* Dashboard Cards */}
+
+        <div className="cards">
+
+          <div className="card blue">
+            <h3>Total Decisions</h3>
+            <h1>{stats.total}</h1>
+          </div>
+
+          <div className="card orange">
+            <h3>Pending Reviews</h3>
+            <h1>{stats.pending}</h1>
+          </div>
+
+          <div className="card green">
+            <h3>Approved</h3>
+            <h1>{stats.approved}</h1>
+          </div>
+
+          <div className="card red">
+            <h3>Rejected</h3>
+            <h1>{stats.rejected}</h1>
+          </div>
+
+        </div>
+
+        {/* Recent Decisions */}
+
+        <div className="table-section">
+
+          <div className="table-header">
+
+            <h2>Recent Decisions</h2>
+
+            {/* <button
+              className="decision-btn"
+              onClick={() => navigate("/decisions")}
+            >
+              Decision Management
+            </button> */}
+
+          </div>
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>Decision</th>
+                <th>CreatedBy</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {stats.recent.length === 0 ? (
+
+                <tr>
+
+                  <td colSpan="5" style={{ textAlign: "center" }}>
+                    No Decisions Found
+                  </td>
+
+                </tr>
+
+              ) : (
+
+                stats.recent.map((decision) => (
+
+                  <tr key={decision.id}>
+
+                    <td>{decision.title}</td>
+
+                    <td>{decision.created_by}</td>
+
+                    <td
+                      className={
+                        decision.status
+                          ? decision.status.toLowerCase()
+                          : ""
+                      }
+                    >
+                      {decision.status}
+                    </td>
+
+                    <td>
+                      {new Date(
+                        decision.created_at
+                      ).toLocaleDateString()}
+                    </td>
+
+                    <td>
+
+                      <button
+                        className="view-btn"
+                        onClick={() =>
+                          navigate(`/decision/${decision.id}`)
+                        }
+                      >
+                        View
+                      </button>
+
+                    </td>
+
+                  </tr>
+
+                ))
+
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
 
     </div>
   );

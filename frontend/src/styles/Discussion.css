@@ -1,0 +1,149 @@
+/* Discussion Container */
+
+.discussion-container {
+    margin-top: 40px;
+    padding: 30px;
+    background: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
+
+/* Heading */
+
+.discussion-container h2 {
+    text-align: center;
+    color: #1e3a8a;
+    margin-bottom: 30px;
+    font-size: 30px;
+}
+
+/* Input Fields */
+
+.discussion-container input,
+.discussion-container textarea {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 18px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: 0.3s;
+    box-sizing: border-box;
+}
+
+.discussion-container input:focus,
+.discussion-container textarea:focus {
+    border-color: #2563eb;
+    outline: none;
+    box-shadow: 0 0 8px rgba(37,99,235,0.25);
+}
+
+/* Post Button */
+
+.post-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.post-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+/* Comments Heading */
+
+.comments-title {
+    margin-top: 35px;
+    margin-bottom: 20px;
+    color: #1e3a8a;
+}
+
+/* Comment Card */
+
+.comment-card {
+    background: #f8fafc;
+    border-left: 5px solid #2563eb;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    transition: 0.3s;
+}
+
+.comment-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+}
+
+/* Username */
+
+.comment-user {
+    font-size: 18px;
+    font-weight: bold;
+    color: #111827;
+}
+
+/* Comment */
+
+.comment-message {
+    margin: 10px 0;
+    color: #374151;
+    line-height: 1.6;
+}
+
+/* Time */
+
+.comment-date {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 12px;
+}
+
+/* Delete Button */
+
+.delete-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.delete-btn:hover {
+    background: #dc2626;
+}
+
+/* Empty Message */
+
+.no-comments {
+    text-align: center;
+    color: #6b7280;
+    padding: 25px;
+    font-style: italic;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+
+    .discussion-container {
+        padding: 20px;
+    }
+
+    .discussion-container h2 {
+        font-size: 24px;
+    }
+
+    .post-btn,
+    .delete-btn {
+        width: 100%;
+    }
+}

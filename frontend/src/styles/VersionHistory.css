@@ -1,0 +1,52 @@
+.version-container{
+    width:95%;
+    margin:40px auto;
+    background:#fff;
+    padding:30px;
+    border-radius:10px;
+    box-shadow:0 5px 20px rgba(0,0,0,.15);
+}
+
+.version-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.version-header h1{
+    color:#1f4cb5;
+}
+
+.dashboard-btn{
+    background:#2f63d8;
+    color:#fff;
+    border:none;
+    padding:10px 18px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.version-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.version-table th{
+    background:#2f63d8;
+    color:white;
+    padding:15px;
+}
+
+.version-table td{
+    padding:15px;
+    border:1px solid #ddd;
+}
+
+.version-table tr:nth-child(even){
+    background:#f8f8f8;
+}
+
+.version-table tr:hover{
+    background:#eef4ff;
+}

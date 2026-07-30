@@ -27,7 +27,7 @@ function Login() {
 
     try {
       // Send login request to FastAPI
-      const response = await API.post("/login", loginData);
+      const response = await API.post("/auth/login", loginData);
 
       // Get JWT token
       const token = response.data.access_token;
