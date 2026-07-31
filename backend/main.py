@@ -13,6 +13,7 @@ from models import User, UserRole
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
+from notifications import router as notification_router
 
 from schemas import UserCreate, UserLogin, UserResponse, Token, AuditLogResponse
 
@@ -30,6 +31,7 @@ UPLOAD_ROOT.mkdir(exist_ok=True)
 DISCUSSION_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 app.include_router(uploads_router)
+app.include_router(notification_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:5174"],
