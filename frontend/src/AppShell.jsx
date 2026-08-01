@@ -1,11 +1,17 @@
 import "./dashboard-shell.css";
 import ProfileMenu from "./ProfileMenu";
 
-function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount = 0, children }) {
-  const isManagerOrAdmin = profile?.role === "manager" || profile?.role === "admin";
-  const isAdmin = profile?.role === "admin";
+function AppShell({
+  profile,
+  activeView,
+  onNavigate,
+  onLogout,
+  unreadCount,
+  children,
+}) {
+  const isManagerOrAdmin = profile.role === "manager" || profile.role === "admin";
+  const isAdmin = profile.role === "admin";
 
-  // Sidebar navigation items including Notifications right under Decisions
   const navItems = [
     { key: "dashboard", label: "Dashboard", icon: "📊" },
     { key: "decisions", label: "Decisions", icon: "📋" },
@@ -29,27 +35,29 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount = 0, 
               key={item.key}
               className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
               onClick={() => onNavigate(item.key)}
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+              style={{ position: "relative" }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span className="shell-nav-icon">{item.icon}</span>
-                <span className="label">{item.label}</span>
-              </div>
-
-              {/* Unread Count Badge */}
-              {item.key === "notifications" && item.badge > 0 && (
+              <span className="shell-nav-icon">{item.icon}</span>
+              <span className="label">{item.label}</span>
+              {!!item.badge && (
                 <span
                   style={{
-                    backgroundColor: "#10B981", // Emerald Green
-                    color: "#000000",
-                    fontSize: "0.75rem",
-                    fontWeight: "bold",
-                    borderRadius: "9999px",
-                    padding: "2px 8px",
-                    lineHeight: "1",
+                    marginLeft: "auto",
+                    background: "var(--danger)",
+                    color: "#fff",
+                    borderRadius: "999px",
+                    minWidth: "18px",
+                    height: "18px",
+                    padding: "0 5px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: 1,
                   }}
                 >
-                  {item.badge}
+                  {item.badge > 99 ? "99+" : item.badge}
                 </span>
               )}
             </button>

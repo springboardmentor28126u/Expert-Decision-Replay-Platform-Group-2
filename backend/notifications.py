@@ -65,3 +65,28 @@ def create_notification(db: Session, user_id: int, title: str, message: str, typ
     db.commit()
     db.refresh(notification)
     return notification
+
+
+def notify_all_users(db: Session, exclude_user_id: int, title: str, message: str, type: str = "info", link: str = None):
+    """Broadcast a notification to every active user except the one who triggered the action.
+
+    Used so any action taken on the platform (decision created/approved/rejected/
+    resubmitted, new discussion message, etc.) reaches everyone, across all roles.
+    """
+    recipients = db.query(User).filter(
+        User.id != exclude_user_id,
+        User.is_active == True
+    ).all()
+    notifications = []
+    for recipient in recipients:
+        notifications.append(
+            create_notification(
+                db,
+                user_id=recipient.id,
+                title=title,
+                message=message,
+                type=type,
+                link=link,
+            )
+        )
+    return notifications

@@ -1,176 +1,189 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
-export default function NotificationsPage({ token, onUnreadCountChange }) {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+// Visual config per notification type: accent color + icon.
+// Falls back to the "info" entry for unknown/legacy types.
+const TYPE_STYLES = {
+  DECISION_CREATED: { color: "var(--accent)", soft: "var(--accent-soft)", icon: "📄" },
+  DECISION_APPROVED: { color: "var(--success)", soft: "var(--success-soft)", icon: "✅" },
+  DECISION_REJECTED: { color: "var(--danger)", soft: "var(--danger-soft)", icon: "❌" },
+  NEW_DISCUSSION: { color: "var(--warning)", soft: "var(--warning-soft)", icon: "💬" },
+  info: { color: "var(--accent)", soft: "var(--accent-soft)", icon: "🔔" },
+};
 
-  // Fetch Notifications from API
-  const fetchNotifications = async () => {
-    if (!token) return;
-    try {
-      const response = await fetch("/notifications", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+function getTypeStyle(type) {
+  return TYPE_STYLES[type] || TYPE_STYLES.info;
+}
 
-      if (!response.ok) throw new Error("Failed to fetch notifications");
+function formatTimestamp(isoString) {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
-      const data = await response.json();
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
 
-      let list = [];
-      if (Array.isArray(data)) {
-        list = data;
-      } else if (data && Array.isArray(data.notifications)) {
-        list = data.notifications;
-      } else if (data && Array.isArray(data.items)) {
-        list = data.items;
-      }
+// Pure presentational component. All data/state comes from the shared
+// useNotifications hook (owned by Dashboard) so this page, the sidebar
+// badge, and the header bell always agree on what's read/unread.
+export default function NotificationsPage({
+  notifications,
+  unreadCount,
+  onMarkAsRead,
+  onMarkAllAsRead,
+  onNavigateToDecision,
+}) {
+  const [filter, setFilter] = useState("all"); // all | unread
 
-      setNotifications(list);
-
-      // Notify parent/shell about updated unread count
-      const unread = list.filter((n) => !n.is_read).length;
-      if (onUnreadCountChange) onUnreadCountChange(unread);
-    } catch (err) {
-      console.error("Notifications fetch error:", err);
-      setNotifications([]);
-    } finally {
-      setLoading(false);
+  const handleClick = (item) => {
+    if (!item.is_read) onMarkAsRead(item.id);
+    if (item.link && onNavigateToDecision) {
+      const match = item.link.match(/\/decisions\/(\d+)/);
+      if (match) onNavigateToDecision(Number(match[1]));
     }
   };
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [token]);
-
-  // Mark single notification as read
-  const handleMarkAsRead = async (id) => {
-    try {
-      await fetch(`/notifications/${id}/read`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      setNotifications((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, is_read: true } : item))
-      );
-
-      // Update badge count
-      setNotifications((updatedList) => {
-        const unread = updatedList.filter((n) => !n.is_read).length;
-        if (onUnreadCountChange) onUnreadCountChange(unread);
-        return updatedList;
-      });
-    } catch (err) {
-      console.error("Error marking notification as read:", err);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div style={{ padding: "24px", color: "#9CA3AF" }}>
-        Loading notifications...
-      </div>
-    );
-  }
+  const visibleNotifications =
+    filter === "unread" ? notifications.filter((n) => !n.is_read) : notifications;
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "16px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h2 style={{ color: "#FFFFFF", fontSize: "1.5rem", fontWeight: "600", margin: 0 }}>
-          Notifications
-        </h2>
-      </div>
+    <div className="panel">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "16px",
+        }}
+      >
+        <p className="panel-title" style={{ margin: 0 }}>
+          All Notifications {unreadCount > 0 && `(${unreadCount} unread)`}
+        </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {!Array.isArray(notifications) || notifications.length === 0 ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div
             style={{
-              padding: "24px",
-              backgroundColor: "#161F28",
-              borderRadius: "12px",
-              color: "#9CA3AF",
-              textAlign: "center",
-              border: "1px solid #1F2937",
+              display: "flex",
+              background: "var(--bg)",
+              border: "1px solid var(--border)",
+              borderRadius: "8px",
+              padding: "3px",
             }}
           >
-            No notifications found.
+            {["all", "unread"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: "6px 14px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  background: filter === f ? "var(--accent-soft)" : "transparent",
+                  color: filter === f ? "var(--accent)" : "var(--text-secondary)",
+                  textTransform: "capitalize",
+                  transition: "all 0.15s",
+                }}
+              >
+                {f}
+              </button>
+            ))}
           </div>
-        ) : (
-          notifications.map((item) => {
-            const isUnread = !item.is_read;
 
+          {unreadCount > 0 && (
+            <button
+              onClick={onMarkAllAsRead}
+              style={{
+                padding: "8px 14px",
+                fontSize: "13px",
+                fontWeight: 600,
+                borderRadius: "6px",
+                border: "1px solid var(--accent)",
+                background: "transparent",
+                color: "var(--accent)",
+                cursor: "pointer",
+              }}
+            >
+              Mark all as read
+            </button>
+          )}
+        </div>
+      </div>
+
+      {visibleNotifications.length === 0 ? (
+        <p style={{ color: "var(--text-secondary)", padding: "20px 0", textAlign: "center" }}>
+          {filter === "unread" ? "You're all caught up — no unread notifications." : "No notifications yet."}
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {visibleNotifications.map((item) => {
+            const style = getTypeStyle(item.type);
             return (
               <div
                 key={item.id}
-                onClick={() => isUnread && handleMarkAsRead(item.id)}
+                onClick={() => handleClick(item)}
                 style={{
-                  padding: "16px",
-                  borderRadius: "12px",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: isUnread ? "pointer" : "default",
-                  transition: "all 0.2s ease-in-out",
-                  // COLOR INDICATORS FOR UNREAD VS READ
-                  backgroundColor: isUnread ? "#1E2E2E" : "#161F28", // Highlighted Dark Teal vs Standard Dark
-                  border: isUnread ? "1px solid rgba(66, 211, 146, 0.4)" : "1px solid #1F2937",
+                  gap: "12px",
+                  alignItems: "flex-start",
+                  padding: "14px 16px",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  border: `1px solid ${item.is_read ? "var(--border)" : style.color}`,
+                  background: item.is_read ? "var(--surface)" : style.soft,
+                  borderLeft: `4px solid ${item.is_read ? "var(--border)" : style.color}`,
+                  transition: "all 0.15s",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  {/* Status Indicator Dot */}
+                <div style={{ fontSize: "20px", lineHeight: 1 }}>{style.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}>
+                    <span
+                      style={{
+                        fontWeight: item.is_read ? 500 : 700,
+                        fontSize: "14px",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {item.title}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                      {formatTimestamp(item.created_at)}
+                    </span>
+                  </div>
+                  <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--text-secondary)" }}>
+                    {item.message}
+                  </p>
+                </div>
+                {!item.is_read && (
                   <span
+                    title="Unread"
                     style={{
-                      width: "10px",
-                      height: "10px",
+                      width: "8px",
+                      height: "8px",
                       borderRadius: "50%",
-                      backgroundColor: isUnread ? "#42D392" : "#4B5563", // Green for New, Gray for Read
+                      background: style.color,
+                      marginTop: "6px",
                       flexShrink: 0,
                     }}
                   />
-                  <div>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "0.95rem",
-                        color: isUnread ? "#FFFFFF" : "#9CA3AF",
-                        fontWeight: isUnread ? "600" : "400",
-                      }}
-                    >
-                      {item.message || item.content || "Notification details"}
-                    </p>
-                    {item.created_at && (
-                      <span style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "4px", display: "block" }}>
-                        {new Date(item.created_at).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Badge Label */}
-                <span
-                  style={{
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    padding: "4px 10px",
-                    borderRadius: "6px",
-                    backgroundColor: isUnread ? "rgba(66, 211, 146, 0.15)" : "#1F2937",
-                    color: isUnread ? "#42D392" : "#6B7280",
-                    border: isUnread ? "1px solid rgba(66, 211, 146, 0.3)" : "none",
-                  }}
-                >
-                  {isUnread ? "NEW" : "READ"}
-                </span>
+                )}
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }
