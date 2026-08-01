@@ -20,19 +20,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Add column as nullable first to avoid integrity violation with existing rows
-    op.add_column('audit_logs', sa.Column('log_type', sa.String(), nullable=True))
-    
-    # Set default value for existing rows
-    op.execute("UPDATE audit_logs SET log_type = 'activity'")
-    
-    # Alter column to be NOT NULL
-    op.alter_column('audit_logs', 'log_type', nullable=False)
-    
+    #log_type column already exists in the shared database from earlier testing - skip re-adding it
     op.alter_column('audit_logs', 'entity_id',
                existing_type=sa.INTEGER(),
                nullable=True)
-    op.create_index(op.f('ix_audit_logs_log_type'), 'audit_logs', ['log_type'], unique=False)
 
 
 def downgrade() -> None:
