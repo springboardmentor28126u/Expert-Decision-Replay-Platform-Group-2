@@ -2,7 +2,8 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from models import UserRole, DecisionStatus, RiskLevel, FeasibilityLevel
 from discussion import DiscussionMessageType
-
+from typing import Optional
+from uuid import UUID
 # Data expected when a new user registers
 class UserCreate(BaseModel):
     full_name: str
@@ -185,6 +186,29 @@ class AuditLogResponse(BaseModel):
     details: str | None = None
     created_at: datetime
     user: UserResponse | None = None
+
+    class Config:
+        from_attributes = True
+class NotificationBase(BaseModel):
+    title: str
+    message: str
+    type: Optional[str] = "info"
+    link: Optional[str] = None
+
+class NotificationBase(BaseModel):
+    title: str
+    message: str
+    type: Optional[str] = "info"
+    link: Optional[str] = None
+
+class NotificationCreate(NotificationBase):
+    user_id: int
+
+class NotificationResponse(NotificationBase):
+    id: int
+    user_id: int
+    is_read: bool
+    created_at: datetime
 
     class Config:
         from_attributes = True

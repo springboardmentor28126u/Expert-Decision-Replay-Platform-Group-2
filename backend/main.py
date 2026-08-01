@@ -13,6 +13,7 @@ from models import User, UserRole
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
+from notifications import router as notification_router
 
 from schemas import UserCreate, UserLogin, UserResponse, Token, AuditLogResponse
 
@@ -30,6 +31,7 @@ UPLOAD_ROOT.mkdir(exist_ok=True)
 DISCUSSION_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 app.include_router(uploads_router)
+app.include_router(notification_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:5174"],
@@ -186,8 +188,9 @@ def update_user_role(
     return target_user
 
 from schemas import DecisionCreate, DecisionResponse, DecisionStatusUpdate
-from models import Decision, DecisionStatus
+from models import Decision, DecisionStatus, NotificationType
 from typing import List as ListType
+from notifications import create_notification, notify_all_users
 
 def _with_creator_name(decision: Decision) -> Decision:
     decision.creator_name = decision.creator.full_name if decision.creator else None
@@ -219,6 +222,17 @@ def create_decision(
         user_id=current_user.id,
         details=f"Created decision: {new_decision.title}",
     )
+
+    # Notify everyone (all roles) that a new decision was posted
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="New decision posted",
+        message=f"{current_user.full_name} posted a new decision: {new_decision.title}",
+        type=NotificationType.decision_created.value,
+        link=f"/decisions/{new_decision.id}",
+    )
+
     return new_decision
 
 @app.get("/decisions", response_model=ListType[DecisionResponse], tags=["Decision Management"])
@@ -359,6 +373,17 @@ def approve_decision(
         user_id=current_user.id,
         details=f"Approved decision {decision.id} with comment: {approval.comment or ''}",
     )
+
+    # Notify everyone (all roles) that the decision was approved
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="Decision approved",
+        message=f"{current_user.full_name} approved the decision: {decision.title}",
+        type=NotificationType.decision_approved.value,
+        link=f"/decisions/{decision.id}",
+    )
+
     return new_approval
 
 
@@ -407,6 +432,17 @@ def reject_decision(
         user_id=current_user.id,
         details=f"Rejected decision {decision.id} with comment: {approval.comment}",
     )
+
+    # Notify everyone (all roles) that the decision was rejected
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="Decision rejected",
+        message=f"{current_user.full_name} rejected the decision: {decision.title}. Reason: {approval.comment}",
+        type=NotificationType.decision_rejected.value,
+        link=f"/decisions/{decision.id}",
+    )
+
     return new_approval
 
 @app.post("/decisions/{decision_id}/resubmit", response_model=DecisionResponse, tags=["Approval Workflow"])
@@ -471,6 +507,17 @@ def resubmit_decision(
         user_id=current_user.id,
         details=f"Resubmitted decision {decision.id} for review",
     )
+
+    # Notify everyone (all roles) that the decision was resubmitted for re-review
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="Decision resubmitted for review",
+        message=f"{current_user.full_name} resubmitted a decision for re-review: {decision.title}",
+        type=NotificationType.decision_created.value,
+        link=f"/decisions/{decision.id}",
+    )
+
     return decision
 
 @app.get("/decisions/{decision_id}/approvals", response_model=ListType[ApprovalResponse], tags=["Approval Workflow"])
@@ -562,6 +609,23 @@ def update_decision(
         user_id=current_user.id,
         details=f"Updated decision {decision.id} (version snapshot v{next_version_number} saved)",
     )
+
+    # Notify everyone (all roles) that the decision was updated,
+    # calling out an attachment change specifically since that's easy to miss
+    if "attachment_url" in update_data:
+        update_message = f"{current_user.full_name} updated the attachment on: {decision.title}"
+    else:
+        update_message = f"{current_user.full_name} updated the decision: {decision.title}"
+
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="Decision updated",
+        message=update_message,
+        type=NotificationType.decision_created.value,
+        link=f"/decisions/{decision.id}",
+    )
+
     return decision
 
 
@@ -1002,17 +1066,29 @@ async def add_discussion_comment(
         attachment_url=payload.get("attachment_url"),
     )
 
-    if not get_decision_or_none(db, discussion.decision_id):
+    decision_for_comment = get_decision_or_none(db, discussion.decision_id)
+    if not decision_for_comment:
         raise HTTPException(status_code=404, detail="Decision not found")
 
     attachment_url = _save_discussion_attachment(attachment) or discussion.attachment_url
-    return add_comment(
+    new_comment = add_comment(
         db,
         decision_id=discussion.decision_id,
         user_id=current_user.id,
         message=discussion.message,
         attachment_url=attachment_url,
     )
+
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="New discussion comment",
+        message=f"{current_user.full_name} commented on: {decision_for_comment.title}",
+        type=NotificationType.new_discussion.value,
+        link=f"/decisions/{discussion.decision_id}",
+    )
+
+    return new_comment
 
 
 @app.post(
@@ -1060,17 +1136,29 @@ async def add_discussion_meeting_note(
     message = str(payload["message"])
     attachment_url = payload.get("attachment_url")
 
-    if not get_decision_or_none(db, decision_id):
+    decision_for_note = get_decision_or_none(db, decision_id)
+    if not decision_for_note:
         raise HTTPException(status_code=404, detail="Decision not found")
 
     saved_attachment_url = _save_discussion_attachment(attachment) or attachment_url
-    return add_meeting_note(
+    new_note = add_meeting_note(
         db,
         decision_id=decision_id,
         user_id=current_user.id,
         message=message,
         attachment_url=saved_attachment_url,
     )
+
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="New meeting note",
+        message=f"{current_user.full_name} added a meeting note on: {decision_for_note.title}",
+        type=NotificationType.new_discussion.value,
+        link=f"/decisions/{decision_id}",
+    )
+
+    return new_note
 
 
 @app.post(
@@ -1123,17 +1211,29 @@ async def reply_to_discussion_comment(
     parent = get_comment_or_none(db, discussion_reply.parent_id)
     if not parent:
         raise HTTPException(status_code=404, detail="Parent comment not found")
-    if not get_decision_or_none(db, parent.decision_id):
+    decision_for_reply = get_decision_or_none(db, parent.decision_id)
+    if not decision_for_reply:
         raise HTTPException(status_code=404, detail="Decision not found")
 
     attachment_url = _save_discussion_attachment(attachment) or discussion_reply.attachment_url
-    return reply_to_comment(
+    new_reply = reply_to_comment(
         db,
         parent=parent,
         user_id=current_user.id,
         message=discussion_reply.message,
         attachment_url=attachment_url,
     )
+
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="New discussion reply",
+        message=f"{current_user.full_name} replied on: {decision_for_reply.title}",
+        type=NotificationType.new_discussion.value,
+        link=f"/decisions/{parent.decision_id}",
+    )
+
+    return new_reply
 
 
 @app.get("/discussion/decision/{decision_id}", response_model=ListType[DiscussionResponse], tags=["Discussion Module"])

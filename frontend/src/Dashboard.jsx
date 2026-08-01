@@ -5,6 +5,8 @@ import CreateDecision from "./CreateDecision";
 import DecisionsList from "./DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "./ChangePassword";
+import NotificationsPage from "./NotificationsPage";
+import useNotifications from "./useNotifications";
 import "./dashboard.css";
 
 function Dashboard({ token, onLogout }) {
@@ -18,6 +20,13 @@ function Dashboard({ token, onLogout }) {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
+
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications(token);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -89,6 +98,17 @@ function Dashboard({ token, onLogout }) {
     setActiveView("decision-details");
   };
 
+  const handleNavigateToDecisionId = (decisionId) => {
+    const decision = decisions.find((d) => d.id === decisionId);
+    if (decision) {
+      handleSelectDecision(decision);
+    } else {
+      // Fallback: not in the currently loaded list, just show the Decisions tab
+      setStatusFilter("all");
+      setActiveView("decisions");
+    }
+  };
+
   const handleStatCardClick = (status) => {
     setStatusFilter(status);
     setActiveView("decisions");
@@ -126,6 +146,7 @@ function Dashboard({ token, onLogout }) {
       activeView={activeView}
       onNavigate={handleNavigate}
       onLogout={onLogout}
+      unreadCount={unreadCount}
     >
       {activeView === "dashboard" && (
         <>
@@ -449,6 +470,16 @@ function Dashboard({ token, onLogout }) {
           </div>
         );
       })()}
+
+      {activeView === "notifications" && (
+        <NotificationsPage
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+          onNavigateToDecision={handleNavigateToDecisionId}
+        />
+      )}
 
       {activeView === "account" && (
         <div className="panel">
