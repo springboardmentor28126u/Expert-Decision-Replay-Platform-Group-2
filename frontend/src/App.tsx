@@ -17,6 +17,7 @@ import DecisionsPage from './pages/DecisionsPage';
 import DecisionDetailPage from './pages/DecisionDetailPage';
 import UsersPage from './pages/UsersPage';
 import ProfilePage from './pages/ProfilePage';
+import AuditLogsPage from './pages/AuditLogsPage';
 
 const App: React.FC = () => {
   return (
@@ -44,12 +45,20 @@ const App: React.FC = () => {
             <Route path="decisions/:id" element={<DecisionDetailPage />} />
             <Route path="profile" element={<ProfilePage />} />
             
-            {/* Admin Only Route */}
+            {/* Admin Only Routes */}
             <Route
               path="users"
               element={
                 <ProtectedRoute roles={['Administrator']}>
                   <UsersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="audit-logs"
+              element={
+                <ProtectedRoute roles={['Administrator']}>
+                  <AuditLogsPage />
                 </ProtectedRoute>
               }
             />

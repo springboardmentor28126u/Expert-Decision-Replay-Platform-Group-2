@@ -25,7 +25,7 @@ def create_alternative(
 ):
     """Add a new alternative to a decision."""
     service = AlternativeService(db)
-    return service.create_alternative(decision_id, data)
+    return service.create_alternative(decision_id, data, user_id=current_user.id)
 
 
 @router.get("/", response_model=List[AlternativeResponse])

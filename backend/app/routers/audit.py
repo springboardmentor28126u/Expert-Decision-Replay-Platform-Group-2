@@ -21,6 +21,7 @@ def list_audit_logs(
     start_date: Optional[datetime] = Query(None, description="Filter from date"),
     end_date: Optional[datetime] = Query(None, description="Filter to date"),
     search: Optional[str] = Query(None, description="Search in description"),
+    sort_order: str = Query("desc", description="Sort order: desc or asc"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: User = Depends(require_role("Administrator")),
@@ -35,6 +36,7 @@ def list_audit_logs(
         start_date=start_date,
         end_date=end_date,
         search=search,
+        sort_order=sort_order,
         page=page,
         page_size=page_size,
     )

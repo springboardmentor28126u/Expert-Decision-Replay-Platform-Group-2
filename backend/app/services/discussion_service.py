@@ -11,6 +11,8 @@ from app.models.user import User
 from app.repositories.discussion_repository import DiscussionRepository
 from app.schemas.discussion import DiscussionCreate, DiscussionUpdate
 
+from app.services.audit_service import AuditService
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,17 +21,12 @@ class DiscussionService:
 
     def __init__(self, db: Session):
         self.disc_repo = DiscussionRepository(db)
+        self.audit_service = AuditService(db)
 
     def create_discussion(
         self, decision_id: int, data: DiscussionCreate, user: User
     ) -> Discussion:
-        """Create a new discussion entry (comment, meeting note, or rationale).
-
-        Args:
-            decision_id: The decision this discussion belongs to.
-            data: Discussion content and metadata.
-            user: The user creating the discussion.
-        """
+        """Create a new discussion entry (comment, meeting note, or rationale)."""
         # Validate parent_id if threading
         if data.parent_id:
             parent = self.disc_repo.get_by_id(data.parent_id)
@@ -50,6 +47,14 @@ class DiscussionService:
             f"Discussion created: {discussion.id} (type={data.type}) "
             f"for decision {decision_id}"
         )
+
+        if data.parent_id:
+            self.audit_service.log_discussion_comment_added(user_id=user.id, decision_id=decision_id)
+        else:
+            self.audit_service.log_discussion_created(
+                user_id=user.id, decision_id=decision_id, discussion_type=data.type
+            )
+
         return self.disc_repo.get_by_id_with_user(discussion.id) or discussion
 
     def get_discussions(

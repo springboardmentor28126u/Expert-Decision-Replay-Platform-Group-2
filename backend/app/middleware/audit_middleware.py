@@ -21,6 +21,13 @@ IGNORED_PREFIXES = (
     "/static",
     "/docs",
     "/redoc",
+    "/api/auth",
+    "/api/decisions",
+    "/api/users",
+    "/api/alternatives",
+    "/api/discussions",
+    "/api/files",
+    "/api/audit-logs",
 )
 
 AUDITABLE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}

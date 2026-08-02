@@ -29,6 +29,7 @@ class AuditRepository(BaseRepository[AuditLog]):
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         search: Optional[str] = None,
+        sort_order: str = "desc",
         skip: int = 0,
         limit: int = 20,
     ) -> List[AuditLog]:
@@ -49,7 +50,12 @@ class AuditRepository(BaseRepository[AuditLog]):
         if search:
             query = query.filter(AuditLog.description.ilike(f"%{search}%"))
 
-        return query.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+        if sort_order and sort_order.lower() == "asc":
+            query = query.order_by(AuditLog.created_at.asc())
+        else:
+            query = query.order_by(AuditLog.created_at.desc())
+
+        return query.offset(skip).limit(limit).all()
 
     def count_filtered(
         self,

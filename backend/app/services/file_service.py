@@ -17,6 +17,8 @@ from app.models.user import User
 from app.repositories.file_repository import FileRepository
 from app.storage.base import StorageBackend
 
+from app.services.audit_service import AuditService
+
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
@@ -27,20 +29,12 @@ class FileService:
     def __init__(self, db: Session, storage: StorageBackend):
         self.file_repo = FileRepository(db)
         self.storage = storage
+        self.audit_service = AuditService(db)
 
     async def upload_file(
         self, decision_id: int, file: UploadFile, user: User
     ) -> FileAttachment:
-        """Upload a file and create a metadata record.
-
-        Args:
-            decision_id: The decision this file is attached to.
-            file: The uploaded file.
-            user: The user uploading the file.
-
-        Raises:
-            FileTooLargeException: If file exceeds size limit.
-        """
+        """Upload a file and create a metadata record."""
         # Read file content
         content = await file.read()
         size_bytes = len(content)
@@ -76,6 +70,12 @@ class FileService:
         )
         attachment = self.file_repo.create(attachment)
         logger.info(f"File uploaded: {file.filename} for decision {decision_id}")
+
+        self.audit_service.log_file_uploaded(
+            user_id=user.id,
+            decision_id=decision_id,
+            filename=file.filename,
+        )
         return attachment
 
     def get_files(self, decision_id: int) -> List[FileAttachment]:

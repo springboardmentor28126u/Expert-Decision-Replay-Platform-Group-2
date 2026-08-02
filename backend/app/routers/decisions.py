@@ -109,8 +109,42 @@ def delete_decision(
 ):
     """Delete a decision and all related data."""
     service = DecisionService(db)
-    service.delete_decision(decision_id)
+    service.delete_decision(decision_id, user=current_user)
     return {"message": f"Decision {decision_id} deleted successfully"}
+
+
+@router.post("/{decision_id}/replay/start", response_model=DecisionResponse)
+def start_replay(
+    decision_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Start replaying a decision."""
+    service = DecisionService(db)
+    decision = service.get_decision(decision_id)
+    service.audit_service.log_replay_started(
+        user_id=current_user.id,
+        decision_id=decision_id,
+        title=decision.title,
+    )
+    return decision
+
+
+@router.post("/{decision_id}/replay/complete", response_model=DecisionResponse)
+def complete_replay(
+    decision_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Complete replaying a decision."""
+    service = DecisionService(db)
+    decision = service.get_decision(decision_id)
+    service.audit_service.log_replay_completed(
+        user_id=current_user.id,
+        decision_id=decision_id,
+        title=decision.title,
+    )
+    return decision
 
 
 # --- Version History ---

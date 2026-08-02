@@ -14,6 +14,8 @@ from app.repositories.decision_repository import DecisionRepository
 from app.repositories.version_repository import VersionRepository
 from app.schemas.decision import DecisionCreate, DecisionUpdate, DecisionListResponse, DecisionResponse
 
+from app.services.audit_service import AuditService
+
 logger = logging.getLogger(__name__)
 
 VALID_STATUSES = {"Draft", "Under Review", "Approved", "Rejected", "Archived"}
@@ -25,6 +27,7 @@ class DecisionService:
     def __init__(self, db: Session):
         self.decision_repo = DecisionRepository(db)
         self.version_repo = VersionRepository(db)
+        self.audit_service = AuditService(db)
         self.db = db
 
     def create_decision(self, data: DecisionCreate, user: User) -> Decision:
@@ -38,6 +41,12 @@ class DecisionService:
         )
         decision = self.decision_repo.create(decision)
         logger.info(f"Decision created: {decision.id} by user {user.id}")
+
+        self.audit_service.log_decision_created(
+            user_id=user.id,
+            decision_id=decision.id,
+            title=decision.title,
+        )
         return decision
 
     def get_decision(self, decision_id: int) -> Decision:
@@ -117,6 +126,12 @@ class DecisionService:
             decision = self.decision_repo.update(decision)
             logger.info(f"Decision {decision_id} updated by user {user.id}")
 
+            self.audit_service.log_decision_updated(
+                user_id=user.id,
+                decision_id=decision_id,
+                title=decision.title,
+            )
+
         return decision
 
     def update_status(self, decision_id: int, status: str, user: User) -> Decision:
@@ -147,15 +162,35 @@ class DecisionService:
         decision = self.decision_repo.update(decision)
 
         logger.info(f"Decision {decision_id} status: {old_status} → {status}")
+
+        if status == "Under Review":
+            self.audit_service.log_decision_submitted(user_id=user.id, decision_id=decision_id, title=decision.title)
+        elif status == "Approved":
+            self.audit_service.log_decision_approved(user_id=user.id, decision_id=decision_id, title=decision.title)
+        elif status == "Rejected":
+            self.audit_service.log_decision_rejected(user_id=user.id, decision_id=decision_id, title=decision.title)
+        else:
+            self.audit_service.log_action(
+                user_id=user.id,
+                action="STATUS_CHANGED",
+                entity_type="Decision",
+                entity_id=decision_id,
+                description=f"Decision status changed to: {status}",
+            )
+
         return decision
 
-    def delete_decision(self, decision_id: int) -> None:
+    def delete_decision(self, decision_id: int, user: Optional[User] = None) -> None:
         """Delete a decision and all related data."""
         decision = self.decision_repo.get_by_id(decision_id)
         if not decision:
             raise NotFoundException(f"Decision with ID {decision_id} not found")
+        title = decision.title
         self.decision_repo.delete(decision)
         logger.info(f"Decision {decision_id} deleted")
+
+        if user:
+            self.audit_service.log_decision_deleted(user_id=user.id, decision_id=decision_id, title=title)
 
     def get_categories(self) -> List[str]:
         """Get all unique decision categories."""

@@ -35,7 +35,7 @@ def update_current_profile(
 ):
     """Update the current user's own profile (username, email)."""
     service = UserService(db)
-    return service.update_user(current_user.id, data)
+    return service.update_user(current_user.id, data, actor_id=current_user.id)
 
 
 @router.put("/me/password")
@@ -84,7 +84,7 @@ def update_user(
 ):
     """Update any user (admin only)."""
     service = UserService(db)
-    return service.admin_update_user(user_id, data)
+    return service.admin_update_user(user_id, data, admin_id=current_user.id)
 
 
 @router.patch("/{user_id}/role", response_model=UserResponse)
@@ -96,7 +96,7 @@ def change_user_role(
 ):
     """Change a user's role (admin only)."""
     service = UserService(db)
-    return service.change_role(user_id, data.role)
+    return service.change_role(user_id, data.role, admin_id=current_user.id)
 
 
 @router.delete("/{user_id}")
@@ -107,5 +107,5 @@ def delete_user(
 ):
     """Delete a user (admin only)."""
     service = UserService(db)
-    service.delete_user(user_id)
+    service.delete_user(user_id, admin_id=current_user.id)
     return {"message": f"User {user_id} deleted successfully"}

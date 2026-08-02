@@ -144,7 +144,44 @@ export interface VersionHistory {
   updater?: User | null;
 }
 
+// ===== Audit Log Types =====
+export interface AuditLog {
+  id: number;
+  user_id: number | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: number | null;
+  description: string | null;
+  endpoint: string | null;
+  http_method: string | null;
+  response_status: number | null;
+  ip_address: string | null;
+  created_at: string | null;
+  user?: User | null;
+}
+
+export interface AuditLogListResponse {
+  items: AuditLog[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AuditLogFilterParams {
+  user_id?: number;
+  action?: string;
+  entity_type?: string;
+  entity_id?: number;
+  start_date?: string;
+  end_date?: string;
+  search?: string;
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  page_size?: number;
+}
+
 // ===== UI Types =====
 export interface ApiError {
   detail: string;
 }
+

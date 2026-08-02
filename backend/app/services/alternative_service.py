@@ -1,7 +1,7 @@
 """Alternative service — alternative analysis CRUD."""
 
 import logging
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,8 @@ from app.exceptions.handlers import NotFoundException
 from app.models.alternative import Alternative
 from app.repositories.alternative_repository import AlternativeRepository
 from app.schemas.alternative import AlternativeCreate, AlternativeUpdate
+
+from app.services.audit_service import AuditService
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +20,11 @@ class AlternativeService:
 
     def __init__(self, db: Session):
         self.alt_repo = AlternativeRepository(db)
+        self.audit_service = AuditService(db)
 
-    def create_alternative(self, decision_id: int, data: AlternativeCreate) -> Alternative:
+    def create_alternative(
+        self, decision_id: int, data: AlternativeCreate, user_id: Optional[int] = None
+    ) -> Alternative:
         """Create a new alternative for a decision."""
         alternative = Alternative(
             decision_id=decision_id,
@@ -33,6 +38,12 @@ class AlternativeService:
         )
         alternative = self.alt_repo.create(alternative)
         logger.info(f"Alternative created: {alternative.id} for decision {decision_id}")
+
+        self.audit_service.log_alternative_added(
+            user_id=user_id,
+            decision_id=decision_id,
+            name=alternative.name,
+        )
         return alternative
 
     def get_alternatives(self, decision_id: int) -> List[Alternative]:
