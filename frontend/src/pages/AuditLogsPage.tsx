@@ -154,7 +154,6 @@ const AuditLogsPage: React.FC = () => {
   
   const handleExportCSV = async () => {
     try {
-      
       const params: AuditLogFilterParams = {
         page: 1,
         page_size: 1000,
@@ -190,34 +189,41 @@ const AuditLogsPage: React.FC = () => {
         'IP Address',
       ];
 
+      const escapeCSV = (val: any) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
       const rows = itemsToExport.map((log) => [
         log.id,
         log.created_at ? new Date(log.created_at).toLocaleString() : '',
-        log.user ? log.user.username : log.user_id ? `User #${log.user_id}` : 'System',
-        log.user?.role || 'N/A',
-        `"${log.action.replace(/"/g, '""')}"`,
-        log.entity_type || '',
+        escapeCSV(log.user ? log.user.username : log.user_id ? `User #${log.user_id}` : 'System'),
+        escapeCSV(log.user?.role || 'N/A'),
+        escapeCSV(log.action),
+        escapeCSV(log.entity_type || ''),
         log.entity_id || '',
-        `"${(log.description || '').replace(/"/g, '""')}"`,
-        `"${(log.endpoint || '').replace(/"/g, '""')}"`,
+        escapeCSV(log.description || ''),
+        escapeCSV(log.endpoint || ''),
         log.http_method || '',
         log.response_status || '',
         log.ip_address || '',
       ]);
 
-      const csvContent =
-        'data:text/csv;charset=utf-8,' +
-        [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-
-      const encodedUri = encodeURI(csvContent);
+      const csvString = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
+      link.setAttribute('href', url);
       link.setAttribute('download', `audit_logs_export_${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (err) {
-      alert('Failed to export audit logs to CSV.');
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Failed to export audit logs:', err);
+      const msg = err.response?.data?.detail || err.message || 'Unknown error';
+      alert(`Failed to export audit logs to CSV: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
     }
   };
 
