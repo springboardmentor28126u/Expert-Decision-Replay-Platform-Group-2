@@ -114,3 +114,22 @@ class DecisionVersion(Base):
 
     decision = relationship("Decision")
     editor = relationship("User")
+
+class ApprovalAction(str, enum.Enum):
+    approved = "approved"
+    rejected = "rejected"
+    resubmitted = "resubmitted"
+
+class Approval(Base):
+    __tablename__ = "approvals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(Enum(ApprovalAction), nullable=False)
+    comment = Column(Text, nullable=True)
+    stage = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    decision = relationship("Decision")
+    reviewer = relationship("User")

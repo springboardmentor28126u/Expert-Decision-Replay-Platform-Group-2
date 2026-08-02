@@ -7,7 +7,7 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
 
   const canUpdateStatus = role === "manager" || role === "admin";
   const isAdmin = role === "admin";
-  const allStatuses = ["draft", "under_review", "approved", "rejected", "archived"];
+  const allStatuses = ["draft", "under_review", "archived"];
 
   const statusStyle = (status) => {
     if (status === "approved") return { bg: "var(--success-soft)", color: "var(--success)" };

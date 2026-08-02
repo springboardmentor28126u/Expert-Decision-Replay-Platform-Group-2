@@ -156,3 +156,77 @@ class DecisionVersionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+from models import ApprovalAction
+
+class ApprovalCreate(BaseModel):
+    comment: str | None = None
+
+class ApprovalResponse(BaseModel):
+    id: int
+    decision_id: int
+    reviewer_id: int
+    reviewer_name: str | None = None
+    action: ApprovalAction
+    comment: str | None
+    stage: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+        
+class RecentDecisionResponse(BaseModel):
+    id: int
+    title: str
+    status: DecisionStatus
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+        
+class EmployeeDashboardResponse(BaseModel):
+    my_decisions: int
+    draft_decisions: int
+    under_review_decisions: int
+    approved_decisions: int
+    rejected_decisions: int
+    archived_decisions: int
+
+    recent_decisions: list[RecentDecisionResponse]
+    
+class ReviewerDashboardResponse(BaseModel):
+    under_review_decisions: int
+    approved_decisions: int
+    rejected_decisions: int
+
+    recent_under_review: list[RecentDecisionResponse]
+    
+class ManagerDashboardResponse(BaseModel):
+    total_decisions: int
+    draft_decisions: int
+    under_review_decisions: int
+    approved_decisions: int
+    rejected_decisions: int
+    archived_decisions: int
+
+    recent_decisions: list[RecentDecisionResponse]
+    
+class AdminDashboardResponse(BaseModel):
+    total_users: int
+    active_users: int
+
+    employees: int
+    reviewers: int
+    managers: int
+    admins: int
+
+    total_alternatives: int
+
+    total_decisions: int
+    draft_decisions: int
+    under_review_decisions: int
+    approved_decisions: int
+    rejected_decisions: int
+    archived_decisions: int
+
+    recent_decisions: list[RecentDecisionResponse]

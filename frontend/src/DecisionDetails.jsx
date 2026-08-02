@@ -5,6 +5,7 @@ import AlternativesPanel from "./AlternativesPanel";
 import "./discussion.css";
 import "./dashboard.css";
 import FileUpload from "./FileUpload";
+import ApprovalHistory from "./ApprovalHistory";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -81,7 +82,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
       }
     } catch (err) {
       console.error("Failed to update status", err);
-      alert("Error: You might not have permission to update the decision status.");
+      alert(err?.response?.data?.detail || "Failed to update status.");
     }
   };
 
@@ -750,8 +751,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 >
                   <option value="draft">Draft</option>
                   <option value="under_review">Under Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
                   <option value="archived">Archived</option>
                 </select>
               </div>
@@ -774,6 +773,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           { key: "alternatives", label: "Alternatives" },
           { key: "discussion", label: "Discussion" },
           { key: "history", label: "Version History" },
+          { key: "approvals", label: "Approval History" },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -806,6 +806,24 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           onRestored={(updatedDecision) => {
             if (onStatusUpdated) {
               onStatusUpdated(updatedDecision);
+            }
+          }}
+        />
+      )}
+
+      {activeTab === "approvals" && (
+        <ApprovalHistory
+          token={token}
+          decisionId={decision.id}
+          profile={profile}
+          decisionStatus={decision.status}
+          decisionCreatedBy={decision.created_by}
+          onApprovalChanged={() => {
+            // refresh the decision's status shown at the top after approve/reject
+            if (onStatusUpdated) {
+              axios.get(`http://127.0.0.1:8000/decisions/${decision.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              }).then((res) => onStatusUpdated(res.data));
             }
           }}
         />

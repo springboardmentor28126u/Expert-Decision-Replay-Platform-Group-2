@@ -1,11 +1,24 @@
 import "./dashboard-shell.css";
+import { useNavigate } from "react-router-dom";
 import ProfileMenu from "./ProfileMenu";
 
 function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
-  const isManagerOrAdmin = profile.role === "manager" || profile.role === "admin";
+  const navigate = useNavigate();
   const isAdmin = profile.role === "admin";
 
+  const dashboardPaths = {
+    employee: "/dashboard/employee",
+    reviewer: "/dashboard/reviewer",
+    manager: "/dashboard/manager",
+    admin: "/dashboard/admin",
+  };
+
+  const handleNavClick = (item) => {
+    onNavigate(item.key);
+  };
+
   const navItems = [
+    { key: "home", label: "Home", icon: "🏠" },
     { key: "dashboard", label: "Dashboard", icon: "📊" },
     { key: "decisions", label: "Decisions", icon: "📋" },
   ];
@@ -26,7 +39,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
             <button
               key={item.key}
               className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
-              onClick={() => onNavigate(item.key)}
+              onClick={() => handleNavClick(item)}
             >
               <span className="shell-nav-icon">{item.icon}</span>
               <span className="label">{item.label}</span>
@@ -73,6 +86,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
       <div className="shell-main">
         <header className="shell-topbar">
           <h1 className="shell-topbar-title">
+            {activeView === "home" && "Home"}
             {activeView === "dashboard" && "Dashboard"}
             {activeView === "decisions" && "Decisions"}
             {activeView === "users" && "User Management"}
