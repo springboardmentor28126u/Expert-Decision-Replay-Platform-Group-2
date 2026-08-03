@@ -7,6 +7,7 @@ from app.models.discussion import Discussion
 from app.models.decision_history import DecisionHistory
 from app.models.file_attachment import FileAttachment
 from app.models.replay import Replay
+from app.models.approval import Approval
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "DecisionHistory",
     "FileAttachment",
     "Replay",
+    "Approval",
 ]
