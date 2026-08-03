@@ -9,7 +9,7 @@ per request, which fails outright under AsyncSession (lazy loading
 requires a sync context) rather than just being slow.
 """
 import uuid
-from typing import Optional, Sequence
+from typing import Dict, Optional, Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,4 +61,26 @@ class UserRepository(BaseRepository[User]):
             .where(Role.name == role_name, User.is_active.is_(True))
         )
         return result.scalars().all()
+
+    async def count_active(self) -> int:
+        result = await self.db.execute(
+            select(func.count())
+            .select_from(User)
+            .where(User.is_deleted.is_(False), User.is_active.is_(True))
+        )
+        return result.scalar_one()
+
+    async def count_by_role(self) -> Dict[str, int]:
+        """
+        Single grouped COUNT joined to Role, for the Dashboard's
+        admin-only role breakdown — role name lives on Role, not User.
+        """
+        result = await self.db.execute(
+            select(Role.name, func.count())
+            .select_from(User)
+            .join(Role, Role.id == User.role_id)
+            .where(User.is_deleted.is_(False))
+            .group_by(Role.name)
+        )
+        return dict(result.all())
 

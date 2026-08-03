@@ -192,6 +192,7 @@ from app.routers import attachment
 from app.routers import comment
 from app.routers import notification
 from app.routers import audit_log
+from app.routers import dashboard
 
 # ---------------------------------------------------------------------
 # Health
@@ -301,4 +302,14 @@ app.include_router(
     audit_log.router,
     prefix=f"{settings.API_V1_PREFIX}/audit-logs",
     tags=["Audit Logs"],
+)
+
+# ---------------------------------------------------------------------
+# Dashboard
+# ---------------------------------------------------------------------
+
+app.include_router(
+    dashboard.router,
+    prefix=f"{settings.API_V1_PREFIX}/dashboard",
+    tags=["Dashboard"],
 )

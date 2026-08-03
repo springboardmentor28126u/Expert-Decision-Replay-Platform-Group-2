@@ -36,4 +36,10 @@ from app.schemas.approval import ApprovalAssign, ApprovalDecision, ApprovalOut  
 from app.schemas.attachment import AttachmentDownloadURL, AttachmentOut  # noqa: F401
 from app.schemas.notification import NotificationMarkReadRequest, NotificationOut  # noqa: F401
 from app.schemas.audit_log import AuditLogOut  # noqa: F401
+from app.schemas.dashboard import (  # noqa: F401
+    AdminDashboardStats,
+    DashboardSummaryOut,
+    DecisionStatusCounts,
+    UserRoleCounts,
+)
 

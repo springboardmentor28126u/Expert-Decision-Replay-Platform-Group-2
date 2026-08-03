@@ -10,7 +10,8 @@ import "../styles/dashboard.css";
 function Dashboard({ token, onLogout }) {
   const [profile, setProfile] = useState(null);
   const [users, setUsers] = useState(null);
-  const [decisions, setDecisions] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [summaryError, setSummaryError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeView, setActiveView] = useState("dashboard");
   const [selectedDecision, setSelectedDecision] = useState(null);
@@ -35,27 +36,29 @@ function Dashboard({ token, onLogout }) {
   }, [token, onLogout]);
 
   useEffect(() => {
-    const fetchDecisions = async () => {
+    const fetchSummary = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/v1/decisions", {
+        const res = await axios.get("http://127.0.0.1:8000/api/v1/dashboard/summary", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setDecisions(res.data.items);
+        setSummary(res.data);
+        setSummaryError("");
       } catch (err) {
-        console.log("Failed to load decisions for stats", err);
+        console.log("Failed to load dashboard summary", err);
+        setSummaryError("Failed to load dashboard statistics.");
       }
     };
-    fetchDecisions();
+    fetchSummary();
   }, [token, refreshKey]);
 
   useEffect(() => {
     const fetchUsers = async () => {
       if (!profile || profile.role?.name !== "administrator") return;
       try {
-        const res = await axios.get("http://127.0.0.1:8000/users", {
+        const res = await axios.get("http://127.0.0.1:8000/api/v1/users/?page=1&page_size=100", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setUsers(res.data);
+        setUsers(res.data.items);
       } catch (err) {
         console.log("Not authorized or failed to load users", err);
       }
@@ -67,13 +70,23 @@ function Dashboard({ token, onLogout }) {
     return <div style={{ padding: 40 }}>Loading dashboard...</div>;
   }
 
-  const statusCounts = ["draft", "under_review", "approved", "rejected", "archived"].reduce(
-    (acc, status) => {
-      acc[status] = decisions.filter((d) => d.status === status).length;
-      return acc;
-    },
-    {}
-  );
+  const statusCounts = summary?.decision_status_counts ?? {
+    draft: 0,
+    under_review: 0,
+    approved: 0,
+    rejected: 0,
+    archived: 0,
+  };
+  const adminStats = summary?.admin_stats ?? null;
+
+  // Backend roles are a UUID-keyed lookup table (no name-based role
+  // assignment) and there's no dedicated roles-listing endpoint, so the
+  // id for each role name is derived from whichever users are already
+  // loaded. A role with zero current members has no derivable id.
+  const roleIdByName = (users || []).reduce((acc, u) => {
+    if (u.role?.name && u.role?.id) acc[u.role.name] = u.role.id;
+    return acc;
+  }, {});
 
   const handleNavigate = (view) => {
     setSelectedDecision(null);
@@ -94,14 +107,19 @@ function Dashboard({ token, onLogout }) {
     setActiveView("decisions");
   };
 
-  const handleRoleChange = async (userId, newRole) => {
+  const handleRoleChange = async (userId, newRoleName) => {
+    const roleId = roleIdByName[newRoleName];
+    if (!roleId) {
+      alert(`Cannot assign "${newRoleName}" — no existing user currently holds that role, so its id can't be resolved.`);
+      return;
+    }
     try {
-      await axios.put(`http://127.0.0.1:8000/users/${userId}/role`, { role: newRole }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+      const res = await axios.patch(
+        `http://127.0.0.1:8000/api/v1/users/${userId}/role`,
+        { role_id: roleId },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
+      setUsers((prev) => prev.map((u) => (u.id === userId ? res.data : u)));
     } catch (err) {
       console.error("Failed to update role", err);
       alert(err.response?.data?.detail || "Failed to update role");
@@ -111,13 +129,14 @@ function Dashboard({ token, onLogout }) {
   const handleDeleteUser = async (userId) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/users/${userId}`, {
+      await axios.delete(`http://127.0.0.1:8000/api/v1/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
     } catch (err) {
-      console.warn("Backend delete user endpoint not found or failed, deleting locally", err);
+      console.error("Failed to delete user", err);
+      alert(err.response?.data?.detail || "Failed to delete user");
     }
-    setUsers((prev) => prev.filter((u) => u.id !== userId));
   };
 
   return (
@@ -151,6 +170,46 @@ function Dashboard({ token, onLogout }) {
               <p className="stat-card-value">{statusCounts.archived}</p>
             </div>
           </div>
+
+          {summaryError && (
+            <p style={{ color: "var(--danger)", fontSize: "13px", margin: "0 0 16px" }}>{summaryError}</p>
+          )}
+
+          {adminStats && (
+            <div className="panel">
+              <p className="panel-title">Organization Overview</p>
+              <div className="stat-grid">
+                <div className="stat-card">
+                  <p className="stat-card-label">Total Users</p>
+                  <p className="stat-card-value">{adminStats.total_users}</p>
+                </div>
+                <div className="stat-card">
+                  <p className="stat-card-label">Active Users</p>
+                  <p className="stat-card-value">{adminStats.active_users}</p>
+                </div>
+                <div className="stat-card">
+                  <p className="stat-card-label">Employees</p>
+                  <p className="stat-card-value">{adminStats.users_by_role.employee}</p>
+                </div>
+                <div className="stat-card">
+                  <p className="stat-card-label">Reviewers</p>
+                  <p className="stat-card-value">{adminStats.users_by_role.reviewer}</p>
+                </div>
+                <div className="stat-card">
+                  <p className="stat-card-label">Managers</p>
+                  <p className="stat-card-value">{adminStats.users_by_role.manager}</p>
+                </div>
+                <div className="stat-card">
+                  <p className="stat-card-label">Administrators</p>
+                  <p className="stat-card-value">{adminStats.users_by_role.administrator}</p>
+                </div>
+                <div className="stat-card">
+                  <p className="stat-card-label">Total Alternatives</p>
+                  <p className="stat-card-value">{adminStats.total_alternatives}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="panel">
             <p className="panel-title">Welcome back, {profile.full_name.split(" ")[0]}</p>
@@ -313,7 +372,7 @@ function Dashboard({ token, onLogout }) {
                           <td>{u.email}</td>
                           <td>
                             <select
-                              value={u.role}
+                              value={u.role?.name}
                               onChange={(e) => handleRoleChange(u.id, e.target.value)}
                               disabled={u.id === profile.id}
                               style={{
@@ -330,7 +389,7 @@ function Dashboard({ token, onLogout }) {
                               <option value="employee">Employee</option>
                               <option value="reviewer">Reviewer</option>
                               <option value="manager">Manager</option>
-                              <option value="admin">Admin</option>
+                              <option value="administrator">Admin</option>
                             </select>
                           </td>
                           <td>

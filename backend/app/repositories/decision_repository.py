@@ -3,13 +3,14 @@ repositories/decision_repository.py
 """
 
 import uuid
-from typing import Optional, Sequence
+from typing import Dict, Optional, Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.decision import Decision
+from app.models.enums import DecisionStatus
 from app.repositories.base_repository import BaseRepository
 
 
@@ -89,3 +90,18 @@ class DecisionRepository(BaseRepository[Decision]):
         )
 
         return result.scalar_one()
+
+    async def count_by_status(self) -> Dict[DecisionStatus, int]:
+        """
+        Single grouped COUNT for the Dashboard's status breakdown —
+        deliberately not `list()` + count-in-Python, which would pull
+        every row just to tally them.
+        """
+
+        result = await self.db.execute(
+            select(Decision.status, func.count())
+            .where(Decision.is_deleted.is_(False))
+            .group_by(Decision.status)
+        )
+
+        return dict(result.all())
