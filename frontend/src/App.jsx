@@ -12,24 +12,43 @@ import Profile from "./pages/Profile";
 import DecisionDetails from "./pages/DecisionDetails";
 import EditDecision from "./pages/EditDecision";
 import DecisionHistory from "./pages/DecisionHistory";
+import Reports from "./pages/Reports";
+import AuditLogs from "./pages/AuditLogs";
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
 
+        {/* Authentication */}
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
+        {/* Dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Decisions */}
         <Route path="/create" element={<CreateDecision />} />
         <Route path="/decisions" element={<DecisionList />} />
-        <Route path="/upload" element={<UploadDocument />} />
-        <Route path="/alternatives" element={<Alternatives />} />
-        <Route path="/comments" element={<Comments />} />
-        <Route path="/profile" element={<Profile />} />
         <Route path="/decision/:id" element={<DecisionDetails />} />
         <Route path="/decision/edit/:id" element={<EditDecision />} />
         <Route path="/decision/history/:id" element={<DecisionHistory />} />
+
+        {/* Documents */}
+        <Route path="/upload" element={<UploadDocument />} />
+
+        {/* Alternatives */}
+        <Route path="/alternatives" element={<Alternatives />} />
+
+        {/* Comments */}
+        <Route path="/comments" element={<Comments />} />
+
+        {/* Reports */}
+        <Route path="/reports" element={<Reports />} />
+
+        {/* Profile */}
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/audit" element={<AuditLogs />} />
 
       </Routes>
     </BrowserRouter>

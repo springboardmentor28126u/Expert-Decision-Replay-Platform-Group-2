@@ -12,6 +12,7 @@ function DecisionDetails() {
   const [alternatives, setAlternatives] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [history, setHistory] = useState([]);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -47,6 +48,9 @@ function DecisionDetails() {
       );
       setHistory(historyRes.data);
 
+      const userRes = await api.get("/me", { headers });
+      setUser(userRes.data);
+
     } catch (err) {
       console.log(err.response);
       alert(err.response?.data?.detail || "Failed to load details");
@@ -80,8 +84,8 @@ function DecisionDetails() {
   try {
     const token = localStorage.getItem("token");
 
-    await api.put(
-      `/decisions/${id}/approve`,
+    await api.post(
+      `/approvals/${id}?status=Approved`,
       {},
       {
         headers: {
@@ -91,7 +95,6 @@ function DecisionDetails() {
     );
 
     alert("Decision Approved Successfully");
-
     loadData();
 
   } catch (err) {
@@ -103,8 +106,8 @@ const rejectDecision = async () => {
   try {
     const token = localStorage.getItem("token");
 
-    await api.put(
-      `/decisions/${id}/reject`,
+    await api.post(
+      `/approvals/${id}?status=Rejected`,
       {},
       {
         headers: {
@@ -114,14 +117,12 @@ const rejectDecision = async () => {
     );
 
     alert("Decision Rejected Successfully");
-
     loadData();
 
   } catch (err) {
     alert(err.response?.data?.detail || "Rejection failed");
   }
-};
-
+  };
   if (!decision) {
     return (
       <Layout>
@@ -136,24 +137,60 @@ const rejectDecision = async () => {
     <Layout>
       <div className="container">
 
-        <h2 className="mb-4">Decision Details</h2>
+        <div className="d-flex justify-content-between align-items-center mb-4">
 
-        <div className="card shadow mb-4">
+  <div>
+    <h2 className="fw-bold mb-1">
+      {decision.title}
+    </h2>
 
-          <div className="card-body">
+    <small className="text-muted">
+      Decision Details
+    </small>
+  </div>
 
-            <h3>{decision.title}</h3>
+  <span
+    className={`badge fs-6 ${
+      decision.status === "Approved"
+        ? "bg-success"
+        : decision.status === "Rejected"
+        ? "bg-danger"
+        : decision.status === "Pending"
+        ? "bg-warning text-dark"
+        : "bg-secondary"
+    }`}
+  >
+    {decision.status}
+  </span>
 
-            <hr />
+</div>
 
-            <p><strong>Description:</strong><br />{decision.description}</p>
+<div className="card border-0 shadow-lg mb-4">
 
-            <p><strong>Category:</strong> {decision.category}</p>
+  <div className="card-body">
 
-            <p><strong>Status:</strong> {decision.status}</p>
+    <div className="row">
 
-            <div className="mt-4">
+      <div className="col-md-6">
+        <h6 className="text-primary">Description</h6>
+        <p>{decision.description}</p>
+      </div>
 
+      <div className="col-md-3">
+        <h6 className="text-primary">Category</h6>
+        <p>{decision.category}</p>
+      </div>
+
+      <div className="col-md-3">
+        <h6 className="text-primary">Status</h6>
+        <p>{decision.status}</p>
+      </div>
+
+    </div>
+
+    <hr />
+
+    <div className="d-flex flex-wrap gap-2">
               <Link
                 to={`/decision/edit/${id}`}
                 className="btn btn-warning me-2"
@@ -167,19 +204,24 @@ const rejectDecision = async () => {
                📜 History
               </Link>
 
-              <button
-                className="btn btn-success me-2"
-                onClick={approveDecision}
-              >
-                ✅ Approve
-              </button>
+             {user &&
+  ["Reviewer", "Manager", "Administrator"].includes(user.role) && (
+    <>
+      <button
+        className="btn btn-success me-2"
+        onClick={approveDecision}
+      >
+        ✅ Approve
+      </button>
 
-              <button
-                className="btn btn-secondary me-2"
-                onClick={rejectDecision}
-              >
-                ❌ Reject
-              </button>
+      <button
+        className="btn btn-secondary me-2"
+        onClick={rejectDecision}
+      >
+        ❌ Reject
+      </button>
+    </>
+)}
 
               <button
                 className="btn btn-danger"
@@ -194,30 +236,46 @@ const rejectDecision = async () => {
 
         </div>
 
-        <div className="card shadow mb-4">
+        <div className="card border-0 shadow-lg mb-4">
 
-          <div className="card-header bg-primary text-white">
-            Comments
-          </div>
+  <div className="card-header bg-primary text-white">
+    <h5 className="mb-0">💬 Comments</h5>
+  </div>
+
+  <div className="card-body">
+
+    {comments.length === 0 ? (
+
+      <div className="text-center text-muted py-4">
+        No Comments Available
+      </div>
+
+    ) : (
+
+      comments.map((comment) => (
+
+        <div
+          key={comment.id}
+          className="card mb-3 border-start border-4 border-primary shadow-sm"
+        >
 
           <div className="card-body">
 
-            {comments.length === 0 ? (
-              <p>No Comments Available</p>
-            ) : (
-              comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className="border rounded p-3 mb-3"
-                >
-                  {comment.comment}
-                </div>
-              ))
-            )}
+            <p className="mb-0">
+              {comment.comment}
+            </p>
 
           </div>
 
         </div>
+
+      ))
+
+    )}
+
+  </div>
+
+</div>
 
                 <div className="card shadow mb-4">
 

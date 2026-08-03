@@ -16,6 +16,14 @@ from app.api.alternative import router as alternative_router
 from app.models.comment import Comment
 from app.api.comment import router as comment_router
 from app.api.history import router as history_router
+from app.models.approval import Approval
+from app.api.approval import router as approval_router
+from app.models.comment import Comment
+from app.models.notification import Notification
+from app.api.notification import router as notification_router
+from app.models.audit_log import AuditLog
+from app.api.audit import router as audit_router
+from app.api.report import router as report_router
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
@@ -39,6 +47,10 @@ app.include_router(decision_router)
 app.include_router(alternative_router)
 app.include_router(comment_router)
 app.include_router(history_router)
+app.include_router(approval_router)
+app.include_router(notification_router)
+app.include_router(audit_router)
+app.include_router(report_router)
 
 @app.get("/")
 def root():

@@ -1,11 +1,24 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import "../Auth.css";
+import {
+  FaUser,
+  FaEnvelope,
+  FaLock,
+  FaUserTag,
+  FaUserPlus,
+  FaShieldAlt,
+  FaChartLine,
+  FaDatabase,
+} from "react-icons/fa";
+
+
 
 function Register() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     full_name: "",
     email: "",
     password: "",
@@ -13,8 +26,8 @@ function Register() {
   });
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
+    setFormData({
+      ...formData,
       [e.target.name]: e.target.value,
     });
   };
@@ -23,98 +36,204 @@ function Register() {
     e.preventDefault();
 
     try {
-      await api.post("/auth/register", form);
+      await api.post("/auth/register", formData);
 
-      alert("Registration Successful!");
+      alert("Registration Successful");
 
       navigate("/");
     } catch (err) {
-        console.log(err.response);
-        console.log(err.response?.data);
-
-    alert(JSON.stringify(err.response?.data) || err.message);
-}
+      console.log(err);
+      alert(
+        err.response?.data?.detail ||
+          "Registration Failed"
+      );
+    }
   };
 
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
+    <div className="auth-page">
 
-        <div className="col-md-6">
+      <div className="container">
 
-          <div className="card shadow p-4">
+        <div className="row justify-content-center align-items-center min-vh-100">
 
-            <h2 className="text-center mb-4">
-              Register
-            </h2>
+          {/* Left Side */}
 
-            <form onSubmit={register}>
+          <div className="col-lg-6 d-none d-lg-flex">
 
-              <div className="mb-3">
-                <label>Full Name</label>
-                <input
-                  className="form-control"
-                  name="full_name"
-                  onChange={handleChange}
-                  required
-                />
+            <div className="auth-left">
+
+              <h1 className="display-5 fw-bold mb-4">
+                Expert Decision Replay Platform
+              </h1>
+
+              <p className="lead mb-5">
+                Join the platform and collaborate on
+                organizational decisions, approvals,
+                reports and audit tracking.
+              </p>
+
+              <div className="feature">
+                <FaShieldAlt className="feature-icon" />
+                <span>Role-Based Access Control</span>
               </div>
 
-              <div className="mb-3">
-                <label>Email</label>
-                <input
-                  className="form-control"
-                  type="email"
-                  name="email"
-                  onChange={handleChange}
-                  required
-                />
+              <div className="feature">
+                <FaChartLine className="feature-icon" />
+                <span>Decision Approval Workflow</span>
               </div>
 
-              <div className="mb-3">
-                <label>Password</label>
-                <input
-                  className="form-control"
-                  type="password"
-                  name="password"
-                  onChange={handleChange}
-                  required
-                />
+              <div className="feature">
+                <FaDatabase className="feature-icon" />
+                <span>Reports & Audit Logging</span>
               </div>
 
-              <div className="mb-3">
-                <label>Role</label>
+            </div>
 
-                <select
-                  className="form-control"
-                  name="role"
-                  onChange={handleChange}
+          </div>
+
+          {/* Register Card */}
+
+          <div className="col-lg-5 col-md-8">
+
+            <div className="auth-card">
+
+              <h2 className="text-center fw-bold mb-2">
+                Create Account
+              </h2>
+
+              <p className="text-center text-muted mb-4">
+                Register to access the platform
+              </p>
+
+              <form onSubmit={register}>
+
+                {/* Full Name */}
+
+                <div className="input-group mb-3">
+
+                  <span className="input-group-text">
+                    <FaUser />
+                  </span>
+
+                  <input
+                    type="text"
+                    name="full_name"
+                    className="form-control"
+                    placeholder="Full Name"
+                    value={formData.full_name}
+                    onChange={handleChange}
+                    required
+                  />
+
+                </div>
+
+                {/* Email */}
+
+                <div className="input-group mb-3">
+
+                  <span className="input-group-text">
+                    <FaEnvelope />
+                  </span>
+
+                  <input
+                    type="email"
+                    name="email"
+                    className="form-control"
+                    placeholder="Email Address"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+
+                </div>
+
+                {/* Password */}
+
+                <div className="input-group mb-3">
+
+                  <span className="input-group-text">
+                    <FaLock />
+                  </span>
+
+                  <input
+                    type="password"
+                    name="password"
+                    className="form-control"
+                    placeholder="Password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+
+                </div>
+
+                {/* Role */}
+
+                <div className="input-group mb-4">
+
+                  <span className="input-group-text">
+                    <FaUserTag />
+                  </span>
+
+                  <select
+                    className="form-select"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                  >
+                    <option value="Employee">
+                      Employee
+                    </option>
+
+                    <option value="Reviewer">
+                      Reviewer
+                    </option>
+
+                    <option value="Manager">
+                      Manager
+                    </option>
+
+                    <option value="Administrator">
+                      Administrator
+                    </option>
+
+                  </select>
+
+                </div>
+
+                <button
+                  className="btn btn-primary auth-btn w-100"
                 >
-                  <option>Employee</option>
-                  <option>Reviewer</option>
-                  <option>Manager</option>
-                  <option>Administrator</option>
-                </select>
-              </div>
+                  <FaUserPlus className="me-2" />
+                  Register
+                </button>
 
-              <button className="btn btn-success w-100">
-                Register
-              </button>
+              </form>
 
-            </form>
+              <hr />
 
-            <hr />
+              <p className="text-center mb-0">
 
-            <p className="text-center">
-              Already have an account?
-              <Link to="/"> Login</Link>
-            </p>
+                Already have an account?
+
+                <Link
+                  to="/"
+                  className="fw-bold ms-2"
+                >
+                  Login
+                </Link>
+
+              </p>
+
+            </div>
 
           </div>
 
         </div>
 
       </div>
+
     </div>
   );
 }

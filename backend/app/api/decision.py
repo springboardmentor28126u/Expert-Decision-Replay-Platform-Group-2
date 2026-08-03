@@ -14,6 +14,7 @@ from fastapi import UploadFile, File
 import os
 
 from app.models.decision_document import DecisionDocument
+from app.models.audit_log import AuditLog
 from app.core.dependencies import (
     get_current_user,
     require_reviewer
@@ -36,10 +37,19 @@ def create_decision(
         category=decision.category,
         created_by=current_user.id
     )
-
     db.add(new_decision)
     db.commit()
     db.refresh(new_decision)
+
+    # Audit Log
+    log = AuditLog(
+        user_id=current_user.id,
+        action="Create Decision",
+        description=f"Created decision '{new_decision.title}'"
+    )
+
+    db.add(log)
+    db.commit()
 
     return new_decision
 
@@ -81,6 +91,15 @@ def update_decision(
 
     db.commit()
     db.refresh(db_decision)
+    audit = AuditLog(
+    user_id=current_user.id,
+    action="Updated Decision",
+    description=f"Updated decision '{db_decision.title}'"
+    )
+
+    db.add(audit)
+    db.commit()
+
 
     return db_decision
 
@@ -101,7 +120,14 @@ def approve_decision(
 
     db.commit()
     db.refresh(decision)
+    audit = AuditLog(
+    user_id=current_user.id,
+    action="Approved Decision",
+    description=f"Approved decision '{decision.title}'"
+    )
 
+    db.add(audit)
+    db.commit()
     return {
         "message": "Decision approved successfully",
         "decision": decision
@@ -124,6 +150,18 @@ def reject_decision(
 
     db.commit()
     db.refresh(decision)
+
+    audit = AuditLog(
+    user_id=current_user.id,
+    action="Rejected Decision",
+    description=f"Rejected decision '{decision.title}'"
+    )
+
+    db.add(audit)
+    db.commit()
+
+    db.add(audit)
+    db.commit()
 
     return {
         "message": "Decision rejected successfully",
@@ -149,6 +187,14 @@ def delete_decision(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     db.delete(db_decision)
+
+    audit = AuditLog(
+        user_id=current_user.id,
+        action="Deleted Decision",
+        description=f"Deleted decision '{db_decision.title}'"
+    )
+
+    db.add(audit)
     db.commit()
 
     return {"message": "Decision deleted successfully"}

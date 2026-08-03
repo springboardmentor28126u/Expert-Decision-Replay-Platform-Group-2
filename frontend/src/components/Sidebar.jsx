@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+
 import {
   FaHome,
   FaClipboardList,
@@ -7,17 +8,39 @@ import {
   FaBalanceScale,
   FaUser,
   FaSignOutAlt,
+  FaHistory,
+  FaChartBar,
 } from "react-icons/fa";
 
+
 function Sidebar() {
+  const linkStyle = ({ isActive }) => ({
+    background: isActive ? "#2563eb" : "transparent",
+    color: "#ffffff",
+    borderRadius: "10px",
+    padding: "12px 15px",
+    marginBottom: "8px",
+    textDecoration: "none",
+    display: "flex",
+    alignItems: "center",
+    transition: "0.3s",
+    fontWeight: isActive ? "600" : "500",
+  });
+
   return (
     <div
       className="bg-dark text-white d-flex flex-column shadow"
       style={{
-        width: "260px",
-        minHeight: "100vh",
-      }}
+  width: "260px",
+  height: "100vh",
+  position: "fixed",
+  left: 0,
+  top: 0,
+  overflowY: "auto",
+  zIndex: 1000,
+}}
     >
+      {/* Logo */}
       <div className="text-center py-4 border-bottom border-secondary">
         <h3 className="fw-bold text-info">EDRP</h3>
         <small className="text-light">
@@ -25,68 +48,62 @@ function Sidebar() {
         </small>
       </div>
 
+      {/* Navigation */}
       <div className="p-3">
 
-        <NavLink
-          to="/dashboard"
-          className="nav-link text-white mb-2 rounded p-3"
-        >
-          <FaHome className="me-2" />
+        <NavLink to="/dashboard" style={linkStyle}>
+          <FaHome className="me-3" />
           Dashboard
         </NavLink>
 
-        <NavLink
-          to="/create"
-          className="nav-link text-white mb-2 rounded p-3"
-        >
-          <FaClipboardList className="me-2" />
+        <NavLink to="/create" style={linkStyle}>
+          <FaClipboardList className="me-3" />
           Create Decision
         </NavLink>
 
-        <NavLink
-          to="/decisions"
-          className="nav-link text-white mb-2 rounded p-3"
-        >
-          <FaClipboardList className="me-2" />
+        <NavLink to="/decisions" style={linkStyle}>
+          <FaClipboardList className="me-3" />
           Decisions
         </NavLink>
 
-        <NavLink
-          to="/upload"
-          className="nav-link text-white mb-2 rounded p-3"
-        >
-          <FaUpload className="me-2" />
+        <NavLink to="/upload" style={linkStyle}>
+          <FaUpload className="me-3" />
           Documents
         </NavLink>
 
-        <NavLink
-          to="/alternatives"
-          className="nav-link text-white mb-2 rounded p-3"
-        >
-          <FaBalanceScale className="me-2" />
+        <NavLink to="/alternatives" style={linkStyle}>
+          <FaBalanceScale className="me-3" />
           Alternatives
         </NavLink>
 
-        <NavLink
-          to="/comments"
-          className="nav-link text-white mb-2 rounded p-3"
-        >
-          <FaComments className="me-2" />
+        <NavLink to="/comments" style={linkStyle}>
+          <FaComments className="me-3" />
           Comments
         </NavLink>
 
+        {/* NEW REPORTS MENU */}
+        <NavLink to="/reports" style={linkStyle}>
+          <FaChartBar className="me-3" />
+          Reports
+        </NavLink>
+
         <NavLink
-          to="/profile"
+          to="/audit"
           className="nav-link text-white mb-2 rounded p-3"
         >
-          <FaUser className="me-2" />
+          <FaHistory className="me-2" />
+          Audit Logs
+        </NavLink>
+
+        <NavLink to="/profile" style={linkStyle}>
+          <FaUser className="me-3" />
           Profile
         </NavLink>
 
       </div>
 
+      {/* Logout */}
       <div className="mt-auto p-3">
-
         <NavLink
           to="/"
           className="btn btn-danger w-100"
@@ -94,7 +111,6 @@ function Sidebar() {
           <FaSignOutAlt className="me-2" />
           Logout
         </NavLink>
-
       </div>
 
     </div>
