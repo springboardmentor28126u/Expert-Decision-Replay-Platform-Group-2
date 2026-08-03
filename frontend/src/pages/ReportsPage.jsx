@@ -133,7 +133,18 @@ function ReportsPage({ token }) {
         {REPORT_TABS.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveReport(tab.key)}
+            onClick={() => {
+              // Clear the previous tab's data in the same state update
+              // that switches tabs — otherwise fetchReport() (which
+              // replaces it) only runs in a useEffect that fires after
+              // this render commits, leaving one render where
+              // activeReport has already changed but reportData still
+              // holds the *other* report's shape (e.g. Decision's
+              // by_status instead of Approval's by_level), which crashes
+              // whichever ReportView renders next.
+              setActiveReport(tab.key);
+              setReportData(null);
+            }}
             style={{
               padding: "8px 18px",
               fontSize: "13px",
