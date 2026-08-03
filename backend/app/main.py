@@ -10,11 +10,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.database import Base, engine
+import app.models
 from app.middleware.error_handler import error_handler_middleware
 from app.middleware.logging import logging_middleware
 from app.middleware.audit_middleware import audit_middleware
-from app.routers import auth, users, decisions, alternatives, discussions, files, audit
-
+from app.routers import (
+    auth,
+    users,
+    decisions,
+    alternatives,
+    discussions,
+    files,
+    audit,
+    approvals,
+    reports,
+)
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -29,10 +40,15 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Application lifecycle events."""
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
-    # Create uploads directory
+
     import os
     os.makedirs(settings.upload_dir, exist_ok=True)
+
+    # Create any missing database tables
+    Base.metadata.create_all(bind=engine)
+
     yield
+
     logger.info("Shutting down...")
 
 
@@ -66,6 +82,8 @@ app.include_router(alternatives.router)
 app.include_router(discussions.router)
 app.include_router(files.router)
 app.include_router(audit.router)
+app.include_router(approvals.router)
+app.include_router(reports.router)
 
 
 @app.get("/", tags=["Health"])
