@@ -105,3 +105,63 @@ class DecisionRepository(BaseRepository[Decision]):
         )
 
         return dict(result.all())
+
+    async def count_by_category(self) -> Dict[Optional[str], int]:
+        """For the Decision Report's category breakdown."""
+
+        result = await self.db.execute(
+            select(Decision.category, func.count())
+            .where(Decision.is_deleted.is_(False))
+            .group_by(Decision.category)
+        )
+
+        return dict(result.all())
+
+    async def count_by_period(self):
+        """
+        Decisions created per day (UTC) — the Decision Report's "created
+        over time" table. Truncation happens in SQL so only the already-
+        aggregated rows come back, not every Decision.
+        """
+
+        period = func.date_trunc("day", Decision.created_at)
+
+        result = await self.db.execute(
+            select(period, func.count())
+            .where(Decision.is_deleted.is_(False))
+            .group_by(period)
+            .order_by(period)
+        )
+
+        return dict(result.all())
+
+    async def count_by_team(self) -> Dict[uuid.UUID, int]:
+        """
+        For the Team Report's decisions-per-team breakdown. Decisions
+        with no team are excluded — there's no team to attribute them to.
+        """
+
+        result = await self.db.execute(
+            select(Decision.team_id, func.count())
+            .where(
+                Decision.is_deleted.is_(False),
+                Decision.team_id.isnot(None),
+            )
+            .group_by(Decision.team_id)
+        )
+
+        return dict(result.all())
+
+    async def list_recent(
+        self,
+        limit: int = 10,
+    ) -> Sequence[Decision]:
+        """Most recently created decisions, for the Decision Report."""
+
+        result = await self.db.execute(
+            self._base_query()
+            .order_by(Decision.created_at.desc())
+            .limit(limit)
+        )
+
+        return result.scalars().all()

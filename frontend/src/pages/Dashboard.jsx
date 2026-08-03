@@ -6,6 +6,7 @@ import DecisionsList from "../components/DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "../components/ChangePassword";
 import NotificationsPage from "./NotificationsPage";
+import ReportsPage from "./ReportsPage";
 import "../styles/dashboard.css";
 
 function Dashboard({ token, onLogout }) {
@@ -600,6 +601,11 @@ function Dashboard({ token, onLogout }) {
           onNavigateToDecision={handleNavigateFromNotification}
         />
       )}
+
+      {activeView === "reports" &&
+        (profile.role?.name === "manager" || profile.role?.name === "administrator") && (
+          <ReportsPage token={token} />
+        )}
 
       {activeView === "account" && (
         <div className="panel">

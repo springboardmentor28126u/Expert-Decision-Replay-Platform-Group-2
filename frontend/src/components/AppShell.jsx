@@ -12,6 +12,10 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
     { key: "notifications", label: "Notifications", icon: "🔔", badge: unreadCount },
   ];
 
+  const managerNavItems = [
+    { key: "reports", label: "Reports", icon: "📈" },
+  ];
+
   const adminNavItems = [
     { key: "users", label: "User Management", icon: "👥" },
   ];
@@ -57,6 +61,23 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
             </button>
           ))}
 
+          {isManagerOrAdmin && (
+            <>
+              <div className="shell-nav-divider" />
+              <div className="shell-nav-section-label">Reports</div>
+              {managerNavItems.map((item) => (
+                <button
+                  key={item.key}
+                  className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
+                  onClick={() => onNavigate(item.key)}
+                >
+                  <span className="shell-nav-icon">{item.icon}</span>
+                  <span className="label">{item.label}</span>
+                </button>
+              ))}
+            </>
+          )}
+
           {isAdmin && (
             <>
               <div className="shell-nav-divider" />
@@ -100,6 +121,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
             {activeView === "dashboard" && "Dashboard"}
             {activeView === "decisions" && "Decisions"}
             {activeView === "notifications" && "Notifications"}
+            {activeView === "reports" && "Reports"}
             {activeView === "users" && "User Management"}
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}
