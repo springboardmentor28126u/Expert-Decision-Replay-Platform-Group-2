@@ -5,6 +5,7 @@ import CreateDecision from "../components/CreateDecision";
 import DecisionsList from "../components/DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "../components/ChangePassword";
+import NotificationsPage from "./NotificationsPage";
 import "../styles/dashboard.css";
 
 function Dashboard({ token, onLogout }) {
@@ -19,6 +20,7 @@ function Dashboard({ token, onLogout }) {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -66,6 +68,22 @@ function Dashboard({ token, onLogout }) {
     fetchUsers();
   }, [profile, token]);
 
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await axios.get("http://127.0.0.1:8000/api/v1/notifications", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setNotifications(res.data);
+      } catch (err) {
+        console.log("Failed to load notifications", err);
+      }
+    };
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 20000);
+    return () => clearInterval(interval);
+  }, [token]);
+
   if (!profile) {
     return <div style={{ padding: 40 }}>Loading dashboard...</div>;
   }
@@ -78,6 +96,7 @@ function Dashboard({ token, onLogout }) {
     archived: 0,
   };
   const adminStats = summary?.admin_stats ?? null;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   // Backend roles are a UUID-keyed lookup table (no name-based role
   // assignment) and there's no dedicated roles-listing endpoint, so the
@@ -100,6 +119,68 @@ function Dashboard({ token, onLogout }) {
   const handleSelectDecision = (decision) => {
     setSelectedDecision(decision);
     setActiveView("decision-details");
+  };
+
+  // Notifications carry a polymorphic (related_entity_type, related_entity_id)
+  // pointer rather than a URL — "decision" points straight at a Decision,
+  // "approval" points at an Approval, which is resolved to its parent
+  // Decision first. Anything else (or a lookup failure) falls back to the
+  // Decisions tab rather than leaving the user stranded.
+  const handleNavigateFromNotification = async (notification) => {
+    try {
+      let decisionId = null;
+
+      if (notification.related_entity_type === "decision") {
+        decisionId = notification.related_entity_id;
+      } else if (notification.related_entity_type === "approval") {
+        const approvalRes = await axios.get(
+          `http://127.0.0.1:8000/api/v1/approvals/${notification.related_entity_id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        decisionId = approvalRes.data.decision_id;
+      }
+
+      if (!decisionId) {
+        setStatusFilter("all");
+        setActiveView("decisions");
+        return;
+      }
+
+      const decisionRes = await axios.get(`http://127.0.0.1:8000/api/v1/decisions/${decisionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      handleSelectDecision(decisionRes.data);
+    } catch (err) {
+      console.error("Failed to open decision from notification", err);
+      setStatusFilter("all");
+      setActiveView("decisions");
+    }
+  };
+
+  const handleMarkNotificationAsRead = async (id) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    try {
+      await axios.patch(
+        `http://127.0.0.1:8000/api/v1/notifications/${id}/read`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+    }
+  };
+
+  const handleMarkAllNotificationsAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    try {
+      await axios.patch(
+        "http://127.0.0.1:8000/api/v1/notifications/read-all",
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error("Failed to mark all notifications as read", err);
+    }
   };
 
   const handleStatCardClick = (status) => {
@@ -145,6 +226,7 @@ function Dashboard({ token, onLogout }) {
       activeView={activeView}
       onNavigate={handleNavigate}
       onLogout={onLogout}
+      unreadCount={unreadCount}
     >
       {activeView === "dashboard" && (
         <>
@@ -508,6 +590,16 @@ function Dashboard({ token, onLogout }) {
           </div>
         );
       })()}
+
+      {activeView === "notifications" && (
+        <NotificationsPage
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={handleMarkNotificationAsRead}
+          onMarkAllAsRead={handleMarkAllNotificationsAsRead}
+          onNavigateToDecision={handleNavigateFromNotification}
+        />
+      )}
 
       {activeView === "account" && (
         <div className="panel">

@@ -1,7 +1,7 @@
 import "../styles/dashboard-shell.css";
 import ProfileMenu from "./ProfileMenu";
 
-function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
+function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, children }) {
   const role = profile.role?.name;
   const isManagerOrAdmin = role === "manager" || role === "administrator";
   const isAdmin = role === "administrator";
@@ -9,6 +9,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
   const navItems = [
     { key: "dashboard", label: "Dashboard", icon: "📊" },
     { key: "decisions", label: "Decisions", icon: "📋" },
+    { key: "notifications", label: "Notifications", icon: "🔔", badge: unreadCount },
   ];
 
   const adminNavItems = [
@@ -28,9 +29,31 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
               key={item.key}
               className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
               onClick={() => onNavigate(item.key)}
+              style={{ position: "relative" }}
             >
               <span className="shell-nav-icon">{item.icon}</span>
               <span className="label">{item.label}</span>
+              {!!item.badge && (
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    background: "var(--danger)",
+                    color: "#fff",
+                    borderRadius: "999px",
+                    minWidth: "18px",
+                    height: "18px",
+                    padding: "0 5px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: 1,
+                  }}
+                >
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              )}
             </button>
           ))}
 
@@ -76,11 +99,16 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
           <h1 className="shell-topbar-title">
             {activeView === "dashboard" && "Dashboard"}
             {activeView === "decisions" && "Decisions"}
+            {activeView === "notifications" && "Notifications"}
             {activeView === "users" && "User Management"}
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}
           </h1>
-          <ProfileMenu profile={profile} />
+          
+          {/* Header Controls */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <ProfileMenu profile={profile} />
+          </div>
         </header>
 
         <main className="shell-content">{children}</main>
