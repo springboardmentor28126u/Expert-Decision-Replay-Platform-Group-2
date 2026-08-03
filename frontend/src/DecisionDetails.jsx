@@ -686,6 +686,12 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                     {decision.category}
                   </span>
                 )}
+
+                {decision.assigned_reviewer_id && (
+                  <span className="decision-reviewer-pill" style={{ background: "rgba(79, 209, 181, 0.15)", color: "#4FD1B5", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "600", border: "1px solid #4FD1B5" }}>
+                    Assigned Reviewer ID: {decision.assigned_reviewer_id}
+                  </span>
+                )}
                 
                 <span
                   className="decision-status-badge"
@@ -845,6 +851,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           profile={profile}
           decisionStatus={decision.status}
           decisionCreatedBy={decision.created_by}
+          assignedReviewerId={decision.assigned_reviewer_id}
           onApprovalChanged={() => {
             // refresh the decision's status shown at the top after approve/reject
             if (onStatusUpdated) {

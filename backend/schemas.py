@@ -212,3 +212,18 @@ class NotificationResponse(NotificationBase):
 
     class Config:
         from_attributes = True
+
+class ReviewerAssignmentCreate(BaseModel):
+    category: str
+    reviewer_id: int
+
+class ReviewerAssignmentResponse(BaseModel):
+    id: int
+    category: str
+    reviewer_id: int
+    reviewer_name: str | None = None
+    assigned_by: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

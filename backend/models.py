@@ -72,10 +72,11 @@ class Decision(Base):
     status = Column(Enum(DecisionStatus), default=DecisionStatus.draft, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     attachment_url = Column(String, nullable=True)
+    assigned_reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    creator = relationship("User")
+    creator = relationship("User", foreign_keys=[created_by])
 
 
 class Alternative(Base):
@@ -166,3 +167,14 @@ class Notification(Base):
     is_read = Column(Boolean, default=False, nullable=False)
     link = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+class ReviewerAssignment(Base):
+    __tablename__ = "reviewer_assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String, unique=True, nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assigned_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    reviewer = relationship("User", foreign_keys=[reviewer_id])

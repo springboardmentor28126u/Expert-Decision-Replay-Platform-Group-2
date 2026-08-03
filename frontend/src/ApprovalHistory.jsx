@@ -1,14 +1,26 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-function ApprovalHistory({ token, decisionId, profile, onApprovalChanged, decisionStatus, decisionCreatedBy }) {
+function ApprovalHistory({ token, decisionId, profile, onApprovalChanged, decisionStatus, decisionCreatedBy, assignedReviewerId }) {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const canReview = profile.role === "reviewer" || profile.role === "manager" || profile.role === "admin";
+  // Calculate stage (0 approved approvals = Stage 1)
+  const approvedCount = approvals.filter((a) => a.action === "approved").length;
+  const isStage1 = approvedCount === 0;
+
+  // Stage 1 assignment guard:
+  // If it's Stage 1, a Reviewer can ONLY review if they are the assigned reviewer (or if no reviewer was assigned)
+  const isAssignedReviewer = !assignedReviewerId || profile.id === assignedReviewerId;
+  const isAllowedAtStage1 = profile.role === "manager" || profile.role === "admin" || (profile.role === "reviewer" && isAssignedReviewer);
+
+  // Stage 2 guard: Only Manager or Admin
+  const isAllowedAtStage2 = profile.role === "manager" || profile.role === "admin";
+
+  const canReview = isStage1 ? isAllowedAtStage1 : isAllowedAtStage2;
   const canResubmit = decisionStatus === "rejected" && (profile.id === decisionCreatedBy || profile.role === "admin");
 
   const fetchApprovals = async () => {
@@ -94,7 +106,14 @@ function ApprovalHistory({ token, decisionId, profile, onApprovalChanged, decisi
           {error && <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "8px" }}>{error}</p>}
         </div>
       )}
-
+      
+      {/* Show info message if a different reviewer is assigned */}
+      {!canReview && profile.role === "reviewer" && isStage1 && assignedReviewerId && (
+        <div style={{ background: "rgba(245, 166, 35, 0.1)", border: "1px solid var(--warning)", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px", color: "var(--warning)", fontSize: "13px" }}>
+          ⚠️ This decision is assigned to another Reviewer for initial approval.
+        </div>
+      )}
+      
       {canReview && (
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
           <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "6px" }}>

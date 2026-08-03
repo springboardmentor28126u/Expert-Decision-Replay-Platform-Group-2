@@ -7,6 +7,7 @@ from pathlib import Path
 from shutil import copyfileobj
 from uuid import uuid4
 from typing import List
+from sqlalchemy import func, select
 
 from database import engine, Base, get_db
 from models import User, UserRole
@@ -202,12 +203,22 @@ def create_decision(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
+    assigned_reviewer_id = None
+    if decision.category:
+        assignment = db.execute(
+            select(ReviewerAssignment).where(function.lower(ReviewerAssignment.category) == decision.category.lower)
+        ).scalar_one_or_none()
+        if assignment:
+            assigned_reviewer_id = assignment.reviewer_id
+
     new_decision = Decision(
         title=decision.title,
         problem_statement=decision.problem_statement,
         category=decision.category,
         created_by=current_user.id,
         attachment_url=decision.attachment_url,
+        assigned_reviewer_id=assigned_reviewer_id,
     )
     db.add(new_decision)
     db.commit()
@@ -328,6 +339,12 @@ def approve_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
+    if current_user.id == decision.created_by:
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot approve your own decision — it must be reviewed by someone else"
+        )
+
      # Find the highest approval stage reached so far for this decision
     last_approval = db.execute(
         select(Approval)
@@ -338,9 +355,32 @@ def approve_decision(
     next_stage = 1 if not last_approval else last_approval.stage + 1
 
     if next_stage == 1:
-        # Stage 1: Reviewer, Manager, or Admin can approve
-        if current_user.role not in (UserRole.reviewer, UserRole.manager, UserRole.admin):
-            raise HTTPException(status_code=403, detail="Only a Reviewer, Manager, or Admin can give the initial approval")
+       if current_user.role not in (UserRole.reviewer, UserRole.manager, UserRole.admin):
+          raise HTTPException(
+             status_code=403, 
+             detail="Only a Reviewer, Manager, or Admin can give initial approval."
+          )
+
+       if current_user.role == UserRole.reviewer:
+            # 1. Get assigned reviewer from the decision
+            target_reviewer_id = decision.assigned_reviewer_id
+
+            # 2. Fallback: If decision doesn't have an ID set, look up category assignment dynamically
+            if not target_reviewer_id and decision.category:
+                assignment = db.execute(
+                    select(ReviewerAssignment).where(
+                        func.lower(ReviewerAssignment.category) == decision.category.lower()
+                    )
+                ).scalar_one_or_none()
+                if assignment:
+                    target_reviewer_id = assignment.reviewer_id
+
+            # 3. Block if current reviewer is not the assigned reviewer
+            if target_reviewer_id and current_user.id != target_reviewer_id:
+                raise HTTPException(
+                   status_code=403, 
+                   detail="This decision is assigned to a specific Reviewer for its category."
+                )
     elif next_stage == 2:
         # Stage 2 (final): only Manager or Admin
         if current_user.role not in (UserRole.manager, UserRole.admin):
@@ -385,6 +425,57 @@ def approve_decision(
     )
 
     return new_approval
+
+from schemas import ReviewerAssignmentCreate, ReviewerAssignmentResponse
+from models import ReviewerAssignment
+
+@app.post("/reviewer-assignments", response_model=ReviewerAssignmentResponse, tags=["Approval Workflow"])
+def assign_reviewer_to_category(
+    assignment: ReviewerAssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.admin)),
+):
+    reviewer = db.execute(
+        select(User).where(User.id == assignment.reviewer_id)
+    ).scalar_one_or_none()
+    if not reviewer:
+        raise HTTPException(status_code=404, detail="Reviewer user not found")
+    if reviewer.role != UserRole.reviewer:
+        raise HTTPException(status_code=400, detail="Assigned user must have the Reviewer role")
+
+    existing = db.execute(
+        select(ReviewerAssignment).where(ReviewerAssignment.category == assignment.category)
+    ).scalar_one_or_none()
+
+    if existing:
+        existing.reviewer_id = assignment.reviewer_id
+        existing.assigned_by = current_user.id
+        db.commit()
+        db.refresh(existing)
+        existing.reviewer_name = reviewer.full_name
+        return existing
+
+    new_assignment = ReviewerAssignment(
+        category=assignment.category,
+        reviewer_id=assignment.reviewer_id,
+        assigned_by=current_user.id,
+    )
+    db.add(new_assignment)
+    db.commit()
+    db.refresh(new_assignment)
+    new_assignment.reviewer_name = reviewer.full_name
+    return new_assignment
+
+
+@app.get("/reviewer-assignments", response_model=ListType[ReviewerAssignmentResponse], tags=["Approval Workflow"])
+def list_reviewer_assignments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    assignments = db.execute(select(ReviewerAssignment)).scalars().all()
+    for a in assignments:
+        a.reviewer_name = a.reviewer.full_name if a.reviewer else None
+    return assignments
 
 
 @app.post("/decisions/{decision_id}/reject", response_model=ApprovalResponse, tags=["Approval Workflow"])
@@ -549,6 +640,7 @@ def get_decision_approvals(
         details=f"Viewed approvals for decision {decision_id}",
     )
     return approvals
+
 
 from schemas import DecisionUpdate, DecisionVersionResponse
 from models import DecisionVersion
