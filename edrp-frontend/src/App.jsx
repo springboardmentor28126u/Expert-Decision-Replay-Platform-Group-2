@@ -289,6 +289,8 @@ import CategoryDetails from "./pages/categories/CategoryDetails";
 import AddAlternative from "./pages/decisions/AddAlternative";
 import EditAlternative from "./pages/decisions/EditAlternative";
 import ViewAlternative from "./pages/decisions/ViewAlternative";
+import AssignedDecisions from "./pages/Reviewer/AssignedDecisions";
+import MyReviews from "./pages/Reviewer/MyReviews";
 function App() {
 
     const [user, setUser] = useState(null);
@@ -469,6 +471,11 @@ function App() {
         path="/alternatives/:id"
         element={<ViewAlternative />}
     />
+    <Route
+    path="/assigned-decisions"
+    element={<AssignedDecisions />}
+/>
+<Route path="/reviews" element={<MyReviews />} />
             </Routes>
             
 

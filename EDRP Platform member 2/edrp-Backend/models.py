@@ -53,7 +53,16 @@ class Decision(Base):
     )
     attachments = relationship("Attachment", back_populates="decision", lazy="dynamic")
     versions = relationship("DecisionVersion", back_populates="decision", lazy="dynamic")
+    reviewer_id = Column(
+    Integer,
+    ForeignKey("users.id"),
+    nullable=True
+)
 
+    reviewer = relationship(
+        "User",
+        foreign_keys=[reviewer_id]
+    )
 
 class Alternative(Base):
     __tablename__ = "alternatives"

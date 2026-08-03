@@ -1,5 +1,9 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "../../styles/dashboard.css";
+import api from "../../services/api";
 
 import {
     Users,
@@ -7,77 +11,94 @@ import {
     UsersRound,
     Building2
 } from "lucide-react";
-
 function AdminDashboard({ user }) {
+    const navigate = useNavigate();
 
-    const statistics = [
+    const [statistics, setStatistics] = useState([]);
 
-        {
-            title: "Total Users",
-            value: 0,
-            icon: <Users />
-        },
+    const [recentUsers, setRecentUsers] = useState([]);
 
-        {
-            title: "Total Teams",
-            value: 0,
-            icon: <Building2 />
-        },
+    const [teams, setTeams] = useState([]);
 
-        {
-            title: "Administrators",
-            value: 0,
-            icon: <UserCheck />
-        },
+    const [loading, setLoading] = useState(true); 
+    
+    useEffect(() => {
+    loadDashboard();
+}, []);
+const loadDashboard = async () => {
 
-        {
-            title: "Managers",
-            value: 0,
-            icon: <UsersRound />
-        }
+    try {
 
-    ];
+        const usersResponse = await api.get("/users");
 
-    const recentUsers = [
+        const teamsResponse = await api.get("/teams");
 
-        {
-            name: "Raj",
-            email: "raj@gmail.com",
-            role: "Administrator"
-        },
+        const users = usersResponse.data;
 
-        {
-            name: "Anjali",
-            email: "anjali@gmail.com",
-            role: "Employee"
-        },
+        const teamData = teamsResponse.data;
 
-        {
-            name: "Rahul",
-            email: "rahul@gmail.com",
-            role: "Manager"
-        }
+        setRecentUsers(users);
 
-    ];
+        setTeams(teamData);
 
-    const teams = [
+        setStatistics([
 
-        {
-            name: "Frontend Team",
-            manager: "Raj"
-        },
+            {
+                title: "Total Users",
+                value: users.length,
+                icon: <Users />
+            },
 
-        {
-            name: "Backend Team",
-            manager: "Rahul"
-        },
+            {
+                title: "Total Teams",
+                value: teamData.length,
+                icon: <Building2 />
+            },
 
-        {
-            name: "QA Team",
-            manager: "Anjali"
-        }
+            {
+                title: "Administrators",
+                value: users.filter(
+                    user => user.role === "Administrator"
+                ).length,
+                icon: <UserCheck />
+            },
 
-    ];
+            {
+                title: "Managers",
+                value: users.filter(
+                    user => user.role === "Manager"
+                ).length,
+                icon: <UsersRound />
+            }
+
+        ]);
+
+    }
+
+    catch (error) {
+
+        console.error("Dashboard Error:", error);
+
+        alert("Failed to load dashboard data.");
+
+    }
+
+    finally {
+
+        setLoading(false);
+
+    }
+
+};
+if (loading) {
+    return (
+        <DashboardLayout user={user}>
+            <div className="dashboard-page">
+                <h2>Loading...</h2>
+            </div>
+        </DashboardLayout>
+    );
+}
     return (
 
         <DashboardLayout user={user}>
@@ -182,31 +203,41 @@ function AdminDashboard({ user }) {
 
         <tbody>
 
-            {
+{
 
-                recentUsers.map((item, index) => (
+recentUsers.length > 0 ? (
 
-                    <tr key={index}>
+        recentUsers.map((item) => (
 
-                        <td>
-                            {item.name}
-                        </td>
+        <tr key={item.id}>
 
-                        <td>
-                            {item.email}
-                        </td>
+        <td>{item.name}</td>
 
-                        <td>
-                            {item.role}
-                        </td>
+        <td>{item.email}</td>
 
-                    </tr>
+        <td>{item.role}</td>
 
-                ))
+        </tr>
 
-            }
+        ))
 
-        </tbody>
+        ) : (
+
+        <tr>
+
+        <td colSpan="3">
+
+        No users found
+
+        </td>
+
+        </tr>
+
+        )
+
+        }
+
+</tbody>
 
     </table>
 
@@ -233,28 +264,41 @@ function AdminDashboard({ user }) {
 
         <tbody>
 
-            {
+            
 
-                teams.map((team, index) => (
+{
 
-                    <tr key={index}>
+teams.length > 0 ? (
 
-                        <td>
-                            {team.name}
-                        </td>
+teams.map((team) => (
 
-                        <td>
-                            {team.manager}
-                        </td>
+<tr key={team.id}>
 
-                    </tr>
+<td>{team.name}</td>
 
-                ))
+<td>{team.manager_name || "Not Assigned"}</td>
 
-            }
+        </tr>
+
+        ))
+
+        ) : (
+
+        <tr>
+
+        <td colSpan="2">
+
+        No teams found
+
+        </td>
+
+        </tr>
+
+        )
+
+        }
 
         </tbody>
-
     </table>
 
 </div>
@@ -279,8 +323,13 @@ function AdminDashboard({ user }) {
                 Manage all registered users.
             </p>
 
-            <button className="approve-btn">
-                View Users
+                <button
+            className="approve-btn"
+            onClick={() => navigate("/users")}
+            >
+
+            View Users
+
             </button>
 
         </div>
@@ -297,8 +346,13 @@ function AdminDashboard({ user }) {
                 Create a new team.
             </p>
 
-            <button className="approve-btn">
-                Create Team
+            <button
+            className="approve-btn"
+            onClick={() => navigate("/teams/create")}
+            >
+
+            Create Team
+
             </button>
 
         </div>
@@ -315,10 +369,14 @@ function AdminDashboard({ user }) {
                 Assign users to teams.
             </p>
 
-            <button className="approve-btn">
-                Assign Team
-            </button>
+                        <button
+            className="approve-btn"
+            onClick={() => navigate("/assign-team")}
+            >
 
+            Assign Team
+
+            </button>
         </div>
 
 
@@ -333,8 +391,13 @@ function AdminDashboard({ user }) {
                 Update user roles.
             </p>
 
-            <button className="approve-btn">
-                Change Role
+           <button
+            className="approve-btn"
+            onClick={() => navigate("/change-role")}
+            >
+
+            Change Role
+
             </button>
 
         </div>

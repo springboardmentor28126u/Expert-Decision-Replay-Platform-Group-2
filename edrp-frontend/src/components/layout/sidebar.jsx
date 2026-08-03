@@ -7,6 +7,7 @@ function Sidebar({ role }) {
     const isAdmin = role === "Administrator";
     const isManager = role === "Manager";
     const isEmployee = role === "Employee";
+    const isReviewer = role === "Reviewer";
 
     return (
 
@@ -39,6 +40,29 @@ function Sidebar({ role }) {
                             <li>
                                 <Link to="/decisions">
                                     My Decisions
+                                </Link>
+                            </li>
+
+                            <li>
+                                <Link to="/profile">
+                                    My Profile
+                                </Link>
+                            </li>
+                        </>
+                    )}
+                    {/* Reviewer */}
+
+                    {isReviewer && (
+                        <>
+                            <li>
+                                <Link to="/decisions">
+                                    Assigned Decisions
+                                </Link>
+                            </li>
+
+                            <li>
+                                <Link to="/reviews">
+                                    My Reviews
                                 </Link>
                             </li>
 

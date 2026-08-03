@@ -31,6 +31,7 @@ class TeamOut(BaseModel):
     id: int
     name: str
     manager_id: int | None
+    manager_name: str | None = None
 
     class Config:
         from_attributes = True
@@ -41,7 +42,8 @@ class DecisionCreate(BaseModel):
     description: str | None = None
     status: str | None = "draft"
     owner_id: int
-
+class AssignReviewer(BaseModel):
+    reviewer_id: int
 class DecisionOut(BaseModel):
     id: int
     title: str

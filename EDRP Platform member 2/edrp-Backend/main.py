@@ -112,8 +112,34 @@ def create_team(team: TeamCreate, admin_user: User = Depends(require_admin), db:
 
 # Admin-only endpoint to list all teams
 @app.get("/teams", response_model=List[TeamOut])
-def list_teams(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Team).all()
+def list_teams(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    teams = db.query(Team).all()
+
+    result = []
+
+    for team in teams:
+
+        manager_name = None
+
+        if team.manager_id:
+
+            manager = db.query(User).filter(User.id == team.manager_id).first()
+
+            if manager:
+                manager_name = manager.name
+
+        result.append({
+            "id": team.id,
+            "name": team.name,
+            "manager_id": team.manager_id,
+            "manager_name": manager_name
+        })
+
+    return result
 
 
 # Admin-only endpoint to assign a user to a team
