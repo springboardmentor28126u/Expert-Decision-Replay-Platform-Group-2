@@ -30,6 +30,8 @@ from app.schemas.alternative import (
     AlternativeUpdate,
 )
 
+from app.services.audit_log_service import AuditLogService
+
 from app.utils.exceptions import (
     NotFoundException,
     PermissionDeniedException,
@@ -47,6 +49,7 @@ class AlternativeService:
 
         self.alternatives = AlternativeRepository(db)
         self.decisions = DecisionRepository(db)
+        self.audit_logs = AuditLogService(db)
 
     # --------------------------------------------------
     # Queries
@@ -135,6 +138,13 @@ class AlternativeService:
             alternative.id
         )
 
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="alternative.created",
+            entity_type="alternative",
+            entity_id=alternative.id,
+        )
+
         return AlternativeOut.model_validate(
             created
         )
@@ -181,6 +191,13 @@ class AlternativeService:
 
         updated = await self.alternatives.get_by_id(
             alternative_id
+        )
+
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="alternative.updated",
+            entity_type="alternative",
+            entity_id=alternative_id,
         )
 
         return AlternativeOut.model_validate(
@@ -256,3 +273,10 @@ class AlternativeService:
         )
 
         await self.db.commit()
+
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="alternative.deleted",
+            entity_type="alternative",
+            entity_id=alternative_id,
+        )

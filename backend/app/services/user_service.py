@@ -17,6 +17,7 @@ from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.common import PaginatedResponse, PaginationParams
 from app.schemas.user import PasswordChange, UserCreate, UserOut, UserSelfUpdate, UserUpdate
+from app.services.audit_log_service import AuditLogService
 from app.utils.exceptions import ConflictException, NotFoundException, PermissionDeniedException, UnauthorizedException
 
 
@@ -24,6 +25,7 @@ class UserService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.users = UserRepository(db)
+        self.audit_logs = AuditLogService(db)
 
     async def list_users(self, pagination: PaginationParams) -> PaginatedResponse[UserOut]:
         items = await self.users.list_paginated(offset=pagination.offset, limit=pagination.page_size)
@@ -94,6 +96,13 @@ class UserService:
         user.hashed_password = hash_password(payload.new_password)
         await self.db.commit()
 
+        await self.audit_logs.log_safely(
+            actor=user,
+            action="user.password_changed",
+            entity_type="user",
+            entity_id=user.id,
+        )
+
     async def deactivate_user(self, user_id: uuid.UUID) -> None:
         user = await self.users.get_by_id(user_id)
         if user is None:
@@ -101,12 +110,32 @@ class UserService:
         user.is_active = False
         await self.db.commit()
 
-    async def change_role(self, user_id: uuid.UUID, role_id: uuid.UUID) -> UserOut:
+    async def change_role(self, user_id: uuid.UUID, role_id: uuid.UUID, current_user: User) -> UserOut:
         user = await self.users.get_by_id(user_id)
         if user is None:
             raise NotFoundException("User not found.")
+        old_role_name = user.role.name
         user.role_id = role_id
         await self.db.commit()
+
+        # expire_on_commit=False means the identity-mapped `user` object
+        # isn't auto-invalidated by commit — a plain get_by_id() would
+        # return the same cached object with its pre-change `role` still
+        # attached. Expire it first so the repository's query (which
+        # eager-loads both `role` and `team` via selectinload) repopulates
+        # everything fresh, rather than partially refreshing just one
+        # relationship and leaving other attributes expired for Pydantic
+        # to trip over later.
+        self.db.expire(user)
         refreshed = await self.users.get_by_id(user_id)
+
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="user.role_changed",
+            entity_type="user",
+            entity_id=user_id,
+            log_metadata={"old_role": old_role_name, "new_role": refreshed.role.name},
+        )
+
         return UserOut.model_validate(refreshed)
 

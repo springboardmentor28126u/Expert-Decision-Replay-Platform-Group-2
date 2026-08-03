@@ -4,6 +4,7 @@ services/audit_log_service.py
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any
 
@@ -14,6 +15,8 @@ from app.models.user import User
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.schemas.audit_log import AuditLogOut
 from app.utils.exceptions import NotFoundException
+
+logger = logging.getLogger("edrp.audit")
 
 
 class AuditLogService:
@@ -117,3 +120,34 @@ class AuditLogService:
         await self.audit_logs.refresh(log)
 
         return log
+
+    async def log_safely(
+        self,
+        *,
+        actor: User | None,
+        action: str,
+        entity_type: str,
+        entity_id: uuid.UUID,
+        log_metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """
+        Best-effort audit-log write for other services to call after
+        their own commit has already succeeded — mirrors
+        ApprovalService._notify_safely. A failure here must never break
+        or roll back the business operation that triggered it; it can
+        only ever affect the audit-log row itself.
+        """
+        try:
+            await self.create_log(
+                actor=actor,
+                action=action,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                log_metadata=log_metadata,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to write audit log (action=%s, entity_type=%s, entity_id=%s)",
+                action, entity_type, entity_id,
+            )
+            await self.db.rollback()

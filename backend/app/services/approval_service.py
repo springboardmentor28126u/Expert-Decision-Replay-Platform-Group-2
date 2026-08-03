@@ -29,6 +29,7 @@ from app.schemas.approval import (
     ApprovalOut,
 )
 
+from app.services.audit_log_service import AuditLogService
 from app.services.notification_service import NotificationService
 
 from app.utils.exceptions import (
@@ -55,6 +56,7 @@ class ApprovalService:
         self.versions = DecisionVersionRepository(db)
         self.users = UserRepository(db)
         self.notifications = NotificationService(db)
+        self.audit_logs = AuditLogService(db)
 
     # --------------------------------------------------
     # Decision lifecycle (derived from approval state)
@@ -381,6 +383,14 @@ class ApprovalService:
         )
 
         await self.db.commit()
+
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="approval.decided",
+            entity_type="approval",
+            entity_id=approval_id,
+            log_metadata={"status": payload.status.value, "decision_id": str(approval.decision_id)},
+        )
 
         # --- Best-effort notifications; workflow state above is already
         # committed, so nothing here can roll it back. ---

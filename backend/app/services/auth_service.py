@@ -28,6 +28,7 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.auth import RegisterRequest
 from app.schemas.token import Token
 from app.schemas.user import UserOut
+from app.services.audit_log_service import AuditLogService
 from app.utils.exceptions import ConflictException, UnauthorizedException
 
 
@@ -37,6 +38,7 @@ class AuthService:
         self.users = UserRepository(db)
         self.refresh_tokens = RefreshTokenRepository(db)
         self.roles = RoleRepository(db)
+        self.audit_logs = AuditLogService(db)
 
     @staticmethod
     def _hash_token(raw_token: str) -> str:
@@ -78,6 +80,14 @@ class AuthService:
         await self.db.commit()
 
         created = await self.users.get_by_id(user.id)
+
+        await self.audit_logs.log_safely(
+            actor=created,
+            action="user.registered",
+            entity_type="user",
+            entity_id=user.id,
+        )
+
         return UserOut.model_validate(created)
 
     async def authenticate(self, email: str, password: str) -> Token:
@@ -90,7 +100,16 @@ class AuthService:
         user.last_login_at = datetime.now(timezone.utc)
         await self.db.flush()
 
-        return await self._issue_tokens(user_id=user.id, role=user.role.name)
+        token = await self._issue_tokens(user_id=user.id, role=user.role.name)
+
+        await self.audit_logs.log_safely(
+            actor=user,
+            action="user.login",
+            entity_type="user",
+            entity_id=user.id,
+        )
+
+        return token
 
     async def _issue_tokens(self, user_id, role: str) -> Token:
         access_token = create_access_token(subject=user_id, role=role)

@@ -19,6 +19,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const [editError, setEditError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const savingRef = useRef(false);
+  const [showEditCustomCategory, setShowEditCustomCategory] = useState(false);
 
   const [attachments, setAttachments] = useState([]);
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
@@ -463,12 +464,38 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
               />
             </div>
             <div className="auth-field">
-              <input
-                type="text"
-                placeholder="Category"
-                value={editCategory}
-                onChange={(e) => setEditCategory(e.target.value)}
-              />
+              <select
+                value={["Technical", "HR", "Finance", "Operations"].includes(editCategory) ? editCategory : (editCategory ? "Other" : "")}
+                onChange={(e) => {
+                  if (e.target.value === "Other") {
+                    setEditCategory("");
+                    setShowEditCustomCategory(true);
+                  } else {
+                    setEditCategory(e.target.value);
+                    setShowEditCustomCategory(false);
+                  }
+                }}
+                style={{
+                  width: "100%", padding: "10px 12px", background: "#12161D",
+                  border: "1px solid #2E3646", borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", boxSizing: "border-box",
+                }}
+              >
+                <option value="">Select a category</option>
+                <option value="Technical">Technical</option>
+                <option value="HR">HR</option>
+                <option value="Finance">Finance</option>
+                <option value="Operations">Operations</option>
+                <option value="Other">Other</option>
+              </select>
+              {showEditCustomCategory && (
+                <input
+                  type="text"
+                  placeholder="Type your custom category"
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  style={{ marginTop: "8px" }}
+                />
+              )}
             </div>
             {editError && <div className="auth-message error">{editError}</div>}
             <div style={{ display: "flex", gap: "10px" }}>

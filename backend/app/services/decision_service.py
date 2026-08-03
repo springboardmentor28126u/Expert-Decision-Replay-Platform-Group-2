@@ -45,6 +45,8 @@ from app.schemas.decision_version import (
     DecisionVersionOut,
 )
 
+from app.services.audit_log_service import AuditLogService
+
 from app.utils.exceptions import (
     ConflictException,
     NotFoundException,
@@ -78,6 +80,7 @@ class DecisionService:
 
         self.decisions = DecisionRepository(db)
         self.versions = DecisionVersionRepository(db)
+        self.audit_logs = AuditLogService(db)
 
     # --------------------------------------------------
     # Queries
@@ -167,6 +170,13 @@ class DecisionService:
             decision.id
         )
 
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="decision.created",
+            entity_type="decision",
+            entity_id=decision.id,
+        )
+
         return DecisionOut.model_validate(created)
 
     # --------------------------------------------------
@@ -218,6 +228,13 @@ class DecisionService:
             decision_id
         )
 
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="decision.updated",
+            entity_type="decision",
+            entity_id=decision_id,
+        )
+
         return DecisionOut.model_validate(updated)
 
     # --------------------------------------------------
@@ -259,6 +276,8 @@ class DecisionService:
                 f"to {payload.status.value}."
             )
 
+        old_status = decision.status
+
         await self.versions.create_snapshot(
             decision=decision,
             changed_by_id=current_user.id,
@@ -271,6 +290,14 @@ class DecisionService:
 
         updated = await self.decisions.get_by_id(
             decision_id
+        )
+
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="decision.status_changed",
+            entity_type="decision",
+            entity_id=decision_id,
+            log_metadata={"old_status": old_status.value, "new_status": payload.status.value},
         )
 
         return DecisionOut.model_validate(updated)
@@ -334,3 +361,10 @@ class DecisionService:
         )
 
         await self.db.commit()
+
+        await self.audit_logs.log_safely(
+            actor=current_user,
+            action="decision.deleted",
+            entity_type="decision",
+            entity_id=decision_id,
+        )

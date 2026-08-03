@@ -132,7 +132,8 @@ async def deactivate_user(
 async def change_user_role(
     user_id: uuid.UUID,
     payload: RoleAssignRequest,
+    current_user: User = Depends(get_current_user),
     user_service: UserService = Depends(get_user_service),
 ) -> UserOut:
-    return await user_service.change_role(user_id=user_id, role_id=payload.role_id)
+    return await user_service.change_role(user_id=user_id, role_id=payload.role_id, current_user=current_user)
 
