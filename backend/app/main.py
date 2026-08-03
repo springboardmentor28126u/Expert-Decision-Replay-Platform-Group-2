@@ -14,7 +14,16 @@ from app.database import Base, engine
 import app.models
 from app.middleware.error_handler import error_handler_middleware
 from app.middleware.logging import logging_middleware
-from app.routers import auth, users, decisions, alternatives, discussions, files, approvals
+from app.routers import (
+    auth,
+    users,
+    decisions,
+    alternatives,
+    discussions,
+    files,
+    approvals,
+    reports,
+)
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -70,6 +79,7 @@ app.include_router(alternatives.router)
 app.include_router(discussions.router)
 app.include_router(files.router)
 app.include_router(approvals.router)
+app.include_router(reports.router)
 
 
 @app.get("/", tags=["Health"])
