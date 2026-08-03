@@ -3,7 +3,7 @@ import shutil
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-
+from fastapi.responses import FileResponse
 from auth import get_current_user, get_db
 from models import (
     User, Decision, Discussion, Comment, MeetingNote, DecisionRationale, DiscussionAttachment
@@ -48,23 +48,7 @@ def get_discussions_for_decision(decision_id: int, db: Session = Depends(get_db)
 
     discussions = db.query(Discussion).filter(Discussion.decision_id == decision_id).all()
     return discussions
-@router.get("/discussion/{discussion_id}", response_model=DiscussionOut)
-def get_discussion(
-    discussion_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    discussion = db.query(Discussion).filter(
-        Discussion.id == discussion_id
-    ).first()
 
-    if not discussion:
-        raise HTTPException(
-            status_code=404,
-            detail="Discussion not found"
-        )
-
-    return discussion
 
 @router.post("/discussion/{discussion_id}/comments", response_model=CommentOut)
 def add_comment(discussion_id: int, comment_in: CommentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -135,7 +119,24 @@ def add_decision_rationale(decision_id: int, rationale_in: DecisionRationaleCrea
     db.commit()
     db.refresh(new_rationale)
     return new_rationale
+@router.get("/discussion/{discussion_id}", response_model=DiscussionOut)
+def get_discussion(
+    discussion_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
 
+    discussion = db.query(Discussion).filter(
+        Discussion.id == discussion_id
+    ).first()
+
+    if not discussion:
+        raise HTTPException(
+            status_code=404,
+            detail="Discussion not found"
+        )
+
+    return discussion
 
 @router.get("/decisions/{decision_id}/rationale", response_model=List[DecisionRationaleOut])
 def get_decision_rationales(decision_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -191,3 +192,46 @@ def delete_discussion_attachment(discussion_id: int, attachment_id: int, db: Ses
     db.delete(attachment)
     db.commit()
     return {"message": "Attachment deleted successfully"}
+@router.get("/discussion/{discussion_id}/attachments/{attachment_id}")
+def download_discussion_attachment(
+    discussion_id:int,
+    attachment_id:int,
+    db:Session=Depends(get_db),
+    current_user:User=Depends(get_current_user)
+):
+
+    attachment = db.query(DiscussionAttachment).filter(
+        DiscussionAttachment.id == attachment_id,
+        DiscussionAttachment.discussion_id == discussion_id
+    ).first()
+
+
+    if not attachment:
+        raise HTTPException(
+            status_code=404,
+            detail="Attachment not found"
+        )
+
+
+    return FileResponse(
+        path=attachment.filepath,
+        filename=attachment.filename
+    )
+@router.get("/discussion/{discussion_id}", response_model=DiscussionOut)
+def get_single_discussion(
+    discussion_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    discussion = db.query(Discussion).filter(
+        Discussion.id == discussion_id
+    ).first()
+
+    if not discussion:
+        raise HTTPException(
+            status_code=404,
+            detail="Discussion not found"
+        )
+
+    return discussion

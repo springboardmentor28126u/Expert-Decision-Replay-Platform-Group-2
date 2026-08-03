@@ -46,21 +46,3 @@ def delete_alternative(
     db.delete(db_alt)
     db.commit()
     return {"detail": "Alternative deleted"}
-@router.get("/{alternative_id}", response_model=AlternativeOut)
-def get_alternative(
-    alternative_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-
-    alternative = db.query(Alternative).filter(
-        Alternative.id == alternative_id
-    ).first()
-
-    if not alternative:
-        raise HTTPException(
-            status_code=404,
-            detail="Alternative not found"
-        )
-
-    return alternative
