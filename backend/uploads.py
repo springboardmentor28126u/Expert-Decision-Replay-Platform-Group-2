@@ -1,14 +1,8 @@
 import os
 import uuid
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, File, UploadFile, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
-from sqlalchemy.orm import Session
 import b2_service
-
-from database import get_db
-from models import User
-from auth import get_current_user
-from audit_helper import log_activity, log_access
 
 router = APIRouter(prefix="/api/uploads", tags=["Uploads"])
 UPLOAD_DIR = "uploads"
@@ -17,11 +11,7 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".pdf", ".txt", ".docx"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  
 
 @router.post("")
-async def upload_file(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+async def upload_file(file: UploadFile = File(...)):
     """Uploads a file and returns its access URL."""
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
@@ -47,14 +37,6 @@ async def upload_file(
         )
         
     file_url = f"/api/uploads/{unique_filename}"
-    log_activity(
-        db,
-        action="upload",
-        entity_type="file",
-        entity_id=None,
-        user_id=current_user.id,
-        details=f"Uploaded file: {file.filename} as {unique_filename}",
-    )
     return {
         "filename": file.filename,
         "saved_as": unique_filename,
@@ -66,24 +48,9 @@ from fastapi.responses import StreamingResponse
 import io
 
 @router.get("/{filename}")
-async def get_uploaded_file(
-    filename: str,
-    download: bool = False,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+async def get_uploaded_file(filename: str, download: bool = False):
     """Serves an uploaded file by filename. Pass ?download=true to force download instead of viewing."""
     file_path = os.path.join(UPLOAD_DIR, filename)
-    
-    log_access(
-        db,
-        action="download" if download else "view",
-        entity_type="file",
-        entity_id=None,
-        user_id=current_user.id,
-        details=f"Accessed file: {filename}",
-    )
-
     if os.path.exists(file_path):
         if download:
             return FileResponse(file_path, filename=filename, media_type="application/octet-stream")

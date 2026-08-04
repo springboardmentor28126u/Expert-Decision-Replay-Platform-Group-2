@@ -2,8 +2,7 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from models import UserRole, DecisionStatus, RiskLevel, FeasibilityLevel
 from discussion import DiscussionMessageType
-from typing import Optional
-from uuid import UUID
+
 # Data expected when a new user registers
 class UserCreate(BaseModel):
     full_name: str
@@ -175,55 +174,59 @@ class ApprovalResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-class AuditLogResponse(BaseModel):
+        
+class RecentDecisionResponse(BaseModel):
     id: int
-    user_id: int
-    log_type: str
-    action: str
-    entity_type: str
-    entity_id: int | None = None
-    details: str | None = None
-    created_at: datetime
-    user: UserResponse | None = None
-
-    class Config:
-        from_attributes = True
-class NotificationBase(BaseModel):
     title: str
-    message: str
-    type: Optional[str] = "info"
-    link: Optional[str] = None
-
-class NotificationBase(BaseModel):
-    title: str
-    message: str
-    type: Optional[str] = "info"
-    link: Optional[str] = None
-
-class NotificationCreate(NotificationBase):
-    user_id: int
-
-class NotificationResponse(NotificationBase):
-    id: int
-    user_id: int
-    is_read: bool
+    status: DecisionStatus
     created_at: datetime
 
     class Config:
         from_attributes = True
+        
+class EmployeeDashboardResponse(BaseModel):
+    my_decisions: int
+    draft_decisions: int
+    under_review_decisions: int
+    approved_decisions: int
+    rejected_decisions: int
+    archived_decisions: int
 
-class ReviewerAssignmentCreate(BaseModel):
-    category: str
-    reviewer_id: int
+    recent_decisions: list[RecentDecisionResponse]
+    
+class ReviewerDashboardResponse(BaseModel):
+    under_review_decisions: int
+    approved_decisions: int
+    rejected_decisions: int
 
-class ReviewerAssignmentResponse(BaseModel):
-    id: int
-    category: str
-    reviewer_id: int
-    reviewer_name: str | None = None
-    assigned_by: int
-    created_at: datetime
+    recent_under_review: list[RecentDecisionResponse]
+    
+class ManagerDashboardResponse(BaseModel):
+    total_decisions: int
+    draft_decisions: int
+    under_review_decisions: int
+    approved_decisions: int
+    rejected_decisions: int
+    archived_decisions: int
 
-    class Config:
-        from_attributes = True
+    recent_decisions: list[RecentDecisionResponse]
+    
+class AdminDashboardResponse(BaseModel):
+    total_users: int
+    active_users: int
+
+    employees: int
+    reviewers: int
+    managers: int
+    admins: int
+
+    total_alternatives: int
+
+    total_decisions: int
+    draft_decisions: int
+    under_review_decisions: int
+    approved_decisions: int
+    rejected_decisions: int
+    archived_decisions: int
+
+    recent_decisions: list[RecentDecisionResponse]

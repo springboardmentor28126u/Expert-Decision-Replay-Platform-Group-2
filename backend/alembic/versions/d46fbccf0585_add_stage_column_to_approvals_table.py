@@ -20,10 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Column already added directly earlier - this migration is now a no-op to avoid duplicate-column errors
-    pass
+    op.add_column('approvals', sa.Column('stage', sa.Integer(), nullable=False, server_default='1'))
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    pass
+    op.drop_column('approvals', 'stage')

@@ -21,7 +21,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const [editError, setEditError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const savingRef = useRef(false);
-  const [showEditCustomCategory, setShowEditCustomCategory] = useState(false);
 
   useEffect(() => {
     setEditTitle(decision.title);
@@ -566,38 +565,12 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
               />
             </div>
             <div className="auth-field">
-              <select
-                value={["Technical", "HR", "Finance", "Operations"].includes(editCategory) ? editCategory : (editCategory ? "Other" : "")}
-                onChange={(e) => {
-                  if (e.target.value === "Other") {
-                    setEditCategory("");
-                    setShowEditCustomCategory(true);
-                  } else {
-                    setEditCategory(e.target.value);
-                    setShowEditCustomCategory(false);
-                  }
-                }}
-                style={{
-                  width: "100%", padding: "10px 12px", background: "#12161D",
-                  border: "1px solid #2E3646", borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", boxSizing: "border-box",
-                }}
-              >
-                <option value="">Select a category</option>
-                <option value="Technical">Technical</option>
-                <option value="HR">HR</option>
-                <option value="Finance">Finance</option>
-                <option value="Operations">Operations</option>
-                <option value="Other">Other</option>
-              </select>
-              {showEditCustomCategory && (
-                <input
-                  type="text"
-                  placeholder="Type your custom category"
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                  style={{ marginTop: "8px" }}
-                />
-              )}
+              <input
+                type="text"
+                placeholder="Category"
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+              />
             </div>
             <div className="auth-field">
               <FileUpload onUploadSuccess={(url) => setEditAttachmentUrl(url)} />
@@ -684,12 +657,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 {decision.category && (
                   <span className="decision-category-pill" style={{ background: "rgba(145, 152, 168, 0.15)", color: "var(--text-secondary)", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "600" }}>
                     {decision.category}
-                  </span>
-                )}
-
-                {decision.assigned_reviewer_id && (
-                  <span className="decision-reviewer-pill" style={{ background: "rgba(79, 209, 181, 0.15)", color: "#4FD1B5", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "600", border: "1px solid #4FD1B5" }}>
-                    Assigned Reviewer ID: {decision.assigned_reviewer_id}
                   </span>
                 )}
                 
@@ -851,7 +818,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           profile={profile}
           decisionStatus={decision.status}
           decisionCreatedBy={decision.created_by}
-          assignedReviewerId={decision.assigned_reviewer_id}
           onApprovalChanged={() => {
             // refresh the decision's status shown at the top after approve/reject
             if (onStatusUpdated) {

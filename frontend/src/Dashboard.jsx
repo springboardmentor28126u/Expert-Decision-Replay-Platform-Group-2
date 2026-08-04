@@ -5,8 +5,13 @@ import CreateDecision from "./CreateDecision";
 import DecisionsList from "./DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "./ChangePassword";
-import NotificationsPage from "./NotificationsPage";
-import useNotifications from "./useNotifications";
+import useDashboardData from "./useDashboardData";
+import {
+  getEmployeeDashboard,
+  getReviewerDashboard,
+  getManagerDashboard,
+  getAdminDashboard,
+} from "./api/dashboardService";
 import "./dashboard.css";
 
 function Dashboard({ token, onLogout }) {
@@ -14,19 +19,15 @@ function Dashboard({ token, onLogout }) {
   const [users, setUsers] = useState(null);
   const [decisions, setDecisions] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeView, setActiveView] = useState("dashboard");
+  const [activeView, setActiveView] = useState("home");
   const [selectedDecision, setSelectedDecision] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
-
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-  } = useNotifications(token);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -58,6 +59,36 @@ function Dashboard({ token, onLogout }) {
   }, [token, refreshKey]);
 
   useEffect(() => {
+    const fetchDashboardStats = async () => {
+      setDashboardLoading(true);
+      setDashboardError("");
+
+      try {
+        const fetchFn =
+          profile?.role === "admin"
+            ? getAdminDashboard
+            : profile?.role === "manager"
+            ? getManagerDashboard
+            : profile?.role === "reviewer"
+            ? getReviewerDashboard
+            : getEmployeeDashboard;
+
+        if (!profile) return;
+
+        const stats = await fetchFn(token);
+        setDashboardStats(stats);
+      } catch (err) {
+        console.error("Failed to load dashboard stats", err);
+        setDashboardError("Failed to load dashboard data.");
+      } finally {
+        setDashboardLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, [profile, token, refreshKey]);
+
+  useEffect(() => {
     const fetchUsers = async () => {
       if (!profile || profile.role !== "admin") return;
       try {
@@ -76,13 +107,21 @@ function Dashboard({ token, onLogout }) {
     return <div style={{ padding: 40 }}>Loading dashboard...</div>;
   }
 
-  const statusCounts = ["draft", "under_review", "approved", "rejected", "archived"].reduce(
-    (acc, status) => {
-      acc[status] = decisions.filter((d) => d.status === status).length;
-      return acc;
-    },
-    {}
-  );
+  const statusCounts = dashboardStats
+    ? {
+        draft: dashboardStats.draft_decisions ?? 0,
+        under_review: dashboardStats.under_review_decisions ?? 0,
+        approved: dashboardStats.approved_decisions ?? 0,
+        rejected: dashboardStats.rejected_decisions ?? 0,
+        archived: dashboardStats.archived_decisions ?? 0,
+      }
+    : {
+        draft: 0,
+        under_review: 0,
+        approved: 0,
+        rejected: 0,
+        archived: 0,
+      };
 
   const handleNavigate = (view) => {
     setSelectedDecision(null);
@@ -96,17 +135,6 @@ function Dashboard({ token, onLogout }) {
   const handleSelectDecision = (decision) => {
     setSelectedDecision(decision);
     setActiveView("decision-details");
-  };
-
-  const handleNavigateToDecisionId = (decisionId) => {
-    const decision = decisions.find((d) => d.id === decisionId);
-    if (decision) {
-      handleSelectDecision(decision);
-    } else {
-      // Fallback: not in the currently loaded list, just show the Decisions tab
-      setStatusFilter("all");
-      setActiveView("decisions");
-    }
   };
 
   const handleStatCardClick = (status) => {
@@ -146,11 +174,20 @@ function Dashboard({ token, onLogout }) {
       activeView={activeView}
       onNavigate={handleNavigate}
       onLogout={onLogout}
-      unreadCount={unreadCount}
     >
       {activeView === "dashboard" && (
         <>
-          <div className="stat-grid">
+          {dashboardLoading ? (
+            <div style={{ padding: "24px", color: "var(--text-secondary)" }}>
+              Loading dashboard metrics...
+            </div>
+          ) : dashboardError ? (
+            <div style={{ padding: "24px", color: "var(--danger)" }}>
+              {dashboardError}
+            </div>
+          ) : (
+            <>
+              <div className="stat-grid">
             <div className="stat-card draft" onClick={() => handleStatCardClick("draft")} role="button" tabIndex={0}>
               <p className="stat-card-label">Draft</p>
               <p className="stat-card-value">{statusCounts.draft}</p>
@@ -172,7 +209,19 @@ function Dashboard({ token, onLogout }) {
               <p className="stat-card-value">{statusCounts.archived}</p>
             </div>
           </div>
+              <div className="panel">
+                <p className="panel-title">Dashboard Overview</p>
+                <p style={{ color: "var(--text-secondary)", margin: "0" }}>
+                  This is your current dashboard overview with status counts for your decisions.
+                </p>
+              </div>
+            </>
+          )}
+        </>
+      )}
 
+      {activeView === "home" && (
+        <>
           <div className="panel">
             <p className="panel-title">Welcome back, {profile.full_name.split(" ")[0]}</p>
             <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
@@ -184,6 +233,7 @@ function Dashboard({ token, onLogout }) {
               token={token}
               refreshKey={refreshKey}
               role={profile.role}
+              userId={profile.id}
               onSelectDecision={handleSelectDecision}
               pageSize={3}
               statusFilter="all"
@@ -195,8 +245,6 @@ function Dashboard({ token, onLogout }) {
       {activeView === "decisions" && (
         <div className="panel">
           <p className="panel-title">All Decisions</p>
-          <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
-          
           <div className="filter-container" style={{ margin: "20px 0 16px 0", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px" }}>
             <div style={{ flex: "1 1 auto", display: "flex", alignItems: "center", gap: "10px" }}>
               <label htmlFor="decision-search" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
@@ -470,16 +518,6 @@ function Dashboard({ token, onLogout }) {
           </div>
         );
       })()}
-
-      {activeView === "notifications" && (
-        <NotificationsPage
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onMarkAsRead={markAsRead}
-          onMarkAllAsRead={markAllAsRead}
-          onNavigateToDecision={handleNavigateToDecisionId}
-        />
-      )}
 
       {activeView === "account" && (
         <div className="panel">

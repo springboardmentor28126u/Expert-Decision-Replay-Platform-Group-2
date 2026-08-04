@@ -11,7 +11,6 @@ function CreateDecision({ token, onCreated }) {
   const [attachmentUrl, setAttachmentUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +34,6 @@ function CreateDecision({ token, onCreated }) {
       setProblemStatement("");
       setCategory("");
       setAttachmentUrl("");
-      setShowCustomCategory(false);
       if (onCreated) onCreated(response.data);
     } catch (error) {
       console.error("Error creating decision:", error);
@@ -81,46 +79,20 @@ function CreateDecision({ token, onCreated }) {
           />
         </div>
         <div className="auth-field">
-          <select
-            value={["Technical", "HR", "Finance", "Operations"].includes(category) ? category : (category ? "Other" : "")}
-            onChange={(e) => {
-              if (e.target.value === "Other") {
-                setCategory("");
-                setShowCustomCategory(true);
-              } else {
-                setCategory(e.target.value);
-                setShowCustomCategory(false);
-              }
-            }}
-            style={{
-              width: "100%", padding: "10px 12px", background: "#12161D",
-              border: "1px solid #2E3646", borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", boxSizing: "border-box",
-            }}
-          >
-            <option value="">Select a category</option>
-            <option value="Technical">Technical</option>
-            <option value="HR">HR</option>
-            <option value="Finance">Finance</option>
-            <option value="Operations">Operations</option>
-            <option value="Other">Other</option>
-          </select>
-          {showCustomCategory && (
-            <input
-              type="text"
-              placeholder="Type your custom category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              style={{ marginTop: "8px" }}
-            />
-          )}
+          <input
+            type="text"
+            placeholder="Category (e.g. Technical, HR, Finance)"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          />
         </div>
         <div className="auth-field">
           <FileUpload onUploadSuccess={(url) => setAttachmentUrl(url)} />
           {attachmentUrl && (
-            <p style={{ color: "#4FD1B5", fontSize: "12px", marginTop: "6px" }}>
-              File attached ✓
-            </p>
-          )}
+             <p style={{ color: "#4FD1B5", fontSize: "12px", marginTop: "6px" }}>
+                File attached ✓
+             </p>
+         )}
         </div>
         <button type="submit" className="auth-button" disabled={isSubmitting}>
           {isSubmitting ? "Creating..." : "Create decision"}
@@ -130,8 +102,10 @@ function CreateDecision({ token, onCreated }) {
         <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }}>
           {message}
         </div>
+        
       )}
     </div>
+       
   );
 }
 

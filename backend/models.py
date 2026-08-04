@@ -1,20 +1,28 @@
-import enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Float, Text, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Float
 from sqlalchemy.sql import func
 from database import Base
-import uuid
-from datetime import datetime
-from sqlalchemy.dialects.postgresql import UUID
-# ==========================================
-# ENUMS
-# ==========================================
+import enum
 
 class UserRole(str, enum.Enum):
     employee = "employee"
     reviewer = "reviewer"
     manager = "manager"
     admin = "admin"
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    full_name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.employee, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+from sqlalchemy import Text, ForeignKey
+from sqlalchemy.orm import relationship
 
 class DecisionStatus(str, enum.Enum):
     draft = "draft"
@@ -33,35 +41,6 @@ class FeasibilityLevel(str, enum.Enum):
     MEDIUM = "Medium"
     HIGH = "High"
 
-class ApprovalAction(str, enum.Enum):
-    approved = "approved"
-    rejected = "rejected"
-    resubmitted = "resubmitted"
-
-class NotificationType(str, enum.Enum):
-    decision_created = "DECISION_CREATED"
-    decision_approved = "DECISION_APPROVED"
-    decision_rejected = "DECISION_REJECTED"
-    new_discussion = "NEW_DISCUSSION"
-
-
-# ==========================================
-# MODELS
-# ==========================================
-
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.employee, nullable=False)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-
 class Decision(Base):
     __tablename__ = "decisions"
 
@@ -72,16 +51,14 @@ class Decision(Base):
     status = Column(Enum(DecisionStatus), default=DecisionStatus.draft, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     attachment_url = Column(String, nullable=True)
-    assigned_reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    creator = relationship("User", foreign_keys=[created_by])
+    creator = relationship("User")
 
 
 class Alternative(Base):
     __tablename__ = "alternatives"
-
     id = Column(Integer, primary_key=True, index=True)
     decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=False)
     title = Column(String, nullable=False)
@@ -92,7 +69,6 @@ class Alternative(Base):
     risk_level = Column(Enum(RiskLevel), nullable=False)
     feasibility = Column(Enum(FeasibilityLevel), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
     decision = relationship("Decision")
 
 
@@ -101,10 +77,9 @@ class AuditLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    log_type = Column(String, nullable=False, default="activity", index=True)  # 'activity', 'security', 'access'
     action = Column(String, nullable=False)
     entity_type = Column(String, nullable=False)
-    entity_id = Column(Integer, nullable=True, index=True)
+    entity_id = Column(Integer, nullable=False, index=True)
     details = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -140,6 +115,10 @@ class DecisionVersion(Base):
     decision = relationship("Decision")
     editor = relationship("User")
 
+class ApprovalAction(str, enum.Enum):
+    approved = "approved"
+    rejected = "rejected"
+    resubmitted = "resubmitted"
 
 class Approval(Base):
     __tablename__ = "approvals"
@@ -154,27 +133,3 @@ class Approval(Base):
 
     decision = relationship("Decision")
     reviewer = relationship("User")
-
-
-class Notification(Base):
-    __tablename__ = "notifications"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    title = Column(String(255), nullable=False)
-    message = Column(Text, nullable=False)
-    type = Column(String(50), default="info")
-    is_read = Column(Boolean, default=False, nullable=False)
-    link = Column(String(512), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-
-class ReviewerAssignment(Base):
-    __tablename__ = "reviewer_assignments"
-
-    id = Column(Integer, primary_key=True, index=True)
-    category = Column(String, unique=True, nullable=False)
-    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    assigned_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    reviewer = relationship("User", foreign_keys=[reviewer_id])
