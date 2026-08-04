@@ -10,7 +10,7 @@ should degrade gracefully in the UI, not violate a constraint.
 """
 
 import uuid
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, String, Text
 from sqlalchemy import Enum as PgEnum
@@ -41,9 +41,15 @@ class Notification(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
 
-    # Loosely-typed polymorphic pointer, see module docstring.
-    related_entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    related_entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    # Loosely-typed polymorphic pointer, see module docstring. Nullable:
+    # notifications created before this field existed have no way to
+    # supply a real value, and degrading gracefully (per the module
+    # docstring's own stated intent) means representing "unknown" as
+    # NULL rather than requiring every historical row to have one.
+    # Every notification the app itself creates still always supplies
+    # both — see services/notification_service.py / approval_service.py.
+    related_entity_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    related_entity_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     # --- Relationships ---
     recipient: Mapped["User"] = relationship(back_populates="notifications")

@@ -4,6 +4,7 @@ schemas/notification.py
 
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -17,8 +18,13 @@ class NotificationOut(ORMBase):
     title: str
     message: str
     is_read: bool
-    related_entity_type: str
-    related_entity_id: uuid.UUID
+    # Optional: notifications created before this field existed have no
+    # real value to report. Every notification the app creates today
+    # still always supplies both (see NotificationService.create_notification
+    # and every call site in ApprovalService) -- this only accommodates
+    # historical rows.
+    related_entity_type: Optional[str] = None
+    related_entity_id: Optional[uuid.UUID] = None
     created_at: datetime
 
 
