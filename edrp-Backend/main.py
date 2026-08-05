@@ -16,42 +16,7 @@ from routers import (
     admin,
 )
 
-app = FastAPI(
-    title="Expert Decision Replay Platform (EDRP)",
-    summary="Enterprise decision governance and collaboration platform for structured review workflows.",
-    description=(
-        "EDRP is a decision replay and governance platform that helps organizations capture "
-        "the problem statement, explore alternatives, preserve decision history, coordinate review "
-        "and approval workflows, and surface operational learning through audit and notification APIs."
-    ),
-    version="1.0.0",
-    contact={
-        "name": "EDRP Support",
-        "email": "support@edrp.example.com",
-        "url": "https://example.com/edrp",
-    },
-    license_info={
-        "name": "MIT License",
-        "url": "https://opensource.org/licenses/MIT",
-    },
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
-    openapi_tags=[
-        {"name": "Authentication", "description": "Register, authenticate, and obtain access tokens for secure API use."},
-        {"name": "Users", "description": "User profile, role assignment, and team membership management APIs."},
-        {"name": "Teams", "description": "Team lifecycle management, team membership, and team detail retrieval APIs."},
-        {"name": "Decisions", "description": "Create, search, update, export, and review organizational decisions."},
-        {"name": "Alternatives", "description": "Manage alternative options associated with a decision."},
-        {"name": "Attachments", "description": "Upload, download, and delete decision attachments."},
-        {"name": "Comments", "description": "Add and retrieve threaded comments tied to decisions."},
-        {"name": "Approvals", "description": "Review and approve or reject decisions through a structured workflow."},
-        {"name": "Ratings", "description": "Collect and summarize end-user rating feedback for decisions."},
-        {"name": "Notifications", "description": "Fetch and manage in-app notification state for users."},
-        {"name": "Audit Logs", "description": "Retrieve historical administrative activity logs and traceability data."},
-        {"name": "Administration", "description": "Administrative dashboards and system-wide analytics endpoints."},
-    ],
-)
+app = FastAPI(title="Expert Decision Replay Platform API")
 
 app.add_middleware(
     CORSMiddleware,
