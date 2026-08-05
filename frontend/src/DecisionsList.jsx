@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import DecisionCard from "./DecisionCard";
 
-function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 10, statusFilter = "all", searchQuery = "" }) {
+function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 10, statusFilter = "all", searchQuery = "", ownerFilter = "all", currentUserId }) {
   const [decisions, setDecisions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,7 +26,7 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
   // Reset page when filter or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery, ownerFilter]);
 
   const handleStatusChanged = (decisionId, nextStatus) => {
     setDecisions((prev) =>
@@ -42,16 +42,17 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
     return <p style={{ color: "var(--text-muted)" }}>Loading decisions...</p>;
   }
 
-  // Filter decisions based on status and search query
+  // Filter decisions based on status, owner, and search query
   const filteredDecisions = decisions.filter((d) => {
     const matchesStatus = statusFilter === "all" || d.status === statusFilter;
+    const matchesOwner = ownerFilter === "all" || (ownerFilter === "mine" && d.created_by === currentUserId);
     const q = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery ||
       d.title.toLowerCase().includes(q) ||
       (d.category && d.category.toLowerCase().includes(q)) ||
       d.problem_statement.toLowerCase().includes(q);
       
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesOwner && matchesSearch;
   });
 
   // Sort decisions by created_at descending (most recent first)
@@ -70,7 +71,7 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
 
   return (
     <div>
-      <div>
+      <div className="decisions-grid">
         {paginatedDecisions.map((d) => (
           <DecisionCard
             key={d.id}

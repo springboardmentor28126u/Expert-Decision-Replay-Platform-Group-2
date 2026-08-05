@@ -8,6 +8,7 @@ function AppShell({
   onLogout,
   unreadCount,
   children,
+  topbarExtra,
 }) {
   const isManagerOrAdmin = profile.role === "manager" || profile.role === "admin";
   const isAdmin = profile.role === "admin";
@@ -113,6 +114,7 @@ function AppShell({
           
           {/* Header Controls */}
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            {topbarExtra}
             <ProfileMenu profile={profile} />
           </div>
         </header>

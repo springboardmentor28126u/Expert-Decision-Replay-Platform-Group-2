@@ -215,6 +215,8 @@ function Dashboard({ token, onLogout }) {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState("all");
 
   const {
     notifications,
@@ -583,30 +585,32 @@ function Dashboard({ token, onLogout }) {
               />
             )}
           </div>
-
-          <div className="panel">
-            <p className="panel-title">Welcome back, {profile.full_name.split(" ")[0]}</p>
-            <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
-          </div>
-
-          <div className="panel">
-            <p className="panel-title">Recent Decisions</p>
-            <DecisionsList
-              token={token}
-              refreshKey={refreshKey}
-              role={profile.role}
-              onSelectDecision={handleSelectDecision}
-              pageSize={3}
-              statusFilter="all"
-            />
-          </div>
         </>
       )}
 
       {activeView === "decisions" && (
         <div className="panel">
-          <p className="panel-title">All Decisions</p>
-          <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <p className="panel-title" style={{ margin: 0 }}>All Decisions</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                padding: "8px 16px",
+                background: "var(--accent)",
+                border: "none",
+                borderRadius: "6px",
+                color: "#fff",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "13px"
+              }}
+            >
+              ➕ Create Decision
+            </button>
+          </div>
           
           <div className="filter-container" style={{ margin: "20px 0 16px 0", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px" }}>
             <div style={{ flex: "1 1 auto", display: "flex", alignItems: "center", gap: "10px" }}>
@@ -634,6 +638,30 @@ function Dashboard({ token, onLogout }) {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <label htmlFor="owner-filter" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
+                Created By:
+              </label>
+              <select
+                id="owner-filter"
+                value={ownerFilter}
+                onChange={(e) => setOwnerFilter(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  background: "#12161D",
+                  border: "1px solid #2E3646",
+                  borderRadius: "6px",
+                  color: "#F1F3F6",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  outline: "none"
+                }}
+              >
+                <option value="all">All Decisions</option>
+                <option value="mine">My Decisions</option>
+              </select>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <label htmlFor="status-filter" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
                 Filter by Status:
               </label>
@@ -653,7 +681,7 @@ function Dashboard({ token, onLogout }) {
                   outline: "none"
                 }}
               >
-                <option value="all">All Decisions</option>
+                <option value="all">All Statuses</option>
                 <option value="draft">Draft</option>
                 <option value="under_review">Under Review</option>
                 <option value="approved">Approved</option>
@@ -671,6 +699,8 @@ function Dashboard({ token, onLogout }) {
             pageSize={10}
             statusFilter={statusFilter}
             searchQuery={decisionSearchQuery}
+            ownerFilter={ownerFilter}
+            currentUserId={profile.id}
           />
         </div>
       )}
@@ -896,6 +926,23 @@ function Dashboard({ token, onLogout }) {
         <div className="panel">
           <p className="panel-title">Account Settings</p>
           <ChangePassword token={token} />
+        </div>
+      )}
+
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ padding: "24px" }}>
+            <button className="modal-close-btn" onClick={() => setShowCreateModal(false)}>&times;</button>
+            <div style={{ marginTop: "12px" }}>
+              <CreateDecision 
+                token={token} 
+                onCreated={() => {
+                  setRefreshKey((k) => k + 1);
+                  setShowCreateModal(false);
+                }} 
+              />
+            </div>
+          </div>
         </div>
       )}
     </AppShell>
