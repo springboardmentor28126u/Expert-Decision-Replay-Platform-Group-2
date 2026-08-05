@@ -316,3 +316,8 @@ export async function rateDecision(decisionId, stars) {
   const response = await apiClient.post(`/decisions/${decisionId}/ratings`, { stars });
   return response.data;
 }
+// --- Decision Versioning ----
+export async function restoreDecisionVersion(decisionId, versionId) {
+  const response = await apiClient.post(`/decisions/${decisionId}/versions/${versionId}/restore`);
+  return response.data;
+}
