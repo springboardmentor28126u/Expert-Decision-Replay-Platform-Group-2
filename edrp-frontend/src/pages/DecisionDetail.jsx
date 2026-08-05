@@ -397,9 +397,9 @@ async function handleRestoreVersion(versionId, versionNumber) {
                   <button className="btn-reject" onClick={() => handleApprovalAction("Rejected")}>
                     Reject
                   </button>
-                  <button className="btn-ghost-light" onClick={() => handleApprovalAction("Escalated")}>
+                  {/* <button className="btn-ghost-light" onClick={() => handleApprovalAction("Escalated")}>
                     Escalate
-                  </button>
+                  </button> */}
                 </div>
               </div>
             )}
