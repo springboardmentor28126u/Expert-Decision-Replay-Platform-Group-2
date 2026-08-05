@@ -52,6 +52,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       ),
     },
     {
+      to: '/dashboard/reports',
+      label: 'Reports',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="h-5 w-5"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M3 3v18h18M8 16v-5m4 5V8m4 8v-3"
+          />
+        </svg>
+      ),
+    },
+    {
       to: '/dashboard/profile',
       label: 'Profile',
       icon: (
@@ -115,12 +135,41 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       ),
     },
   ];
+   const reviewerLinks = [
+  {
+    to: "/dashboard/my-approvals",
+    label: "My Approvals",
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="h-5 w-5"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0Z"
+        />
+      </svg>
+    ),
+  },
+];    
 
-  const links = user?.role === 'Administrator' ? [...baseLinks, ...adminLinks] : baseLinks;
+  let links = [...baseLinks];
+
+if (user?.role === "Administrator") {
+  links = [...baseLinks, ...adminLinks];
+}
+
+if (user?.role === "Reviewer") {
+  links = [...baseLinks, ...reviewerLinks];
+}
 
   return (
     <>
-      {/* Mobile Backdrop */}
       {isOpen && (
         <div
           className="fixed inset-0 z-30 bg-surface/85 backdrop-blur-sm lg:hidden transition-opacity duration-200"
@@ -128,7 +177,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         />
       )}
 
-      {/* Sidebar: Fixed width w-64 on all viewports */}
       <aside
         className={`fixed bottom-0 top-0 left-0 z-30 flex w-64 flex-col border-r border-border bg-surface-elevated transition-transform duration-200 ease-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
@@ -141,21 +189,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               Decision Vault
             </span>
           </div>
+
           <button
             onClick={onClose}
             className="rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text lg:hidden transition-all"
-            aria-label="close sidebar"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="h-5 w-5"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-            </svg>
+            ✕
           </button>
         </div>
 

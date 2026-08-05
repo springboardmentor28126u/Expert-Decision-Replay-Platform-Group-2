@@ -34,3 +34,10 @@ class ApprovalRepository(BaseRepository[Approval]):
             .filter(Approval.reviewer_id == reviewer_id)
             .all()
         )
+
+    def get_by_reviewer(self, reviewer_id: int):
+        return (
+        self.db.query(Approval)
+        .filter(Approval.reviewer_id == reviewer_id)
+        .all()
+    )

@@ -41,4 +41,14 @@ export const usersApi = {
   deleteUser: async (id: number): Promise<void> => {
     await client.delete(`/api/users/${id}`);
   },
+
+  getReviewers: async () => {
+  const response = await client.get("/api/users/");
+  return response.data.filter(
+    (user: any) =>
+      user.role === "Reviewer" ||
+      user.role === "Manager" ||
+      user.role === "Administrator"
+  );
+},
 };

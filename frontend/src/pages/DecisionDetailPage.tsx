@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usersApi } from "../api/users";
+import { approvalsApi } from "../api/approvals";
 import { decisionsApi } from '../api/decisions';
 import { alternativesApi } from '../api/alternatives';
 import { discussionsApi } from '../api/discussions';
@@ -38,6 +40,8 @@ const DecisionDetailPage: React.FC = () => {
   const decisionId = parseInt(id || '0');
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [reviewers, setReviewers] = useState<any[]>([]);
+  const [selectedReviewer, setSelectedReviewer] = useState<number | null>(null);
 
   const [decision, setDecision] = useState<Decision | null>(null);
   const [alternatives, setAlternatives] = useState<Alternative[]>([]);
@@ -77,6 +81,12 @@ const DecisionDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+    try {
+    const reviewerList = await usersApi.getReviewers();
+    setReviewers(reviewerList);
+    } catch (err) {
+  console.log(err);
+}
   };
 
   useEffect(() => {
@@ -97,7 +107,8 @@ const DecisionDetailPage: React.FC = () => {
   const isManager = user?.role === 'Manager' || isAdmin;
   const isReviewer = user?.role === 'Reviewer' || isManager;
   const isAuthor = decision.created_by === user?.id;
-  const canModify = isAuthor || isReviewer;
+  const canModify = isAuthor || isManager;
+  const canViewApprovals = isAdmin || isManager || isReviewer;
 
   const handleUpdateDecision = async (formData: any) => {
     setEditLoading(true);
@@ -256,18 +267,39 @@ const DecisionDetailPage: React.FC = () => {
           Library
         </button>
 
-        {canModify && (
-          <div className="flex gap-3">
-            <Button variant="secondary" size="sm" onClick={() => setIsEditModalOpen(true)}>
-              Edit
-            </Button>
-            {isAdmin && (
-              <Button variant="danger" size="sm" onClick={handleDeleteDecision}>
-                Delete
-              </Button>
-            )}
-          </div>
-        )}
+        <div className="flex gap-3">
+
+  {canViewApprovals && (
+    <Button
+      variant="primary"
+      size="sm"
+      onClick={() => navigate(`/dashboard/decisions/${decisionId}/approvals`)}
+    >
+      Approvals
+    </Button>
+  )}
+
+  {canModify && (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={() => setIsEditModalOpen(true)}
+    >
+      Edit
+    </Button>
+  )}
+
+  {isAdmin && (
+    <Button
+      variant="danger"
+      size="sm"
+      onClick={handleDeleteDecision}
+    >
+      Delete
+    </Button>
+  )}
+
+</div>
       </div>
 
       {/* Main Info Header */}

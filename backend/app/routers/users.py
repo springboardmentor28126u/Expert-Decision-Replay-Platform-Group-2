@@ -19,11 +19,15 @@ from app.services.user_service import UserService
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
 
-# --- Current User Endpoints ---
+# ----------------------------
+# Current User Endpoints
+# ----------------------------
 
 @router.get("/me", response_model=UserResponse)
-def get_current_profile(current_user: User = Depends(get_current_user)):
-    """Get the current authenticated user's profile."""
+def get_current_profile(
+    current_user: User = Depends(get_current_user),
+):
+    """Get current authenticated user."""
     return current_user
 
 
@@ -33,7 +37,7 @@ def update_current_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Update the current user's own profile (username, email)."""
+    """Update current user's profile."""
     service = UserService(db)
     return service.update_user(current_user.id, data, actor_id=current_user.id)
 
@@ -44,13 +48,15 @@ def change_password(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Change the current user's password."""
+    """Change current user's password."""
     service = UserService(db)
     service.change_password(current_user.id, data)
     return {"message": "Password changed successfully"}
 
 
-# --- Admin Endpoints ---
+# ----------------------------
+# User List
+# ----------------------------
 
 @router.get("/", response_model=List[UserResponse])
 def list_users(
@@ -59,10 +65,28 @@ def list_users(
     current_user: User = Depends(require_role("Administrator")),
     db: Session = Depends(get_db),
 ):
-    """List all users (admin only)."""
+    """List all users."""
     service = UserService(db)
     return service.get_all_users(skip=skip, limit=limit)
 
+
+# ----------------------------
+# Reviewer List
+# ----------------------------
+
+@router.get("/reviewers", response_model=List[UserResponse])
+def get_reviewers(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return all reviewers."""
+    service = UserService(db)
+    return service.get_reviewers()
+
+
+# ----------------------------
+# Get User
+# ----------------------------
 
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
@@ -70,10 +94,14 @@ def get_user(
     current_user: User = Depends(require_role("Administrator")),
     db: Session = Depends(get_db),
 ):
-    """Get a specific user by ID (admin only)."""
+    """Get one user."""
     service = UserService(db)
     return service.get_user(user_id)
 
+
+# ----------------------------
+# Update User
+# ----------------------------
 
 @router.put("/{user_id}", response_model=UserResponse)
 def update_user(
@@ -82,10 +110,14 @@ def update_user(
     current_user: User = Depends(require_role("Administrator")),
     db: Session = Depends(get_db),
 ):
-    """Update any user (admin only)."""
+    """Admin update user."""
     service = UserService(db)
     return service.admin_update_user(user_id, data, admin_id=current_user.id)
 
+
+# ----------------------------
+# Change Role
+# ----------------------------
 
 @router.patch("/{user_id}/role", response_model=UserResponse)
 def change_user_role(
@@ -94,10 +126,14 @@ def change_user_role(
     current_user: User = Depends(require_role("Administrator")),
     db: Session = Depends(get_db),
 ):
-    """Change a user's role (admin only)."""
+    """Change user role."""
     service = UserService(db)
     return service.change_role(user_id, data.role, admin_id=current_user.id)
 
+
+# ----------------------------
+# Delete User
+# ----------------------------
 
 @router.delete("/{user_id}")
 def delete_user(
@@ -105,7 +141,7 @@ def delete_user(
     current_user: User = Depends(require_role("Administrator")),
     db: Session = Depends(get_db),
 ):
-    """Delete a user (admin only)."""
+    """Delete user."""
     service = UserService(db)
     service.delete_user(user_id, admin_id=current_user.id)
     return {"message": f"User {user_id} deleted successfully"}

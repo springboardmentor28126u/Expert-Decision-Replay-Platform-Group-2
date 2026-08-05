@@ -22,15 +22,21 @@ class ApprovalService:
         if not decision:
             raise NotFoundException("Decision not found")
 
+        existing = self.approval_repo.get_by_decision(decision_id)
+
+        for approval in existing:
+           if approval.reviewer_id == reviewer_id:
+              raise BadRequestException("Reviewer already assigned")
+
         approval = Approval(
             decision_id=decision_id,
             reviewer_id=reviewer_id,
             status="Pending",
             comments=comments,
-        )
+       )
 
         return self.approval_repo.create(approval)
-
+        
     def approve(self, approval_id: int):
         approval = self.approval_repo.get_by_id(approval_id)
 
@@ -66,3 +72,6 @@ class ApprovalService:
 
     def get_by_decision(self, decision_id: int):
         return self.approval_repo.get_by_decision(decision_id)
+
+    def get_my_approvals(self, reviewer_id: int):
+        return self.approval_repo.get_by_reviewer(reviewer_id)

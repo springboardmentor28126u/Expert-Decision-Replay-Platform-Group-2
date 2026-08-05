@@ -18,3 +18,31 @@ def get_summary(
 ):
     service = ReportService(db)
     return service.get_summary()
+
+
+@router.get("/approvals")
+def approval_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = ReportService(db)
+    return service.get_approval_report()
+
+
+@router.get("/teams")
+def team_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = ReportService(db)
+    return service.get_team_report()
+
+
+@router.get("/audit")
+def audit_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = ReportService(db)
+    return service.get_audit_report()
+
