@@ -8,7 +8,27 @@ export interface User {
   role: string | null;
 }
 
-export type UserRole = 'Employee' | 'Reviewer' | 'Manager' | 'Administrator';
+export type UserRole =
+  | "Employee"
+  | "Reviewer"
+  | "Manager"
+  | "Administrator";
+
+export interface UserUpdate {
+  username?: string;
+  email?: string;
+}
+
+export interface UserAdminUpdate {
+  username?: string;
+  email?: string;
+  role?: UserRole;
+}
+
+export interface PasswordUpdate {
+  current_password: string;
+  new_password: string;
+}
 
 // ===== Auth Types =====
 export interface LoginRequest {
@@ -33,7 +53,12 @@ export interface TokenResponse {
 }
 
 // ===== Decision Types =====
-export type DecisionStatus = 'Draft' | 'Under Review' | 'Approved' | 'Rejected' | 'Archived';
+export type DecisionStatus =
+  | "Draft"
+  | "Under Review"
+  | "Approved"
+  | "Rejected"
+  | "Archived";
 
 export interface Decision {
   id: number;
@@ -100,7 +125,10 @@ export interface AlternativeUpdate {
 }
 
 // ===== Discussion Types =====
-export type DiscussionType = 'comment' | 'meeting_note' | 'rationale';
+export type DiscussionType =
+  | "comment"
+  | "meeting_note"
+  | "rationale";
 
 export interface Discussion {
   id: number;

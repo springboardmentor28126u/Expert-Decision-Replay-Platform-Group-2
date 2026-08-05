@@ -11,7 +11,6 @@ class ApprovalCreate(BaseModel):
 
 
 class ApprovalUpdate(BaseModel):
-    status: str
     comments: Optional[str] = None
 
 

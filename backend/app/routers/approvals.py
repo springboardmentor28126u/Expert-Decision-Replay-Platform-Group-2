@@ -34,6 +34,14 @@ def assign_reviewer(
         comments=data.comments,
     )
 
+@router.get("/my")
+def my_approvals(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ApprovalService(db)
+    return service.get_my_approvals(current_user.id)
+
 
 @router.get("/{decision_id}", response_model=List[ApprovalResponse])
 def get_approvals(

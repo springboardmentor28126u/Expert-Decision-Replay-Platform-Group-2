@@ -106,3 +106,10 @@ class UserService:
     def count_users(self) -> int:
         """Get total user count."""
         return self.user_repo.count()
+
+    def get_reviewers(self):
+        return (
+        self.db.query(User)
+        .filter(User.role == "Reviewer")
+        .all()
+    )
