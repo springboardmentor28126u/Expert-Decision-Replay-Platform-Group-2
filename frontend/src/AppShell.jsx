@@ -2,8 +2,17 @@ import "./dashboard-shell.css";
 import { useNavigate } from "react-router-dom";
 import ProfileMenu from "./ProfileMenu";
 
-function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
+function AppShell({
+  profile,
+  activeView,
+  onNavigate,
+  onLogout,
+  unreadCount,
+  children,
+  topbarExtra,
+}) {
   const navigate = useNavigate();
+  const isManagerOrAdmin = profile.role === "manager" || profile.role === "admin";
   const isAdmin = profile.role === "admin";
 
   const dashboardPaths = {
@@ -34,7 +43,6 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
         <div className="shell-logo">
           <span className="full-name">EDRP</span>
         </div>
-
         <nav className="shell-nav">
           {navItems.map((item) => (
             <button
@@ -95,7 +103,11 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}
           </h1>
-          <ProfileMenu profile={profile} />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            {topbarExtra}
+            <ProfileMenu profile={profile} />
+          </div>
         </header>
 
         <main className="shell-content">{children}</main>
