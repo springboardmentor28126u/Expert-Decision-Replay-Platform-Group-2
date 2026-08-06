@@ -14,6 +14,7 @@ import EditDecision from "./pages/EditDecision";
 import DecisionHistory from "./pages/DecisionHistory";
 import Reports from "./pages/Reports";
 import AuditLogs from "./pages/AuditLogs";
+import ApprovalWorkflow from "./pages/ApprovalWorkflow";
 
 function App() {
   return (
@@ -42,6 +43,9 @@ function App() {
 
         {/* Comments */}
         <Route path="/comments" element={<Comments />} />
+
+        {/* Approval Workflow */}
+        <Route path="/approvals" element={<ApprovalWorkflow />} />
 
         {/* Reports */}
         <Route path="/reports" element={<Reports />} />

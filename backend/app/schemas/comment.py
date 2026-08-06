@@ -16,6 +16,8 @@ class CommentResponse(BaseModel):
     user_id: int
     comment: str
     created_at: datetime
+    user_name: str
+    user_role: str
 
     class Config:
         from_attributes = True

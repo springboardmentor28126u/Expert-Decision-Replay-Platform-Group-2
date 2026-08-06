@@ -188,7 +188,7 @@ export default function Navbar() {
         </div>
 
         {/* Messages */}
-        <div style={{ position: "relative", cursor: "pointer" }}>
+        {/*<div style={{ position: "relative", cursor: "pointer" }}>
           <FaEnvelope size={22} color="#475569" />
 
           <span
@@ -209,7 +209,7 @@ export default function Navbar() {
           >
             5
           </span>
-        </div>
+        </div> */}
 
         {/* User */}
         <div

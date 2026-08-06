@@ -198,6 +198,53 @@ const downloadExcel = async () => {
     </div>
   );
 
+  // Decision Status Overview donut (pure CSS, no new packages)
+  const DonutChart = () => {
+    const total = stats.total || 1;
+    const approvedDeg = (stats.approved / total) * 360;
+    const pendingDeg = (stats.pending / total) * 360;
+    const rejectedDeg = (stats.rejected / total) * 360;
+
+    return (
+      <div
+        style={{
+          width: 160,
+          height: 160,
+          borderRadius: "50%",
+          background: `conic-gradient(
+            #16a34a 0deg ${approvedDeg}deg,
+            #d97706 ${approvedDeg}deg ${approvedDeg + pendingDeg}deg,
+            #dc2626 ${approvedDeg + pendingDeg}deg ${approvedDeg + pendingDeg + rejectedDeg}deg,
+            #EEF4FF ${approvedDeg + pendingDeg + rejectedDeg}deg 360deg
+          )`,
+          margin: "0 auto",
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            width: 100,
+            height: 100,
+            borderRadius: "50%",
+            background: "#fff",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <h3 className="fw-bold mb-0" style={{ color: "#2563eb" }}>
+            {stats.total}
+          </h3>
+          <small className="text-muted">Total</small>
+        </div>
+      </div>
+    );
+  };
+
     return (
     <Layout>
       <div className="container-fluid py-4">
@@ -305,11 +352,93 @@ const downloadExcel = async () => {
 
         </div>
 
-        {/* Recent Decisions + Notifications */}
+        {/* Decision Status Overview + Notifications */}
 
         <div className="row mt-2">
 
+          <div className="col-lg-4 mb-4">
+
+            <div
+              className="card border-0 h-100"
+              style={{
+                borderRadius: "18px",
+                boxShadow: "0 8px 25px rgba(0,0,0,.08)",
+              }}
+            >
+
+              <div className="card-body">
+
+                <h4 className="fw-bold mb-4">
+                  Decision Status Overview
+                </h4>
+
+                <DonutChart />
+
+                <div className="d-flex justify-content-around mt-4">
+
+                  <div className="text-center">
+                    <div
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        background: "#16a34a",
+                        display: "inline-block",
+                        marginRight: 6,
+                      }}
+                    ></div>
+                    <small>Approved</small>
+                  </div>
+
+                  <div className="text-center">
+                    <div
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        background: "#d97706",
+                        display: "inline-block",
+                        marginRight: 6,
+                      }}
+                    ></div>
+                    <small>Pending</small>
+                  </div>
+
+                  <div className="text-center">
+                    <div
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        background: "#dc2626",
+                        display: "inline-block",
+                        marginRight: 6,
+                      }}
+                    ></div>
+                    <small>Rejected</small>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
           <div className="col-lg-8 mb-4">
+
+            <RecentNotifications />
+
+          </div>
+
+        </div>
+
+        {/* Recent Decisions (full width) */}
+
+        <div className="row mt-2">
+
+          <div className="col-lg-12 mb-4">
 
             <div
               className="card border-0"
@@ -426,12 +555,6 @@ const downloadExcel = async () => {
               </div>
 
             </div>
-
-          </div>
-
-          <div className="col-lg-4 mb-4">
-
-            <RecentNotifications />
 
           </div>
 
@@ -640,9 +763,6 @@ const downloadExcel = async () => {
         </div>
 
       </div>
-
-      
-      
 
     </div>
 
