@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import AttachmentTable from "../../components/decision/AttachmentTable";
@@ -10,9 +10,7 @@ import "../../styles/attachment.css";
 function Attachment() {
 
     const { id } = useParams();
-    const navigate = useNavigate();
 
-    const [user, setUser] = useState(null);
     const [attachments, setAttachments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -20,43 +18,35 @@ function Attachment() {
     const fileInputRef = useRef(null);
 
     useEffect(() => {
-        loadPage();
+        loadAttachments();
     }, [id]);
 
-    const loadPage = async () => {
-        setLoading(true);
+    const loadAttachments = async () => {
 
         try {
 
-            // Load Logged In User
-            const userRes = await api.get("/users/me");
-            setUser(userRes.data);
-
-            // Load Attachments
-            const attachmentRes = await api.get(
+            const response = await api.get(
                 `/decisions/${id}/attachments`
             );
 
-            setAttachments(attachmentRes.data);
+            setAttachments(response.data);
 
         } catch (error) {
 
-            console.error("Attachment Page Error:", error);
-
-            if (error.response?.status === 401) {
-                localStorage.removeItem("access_token");
-                navigate("/login");
-            }
+            console.error("Load Attachment Error:", error);
 
         } finally {
 
             setLoading(false);
 
         }
+
     };
 
     const handleUploadClick = () => {
+
         fileInputRef.current.click();
+
     };
 
     const handleFileUpload = async (e) => {
@@ -66,6 +56,7 @@ function Attachment() {
         if (!file) return;
 
         const formData = new FormData();
+
         formData.append("file", file);
 
         try {
@@ -82,7 +73,7 @@ function Attachment() {
 
             alert("Attachment Uploaded Successfully");
 
-            loadPage();
+            loadAttachments();
 
         } catch (error) {
 
@@ -101,12 +92,22 @@ function Attachment() {
     );
 
     if (loading) {
-        return <h2>Loading Attachments...</h2>;
+
+        return (
+
+            <DashboardLayout>
+
+                <h2>Loading Attachments...</h2>
+
+            </DashboardLayout>
+
+        );
+
     }
 
     return (
 
-        <DashboardLayout user={user}>
+        <DashboardLayout>
 
             <div className="attachment-page">
 
@@ -144,14 +145,16 @@ function Attachment() {
                         type="text"
                         placeholder="Search attachment..."
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) =>
+                            setSearch(e.target.value)
+                        }
                     />
 
                 </div>
 
                 <AttachmentTable
                     attachments={filteredAttachments}
-                    onDeleted={loadPage}
+                    onDeleted={loadAttachments}
                 />
 
             </div>

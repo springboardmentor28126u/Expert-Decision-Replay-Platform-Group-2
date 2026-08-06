@@ -9,66 +9,87 @@ function DiscussionTable({ discussions }) {
             <table className="discussion-table">
 
                 <thead>
+
                     <tr>
+
                         <th>ID</th>
                         <th>Title</th>
                         <th>Created By</th>
                         <th>Created At</th>
                         <th>Actions</th>
+
                     </tr>
+
                 </thead>
 
                 <tbody>
 
                     {
-                        discussions.length > 0 ? (
 
-                            discussions.map((discussion) => {
+                        discussions.length > 0 ?
 
-                                console.log("Discussion:", discussion);
+                        discussions.map((discussion) => (
 
-                                return (
-                                    <tr key={discussion.id}>
+                            <tr key={discussion.id}>
 
-                                        <td>{discussion.id}</td>
+                                <td>{discussion.id}</td>
 
-                                        <td>
-                                            <strong>{discussion.title}</strong>
-                                        </td>
+                                <td>
 
-                                        <td>{discussion.created_by}</td>
+                                    <strong>
 
-                                        <td>
-                                            {new Date(
-                                                discussion.created_at
-                                            ).toLocaleString()}
-                                        </td>
+                                        {discussion.title}
 
-                                        <td>
-                                            <Link
-                                                to={`/decisions/${discussion.decision_id}/discussion/${discussion.id}`}
-                                                className="view-btn"
-                                            >
-                                                View
-                                            </Link>
-                                        </td>
+                                    </strong>
 
-                                    </tr>
-                                );
-                            })
-
-                        ) : (
-
-                            <tr>
-                                <td
-                                    colSpan="5"
-                                    className="no-data"
-                                >
-                                    No Discussions Found
                                 </td>
+
+                                <td>
+
+                                    {discussion.created_by}
+
+                                </td>
+
+                                <td>
+
+                                    {
+
+                                        new Date(
+                                            discussion.created_at
+                                        ).toLocaleString()
+
+                                    }
+
+                                </td>
+
+                                <td>
+
+                                   <Link
+                                    to={`/decisions/${discussion.decision_id}/discussion/${discussion.id}`}
+                                    className="view-btn"
+                                >
+                                    View
+                                </Link>
+
+                                </td>
+
                             </tr>
 
-                        )
+                        ))
+
+                        :
+
+                        <tr>
+
+                            <td
+                                colSpan="5"
+                                className="no-data"
+                            >
+                                No Discussions Found
+                            </td>
+
+                        </tr>
+
                     }
 
                 </tbody>

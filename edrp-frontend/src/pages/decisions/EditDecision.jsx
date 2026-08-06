@@ -71,7 +71,7 @@ function EditDecision() {
             // Update Category
             if (formData.category_id) {
 
-                await api.patch(
+                await api.post(
                     `/decisions/${id}/category`,
                     {
                         category_id: Number(formData.category_id)

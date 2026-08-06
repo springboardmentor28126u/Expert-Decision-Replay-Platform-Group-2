@@ -23,9 +23,6 @@ function AlternativeTable({ alternatives, onDeleted }) {
 
         } catch (error) {
 
-            console.log("Status:", error.response?.status);
-            console.log("Data:", error.response?.data);
-            console.error(error);
             console.error("Delete Error:", error);
 
             alert("Failed to delete alternative.");

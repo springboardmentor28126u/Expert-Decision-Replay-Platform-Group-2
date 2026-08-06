@@ -44,16 +44,43 @@ class DecisionStatus(str, enum.Enum):
 class Decision(Base):
     __tablename__ = "decisions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    problem_statement = Column(Text, nullable=False)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
-    status = Column(SQLEnum(DecisionStatus), nullable=False, default=DecisionStatus.DRAFT)
+    title = Column(
+        String,
+        nullable=False
+    )
 
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    problem_statement = Column(
+        Text,
+        nullable=False
+    )
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    status = Column(
+        SQLEnum(DecisionStatus),
+        nullable=False,
+        default=DecisionStatus.DRAFT
+    )
+
+    created_by = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        onupdate=func.now()
+    )
 
 # Define the Alternative model
 class Alternative(Base):

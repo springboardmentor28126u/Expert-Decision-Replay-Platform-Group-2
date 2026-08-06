@@ -15,8 +15,7 @@ import "../../styles/discussion.css";
 function DiscussionDetails(){
 
     const { decisionId, id } = useParams();
-    console.log("Decision ID:", decisionId);
-    console.log("Discussion ID:", id);
+
     const [user,setUser] = useState(null);
     const [discussion,setDiscussion] = useState(null);
     const [loading,setLoading] = useState(true);

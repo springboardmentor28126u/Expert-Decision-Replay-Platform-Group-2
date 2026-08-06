@@ -68,18 +68,12 @@ function DecisionList() {
 
         } catch (err) {
 
-           
-
-            console.log("Status:", err.response?.status);
-            console.log("Data:", err.response?.data);
             console.error(err);
 
             alert(
                 err.response?.data?.detail ||
                 "Unable to delete decision."
             );
-
-
 
         }
 

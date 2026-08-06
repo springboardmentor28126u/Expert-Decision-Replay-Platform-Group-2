@@ -1,9 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import "../../styles/dashboard.css";
-import api from "../../services/api";
 
 import {
     Users,
@@ -11,94 +7,77 @@ import {
     UsersRound,
     Building2
 } from "lucide-react";
+
 function AdminDashboard({ user }) {
-    const navigate = useNavigate();
 
-    const [statistics, setStatistics] = useState([]);
+    const statistics = [
 
-    const [recentUsers, setRecentUsers] = useState([]);
+        {
+            title: "Total Users",
+            value: 0,
+            icon: <Users />
+        },
 
-    const [teams, setTeams] = useState([]);
+        {
+            title: "Total Teams",
+            value: 0,
+            icon: <Building2 />
+        },
 
-    const [loading, setLoading] = useState(true); 
-    
-    useEffect(() => {
-    loadDashboard();
-}, []);
-const loadDashboard = async () => {
+        {
+            title: "Administrators",
+            value: 0,
+            icon: <UserCheck />
+        },
 
-    try {
+        {
+            title: "Managers",
+            value: 0,
+            icon: <UsersRound />
+        }
 
-        const usersResponse = await api.get("/users");
+    ];
 
-        const teamsResponse = await api.get("/teams");
+    const recentUsers = [
 
-        const users = usersResponse.data;
+        {
+            name: "Raj",
+            email: "raj@gmail.com",
+            role: "Administrator"
+        },
 
-        const teamData = teamsResponse.data;
+        {
+            name: "Anjali",
+            email: "anjali@gmail.com",
+            role: "Employee"
+        },
 
-        setRecentUsers(users);
+        {
+            name: "Rahul",
+            email: "rahul@gmail.com",
+            role: "Manager"
+        }
 
-        setTeams(teamData);
+    ];
 
-        setStatistics([
+    const teams = [
 
-            {
-                title: "Total Users",
-                value: users.length,
-                icon: <Users />
-            },
+        {
+            name: "Frontend Team",
+            manager: "Raj"
+        },
 
-            {
-                title: "Total Teams",
-                value: teamData.length,
-                icon: <Building2 />
-            },
+        {
+            name: "Backend Team",
+            manager: "Rahul"
+        },
 
-            {
-                title: "Administrators",
-                value: users.filter(
-                    user => user.role === "Administrator"
-                ).length,
-                icon: <UserCheck />
-            },
+        {
+            name: "QA Team",
+            manager: "Anjali"
+        }
 
-            {
-                title: "Managers",
-                value: users.filter(
-                    user => user.role === "Manager"
-                ).length,
-                icon: <UsersRound />
-            }
-
-        ]);
-
-    }
-
-    catch (error) {
-
-        console.error("Dashboard Error:", error);
-
-        alert("Failed to load dashboard data.");
-
-    }
-
-    finally {
-
-        setLoading(false);
-
-    }
-
-};
-if (loading) {
-    return (
-        <DashboardLayout user={user}>
-            <div className="dashboard-page">
-                <h2>Loading...</h2>
-            </div>
-        </DashboardLayout>
-    );
-}
+    ];
     return (
 
         <DashboardLayout user={user}>
@@ -203,41 +182,31 @@ if (loading) {
 
         <tbody>
 
-{
+            {
 
-recentUsers.length > 0 ? (
+                recentUsers.map((item, index) => (
 
-        recentUsers.map((item) => (
+                    <tr key={index}>
 
-        <tr key={item.id}>
+                        <td>
+                            {item.name}
+                        </td>
 
-        <td>{item.name}</td>
+                        <td>
+                            {item.email}
+                        </td>
 
-        <td>{item.email}</td>
+                        <td>
+                            {item.role}
+                        </td>
 
-        <td>{item.role}</td>
+                    </tr>
 
-        </tr>
+                ))
 
-        ))
+            }
 
-        ) : (
-
-        <tr>
-
-        <td colSpan="3">
-
-        No users found
-
-        </td>
-
-        </tr>
-
-        )
-
-        }
-
-</tbody>
+        </tbody>
 
     </table>
 
@@ -264,41 +233,28 @@ recentUsers.length > 0 ? (
 
         <tbody>
 
-            
+            {
 
-{
+                teams.map((team, index) => (
 
-teams.length > 0 ? (
+                    <tr key={index}>
 
-teams.map((team) => (
+                        <td>
+                            {team.name}
+                        </td>
 
-<tr key={team.id}>
+                        <td>
+                            {team.manager}
+                        </td>
 
-<td>{team.name}</td>
+                    </tr>
 
-<td>{team.manager_name || "Not Assigned"}</td>
+                ))
 
-        </tr>
-
-        ))
-
-        ) : (
-
-        <tr>
-
-        <td colSpan="2">
-
-        No teams found
-
-        </td>
-
-        </tr>
-
-        )
-
-        }
+            }
 
         </tbody>
+
     </table>
 
 </div>
@@ -323,13 +279,8 @@ teams.map((team) => (
                 Manage all registered users.
             </p>
 
-                <button
-            className="approve-btn"
-            onClick={() => navigate("/users")}
-            >
-
-            View Users
-
+            <button className="approve-btn">
+                View Users
             </button>
 
         </div>
@@ -346,13 +297,8 @@ teams.map((team) => (
                 Create a new team.
             </p>
 
-            <button
-            className="approve-btn"
-            onClick={() => navigate("/teams/create")}
-            >
-
-            Create Team
-
+            <button className="approve-btn">
+                Create Team
             </button>
 
         </div>
@@ -369,14 +315,10 @@ teams.map((team) => (
                 Assign users to teams.
             </p>
 
-                        <button
-            className="approve-btn"
-            onClick={() => navigate("/assign-team")}
-            >
-
-            Assign Team
-
+            <button className="approve-btn">
+                Assign Team
             </button>
+
         </div>
 
 
@@ -391,13 +333,8 @@ teams.map((team) => (
                 Update user roles.
             </p>
 
-           <button
-            className="approve-btn"
-            onClick={() => navigate("/change-role")}
-            >
-
-            Change Role
-
+            <button className="approve-btn">
+                Change Role
             </button>
 
         </div>
