@@ -13,6 +13,7 @@ from models import User, UserRole
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
+from notifications import router as notifications_router, create_notification, notify_all_users
 
 from schemas import UserCreate, UserLogin, UserResponse, Token
 
@@ -29,6 +30,7 @@ UPLOAD_ROOT.mkdir(exist_ok=True)
 DISCUSSION_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 app.include_router(uploads_router)
+app.include_router(notifications_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:5174"],
@@ -164,6 +166,16 @@ def create_decision(
     db.commit()
     db.refresh(new_decision)
     new_decision.creator_name = new_decision.creator.full_name
+
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="New decision submitted",
+        message=f"{current_user.full_name} created \"{new_decision.title}\"",
+        type="DECISION_CREATED",
+        link=f"/decisions/{new_decision.id}",
+    )
+
     return new_decision
 
 @app.get("/decisions", response_model=ListType[DecisionResponse], tags=["Decision Management"])
@@ -278,6 +290,26 @@ def approve_decision(
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
+
+    if decision.status == DecisionStatus.approved:
+        create_notification(
+            db,
+            user_id=decision.created_by,
+            title="Decision approved",
+            message=f"Your decision \"{decision.title}\" was approved by {current_user.full_name}",
+            type="DECISION_APPROVED",
+            link=f"/decisions/{decision.id}",
+        )
+    else:
+        create_notification(
+            db,
+            user_id=decision.created_by,
+            title="Decision moved to next approval stage",
+            message=f"\"{decision.title}\" was approved by {current_user.full_name} and needs one more approval",
+            type="DECISION_CREATED",
+            link=f"/decisions/{decision.id}",
+        )
+
     return new_approval
 
 
@@ -317,6 +349,16 @@ def reject_decision(
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
+
+    create_notification(
+        db,
+        user_id=decision.created_by,
+        title="Decision rejected",
+        message=f"Your decision \"{decision.title}\" was rejected by {current_user.full_name}: {approval.comment}",
+        type="DECISION_REJECTED",
+        link=f"/decisions/{decision.id}",
+    )
+
     return new_approval
 
 @app.post("/decisions/{decision_id}/resubmit", response_model=DecisionResponse, tags=["Approval Workflow"])
@@ -372,6 +414,16 @@ def resubmit_decision(
     decision.status = DecisionStatus.under_review
     db.commit()
     db.refresh(decision)
+
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="Decision resubmitted",
+        message=f"\"{decision.title}\" was resubmitted for review by {current_user.full_name}",
+        type="DECISION_CREATED",
+        link=f"/decisions/{decision.id}",
+    )
+
     return decision
 
 @app.get("/decisions/{decision_id}/approvals", response_model=ListType[ApprovalResponse], tags=["Approval Workflow"])
@@ -814,13 +866,25 @@ async def add_discussion_comment(
         raise HTTPException(status_code=404, detail="Decision not found")
 
     attachment_url = _save_discussion_attachment(attachment) or discussion.attachment_url
-    return add_comment(
+    new_comment = add_comment(
         db,
         decision_id=discussion.decision_id,
         user_id=current_user.id,
         message=discussion.message,
         attachment_url=attachment_url,
     )
+
+    decision_for_notif = get_decision_or_none(db, discussion.decision_id)
+    notify_all_users(
+        db,
+        exclude_user_id=current_user.id,
+        title="New discussion comment",
+        message=f"{current_user.full_name} commented on \"{decision_for_notif.title}\"",
+        type="NEW_DISCUSSION",
+        link=f"/decisions/{discussion.decision_id}",
+    )
+
+    return new_comment
 
 
 @app.post(

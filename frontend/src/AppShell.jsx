@@ -2,7 +2,7 @@ import "./dashboard-shell.css";
 import { useNavigate } from "react-router-dom";
 import ProfileMenu from "./ProfileMenu";
 
-function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
+function AppShell({ profile, activeView, onNavigate, onLogout, children, unreadCount = 0 }) {
   const navigate = useNavigate();
   const isAdmin = profile.role === "admin";
 
@@ -21,6 +21,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
     { key: "home", label: "Home", icon: "🏠" },
     { key: "dashboard", label: "Dashboard", icon: "📊" },
     { key: "decisions", label: "Decisions", icon: "📋" },
+    { key: "notifications", label: "Notifications", icon: "🔔" },
   ];
 
   const adminNavItems = [
@@ -43,6 +44,22 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
             >
               <span className="shell-nav-icon">{item.icon}</span>
               <span className="label">{item.label}</span>
+              {item.key === "notifications" && unreadCount > 0 && (
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    background: "var(--danger, #F0555A)",
+                    color: "#fff",
+                    borderRadius: "999px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    padding: "1px 7px",
+                    lineHeight: "16px",
+                  }}
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
           ))}
 
@@ -89,6 +106,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
             {activeView === "home" && "Home"}
             {activeView === "dashboard" && "Dashboard"}
             {activeView === "decisions" && "Decisions"}
+            {activeView === "notifications" && "Notifications"}
             {activeView === "users" && "User Management"}
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}

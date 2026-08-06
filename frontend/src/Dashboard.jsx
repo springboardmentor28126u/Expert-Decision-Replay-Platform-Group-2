@@ -5,6 +5,8 @@ import CreateDecision from "./CreateDecision";
 import DecisionsList from "./DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "./ChangePassword";
+import NotificationsPage from "./NotificationsPage";
+import useNotifications from "./useNotifications";
 import useDashboardData from "./useDashboardData";
 import {
   getEmployeeDashboard,
@@ -28,6 +30,12 @@ function Dashboard({ token, onLogout }) {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState("");
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications(token);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -174,7 +182,24 @@ function Dashboard({ token, onLogout }) {
       activeView={activeView}
       onNavigate={handleNavigate}
       onLogout={onLogout}
+      unreadCount={unreadCount}
     >
+      {activeView === "notifications" && (
+        <NotificationsPage
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+          onNavigateToDecision={(id) => {
+            const decision = decisions.find((d) => d.id === id);
+            if (decision) {
+              setSelectedDecision(decision);
+              setActiveView("decision-details");
+            }
+          }}
+        />
+      )}
+
       {activeView === "dashboard" && (
         <>
           {dashboardLoading ? (
