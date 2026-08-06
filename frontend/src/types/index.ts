@@ -10,6 +10,22 @@ export interface User {
 
 export type UserRole = 'Employee' | 'Reviewer' | 'Manager' | 'Administrator';
 
+export interface UserUpdate {
+  username?: string;
+  email?: string;
+}
+
+export interface UserAdminUpdate {
+  username?: string;
+  email?: string;
+  role?: string;
+}
+
+export interface PasswordUpdate {
+  current_password?: string;
+  new_password?: string;
+}
+
 // ===== Auth Types =====
 export interface LoginRequest {
   email: string;

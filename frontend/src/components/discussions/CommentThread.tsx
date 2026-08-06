@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Discussion, DiscussionCreate, DiscussionType } from '../../types';
+import { Discussion, DiscussionType } from '../../types';
 import CommentForm from './CommentForm';
 import Badge from '../common/Badge';
 import { formatDate } from '../../utils/helpers';

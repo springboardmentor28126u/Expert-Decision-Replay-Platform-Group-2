@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationDropdown from '../NotificationDropdown';
 import Button from '../common/Button';
 
 interface NavbarProps {
@@ -38,6 +39,9 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
       <div className="flex items-center gap-4 ml-auto">
         {user && (
           <div className="flex items-center gap-3">
+            {/* Realtime Notification Bell Dropdown */}
+            <NotificationDropdown />
+
             <div className="hidden text-right md:block">
               <p className="text-sm font-semibold text-text leading-tight">{user.username}</p>
               <p className="text-xs text-text-secondary leading-none capitalize mt-0.5">{user.role}</p>

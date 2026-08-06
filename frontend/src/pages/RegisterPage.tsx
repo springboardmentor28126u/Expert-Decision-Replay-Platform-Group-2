@@ -5,6 +5,7 @@ import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import { USER_ROLES } from '../utils/constants';
+import { extractErrorMessage } from '../utils/error';
 
 const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -45,7 +46,7 @@ const RegisterPage: React.FC = () => {
       });
       navigate('/dashboard');
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Registration failed. Try a different email.';
+      const msg = extractErrorMessage(err, 'Registration failed. Please check details and try again.');
       setErrors({ general: msg });
     } finally {
       setLoading(false);

@@ -3,24 +3,27 @@ import Badge from '../common/Badge';
 import { DecisionStatus } from '../../types';
 
 interface StatusBadgeProps {
-  status: DecisionStatus | null | undefined;
+  status: DecisionStatus | string | null | undefined;
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   if (!status) return null;
 
   const variantMap: Record<
-    DecisionStatus,
-    'draft' | 'under-review' | 'approved' | 'rejected' | 'archived'
+    string,
+    'draft' | 'under-review' | 'approved' | 'rejected' | 'archived' | 'info'
   > = {
     Draft: 'draft',
     'Under Review': 'under-review',
     Approved: 'approved',
     Rejected: 'rejected',
     Archived: 'archived',
+    Pending: 'under-review',
   };
 
-  return <Badge variant={variantMap[status]}>{status}</Badge>;
+  const variant = variantMap[status] || 'info';
+
+  return <Badge variant={variant as any}>{status}</Badge>;
 };
 
 export default StatusBadge;

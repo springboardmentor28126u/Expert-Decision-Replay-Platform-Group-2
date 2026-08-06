@@ -8,12 +8,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.config import get_settings
 from app.middleware.error_handler import error_handler_middleware
 from app.middleware.logging import logging_middleware
 from app.middleware.audit_middleware import audit_middleware
-from app.routers import auth, users, decisions, alternatives, discussions, files, audit
+from app.routers import auth, users, decisions, alternatives, discussions, files, audit, dashboard, notification
 
 # Configure logging
 logging.basicConfig(
@@ -29,6 +30,29 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Application lifecycle events."""
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    # Create database tables for any new models
+    from app.database import engine, Base
+    import app.models  # Ensure all models are registered
+    Base.metadata.create_all(bind=engine)
+
+    # Safely migrate existing notifications table & add high-performance database indexes
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'general';"))
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'medium';"))
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;"))
+
+            # Create Indexes for sub-millisecond query execution
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_decisions_created_at ON decisions(created_at);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_decisions_status ON decisions(status);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_decisions_created_by ON decisions(created_by);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_notifications_user_id_read ON notifications(user_id, is_read);"))
+    except Exception as exc:
+        logger.warning(f"Database migration & indexing check skipped/failed: {exc}")
+
     # Create uploads directory
     import os
     os.makedirs(settings.upload_dir, exist_ok=True)
@@ -44,7 +68,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware
+# Custom middleware (registered first so CORS & GZip wrap them)
+app.middleware("http")(logging_middleware)
+app.middleware("http")(error_handler_middleware)
+app.middleware("http")(audit_middleware)
+
+# Enable GZip Response Compression for ultra-fast payload delivery
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
+# CORS middleware (added last so it is outermost and wraps all middleware responses)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:3000"],
@@ -52,11 +84,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Custom middleware
-app.middleware("http")(logging_middleware)
-app.middleware("http")(error_handler_middleware)
-app.middleware("http")(audit_middleware)
 
 # Register routers
 app.include_router(auth.router)
@@ -66,6 +93,8 @@ app.include_router(alternatives.router)
 app.include_router(discussions.router)
 app.include_router(files.router)
 app.include_router(audit.router)
+app.include_router(dashboard.router)
+app.include_router(notification.router)
 
 
 @app.get("/", tags=["Health"])

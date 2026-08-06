@@ -147,6 +147,20 @@ class DecisionService:
         decision = self.decision_repo.update(decision)
 
         logger.info(f"Decision {decision_id} status: {old_status} → {status}")
+
+        # Trigger notification when decision is approved
+        if status == "Approved" and decision.created_by:
+            try:
+                from app.services.notification_service import NotificationService
+                notif_service = NotificationService(self.db)
+                notif_service.trigger_decision_approval_notification(
+                    decision_id=decision.id,
+                    decision_title=decision.title or f"Decision #{decision.id}",
+                    creator_id=decision.created_by,
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to dispatch approval notification: {exc}")
+
         return decision
 
     def delete_decision(self, decision_id: int) -> None:

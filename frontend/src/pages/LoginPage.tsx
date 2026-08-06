@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
+import { extractErrorMessage } from '../utils/error';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -34,7 +35,7 @@ const LoginPage: React.FC = () => {
       await login({ email: email.trim(), password });
       navigate(from, { replace: true });
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Authentication failed. Please verify credentials.';
+      const msg = extractErrorMessage(err, 'Authentication failed. Please verify credentials.');
       setErrors({ general: msg });
     } finally {
       setLoading(false);

@@ -1,144 +1,114 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { decisionsApi } from '../api/decisions';
-import { DecisionListResponse } from '../types';
-import Card from '../components/common/Card';
+import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useDashboard } from '../hooks/useDashboard';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 import Button from '../components/common/Button';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import StatusBadge from '../components/decisions/StatusBadge';
-import { formatDate } from '../utils/helpers';
+
+// Modular Dashboard Components
+import DashboardHeader from '../components/dashboard/DashboardHeader';
+import DashboardCards from '../components/DashboardCards';
+import MonthlyChart from '../components/dashboard/MonthlyChart';
+import ApprovalChart from '../components/dashboard/ApprovalChart';
+import ReplayChart from '../components/dashboard/ReplayChart';
+import UserActivityChart from '../components/dashboard/UserActivityChart';
+import ActivityTimeline from '../components/dashboard/ActivityTimeline';
+
+// Skeleton UI Components
+import {
+  SkeletonHeader,
+  SkeletonCards,
+  SkeletonCharts,
+  SkeletonActivity,
+} from '../components/dashboard/SkeletonLoader';
 
 const DashboardPage: React.FC = () => {
-  const [stats, setStats] = useState({
-    total: 0,
-    draft: 0,
-    review: 0,
-    approved: 0,
-  });
-  const [recentDecisions, setRecentDecisions] = useState<DecisionListResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data, isLoading, isFetching, isError, error, manualRefresh } = useDashboard(10);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const recent = await decisionsApi.list({ page: 1, page_size: 5 });
-        setRecentDecisions(recent);
+  const roleLower = (user?.role || '').toLowerCase();
+  const isAdminOrManager = ['administrator', 'admin', 'manager', 'reviewer'].includes(roleLower);
 
-        const [drafts, reviews, approved] = await Promise.all([
-          decisionsApi.list({ status: 'Draft', page_size: 1 }),
-          decisionsApi.list({ status: 'Under Review', page_size: 1 }),
-          decisionsApi.list({ status: 'Approved', page_size: 1 }),
-        ]);
-
-        setStats({
-          total: recent.total,
-          draft: drafts.total,
-          review: reviews.total,
-          approved: approved.total,
-        });
-      } catch (error) {
-        console.error('Failed to load dashboard data', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <LoadingSpinner size="lg" />
+      <div className="section-spacing space-y-8 animate-fadeIn">
+        <SkeletonHeader />
+        <SkeletonCards count={isAdminOrManager ? 5 : 4} />
+        <SkeletonCharts columns={isAdminOrManager ? 2 : 3} />
+        <SkeletonActivity />
       </div>
     );
   }
 
-  const renderStatCard = (title: string, value: number, colorClass: string) => {
-    return (
-      <Card className="flex flex-col justify-center border border-border bg-surface-elevated/40">
-        <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-          {title}
-        </span>
-        <span className={`text-3xl font-bold tracking-tight mt-2 ${colorClass}`}>{value}</span>
-      </Card>
-    );
+  const cardsData = data?.cards || {
+    total_decisions: 0,
+    pending_approvals: 0,
+    approved_decisions: 0,
+    replays_count: 0,
+    active_users: 0,
+    total_decisions_change: 0,
+    pending_approvals_change: 0,
+    approved_decisions_change: 0,
+    replays_count_change: 0,
+    active_users_change: 0,
   };
 
+  const chartsData = data?.charts || {
+    monthly_decisions: [],
+    approval_trends: [],
+    replay_trends: [],
+    user_activity: [],
+  };
+
+  const activityItems = data?.recent_activity || [];
+
   return (
-    <div className="section-spacing">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-text">Dashboard</h1>
-          <p className="text-sm text-text-secondary">
-            Overview of logged organizational decisions and metrics.
-          </p>
-        </div>
-        <Button variant="primary" onClick={() => navigate('/dashboard/decisions?create=true')}>
-          Record Decision
-        </Button>
-      </div>
+    <div className="section-spacing space-y-8 animate-fadeIn">
+      {/* Header Component */}
+      <ErrorBoundary>
+        <DashboardHeader
+          onRefresh={manualRefresh}
+          isRefreshing={isFetching}
+          lastUpdated={new Date()}
+        />
+      </ErrorBoundary>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {renderStatCard('Total Decisions', stats.total, 'text-primary-light')}
-        {renderStatCard('Drafts', stats.draft, 'text-text-secondary')}
-        {renderStatCard('Under Review', stats.review, 'text-warning')}
-        {renderStatCard('Approved', stats.approved, 'text-success')}
-      </div>
-
-      {/* Recent Activity Table */}
-      <Card className="border border-border/80 p-0 overflow-hidden bg-surface-elevated/20">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border/60">
-          <h3 className="text-base font-bold text-text">Recent Decisions</h3>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/decisions')}>
-            View Library
+      {/* Error Alert State */}
+      {isError && (
+        <div className="rounded-xl bg-error-bg/25 border border-error/30 p-4 text-error flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-sm font-semibold">{error || 'Failed to sync with dashboard service.'}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={manualRefresh}>
+            Retry Sync
           </Button>
         </div>
+      )}
 
-        {recentDecisions?.items && recentDecisions.items.length > 0 ? (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-elevated/40 text-text-secondary">
-                  <th className="px-6 py-3.5 font-semibold uppercase tracking-wider text-xs">Title</th>
-                  <th className="px-6 py-3.5 font-semibold uppercase tracking-wider text-xs">Category</th>
-                  <th className="px-6 py-3.5 font-semibold uppercase tracking-wider text-xs">Status</th>
-                  <th className="px-6 py-3.5 font-semibold uppercase tracking-wider text-xs text-right">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/30">
-                {recentDecisions.items.map((d) => (
-                  <tr
-                    key={d.id}
-                    className="hover:bg-surface-hover/30 cursor-pointer transition-all"
-                    onClick={() => navigate(`/dashboard/decisions/${d.id}`)}
-                  >
-                    <td className="px-6 py-4 font-semibold text-text pr-3 truncate max-w-xs">
-                      {d.title}
-                    </td>
-                    <td className="px-6 py-4 text-text-secondary">
-                      {d.category || '—'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={d.status} />
-                    </td>
-                    <td className="px-6 py-4 text-right text-text-muted text-xs">
-                      {d.created_at ? formatDate(d.created_at) : ''}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center text-text-secondary py-12 text-sm border-t border-border/40">
-            No decisions recorded yet. Click 'Record Decision' to log the first one.
-          </div>
-        )}
-      </Card>
+      {/* 1. KPI Cards Grid (Memoized) */}
+      <ErrorBoundary>
+        <DashboardCards data={cardsData} loading={false} />
+      </ErrorBoundary>
+
+      {/* 2. Charts Grid (Split into independent, memoized components) */}
+      <ErrorBoundary>
+        <div className={`grid grid-cols-1 ${isAdminOrManager ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-6`}>
+          <MonthlyChart data={chartsData.monthly_decisions} />
+          <ApprovalChart data={chartsData.approval_trends} />
+          <ReplayChart data={chartsData.replay_trends} />
+          {isAdminOrManager && <UserActivityChart data={chartsData.user_activity} />}
+        </div>
+      </ErrorBoundary>
+
+      {/* 3. Activity Feed Timeline (Independent pagination state) */}
+      <ErrorBoundary>
+        <ActivityTimeline
+          initialItems={activityItems}
+          onRefresh={manualRefresh}
+        />
+      </ErrorBoundary>
     </div>
   );
 };
