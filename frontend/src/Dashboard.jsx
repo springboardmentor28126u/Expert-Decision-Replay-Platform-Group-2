@@ -5,6 +5,7 @@ import CreateDecision from "./CreateDecision";
 import DecisionsList from "./DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "./ChangePassword";
+import ReportsPage from "./ReportsPage";
 import useDashboardData from "./useDashboardData";
 import {
   getEmployeeDashboard,
@@ -310,6 +311,10 @@ function Dashboard({ token, onLogout }) {
             searchQuery={decisionSearchQuery}
           />
         </div>
+      )}
+
+      {activeView === "reports" && (
+        <ReportsPage token={token} />
       )}
 
       {activeView === "decision-details" && selectedDecision && (

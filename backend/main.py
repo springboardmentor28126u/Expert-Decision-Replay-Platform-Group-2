@@ -9,7 +9,7 @@ from uuid import uuid4
 from typing import List
 
 from database import engine, Base, get_db
-from models import User, UserRole
+from models import User, UserRole, AuditLog
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
@@ -139,8 +139,9 @@ def update_user_role(
 
     return target_user
 
-from schemas import DecisionCreate, DecisionResponse, DecisionStatusUpdate
-from models import Decision, DecisionStatus
+from schemas import (
+    DecisionCreate, DecisionResponse, DecisionStatusUpdate, DecisionReportResponse, ApprovalReportResponse, AuditReportResponse, )
+from models import ( Decision, DecisionStatus, Approval, ApprovalAction, )
 from typing import List as ListType
 
 def _with_creator_name(decision: Decision) -> Decision:
@@ -185,6 +186,28 @@ def list_decisions(
     decisions = db.execute(query).scalars().all()
     for d in decisions:
         d.creator_name = d.creator.full_name if d.creator else None
+    return decisions
+
+from datetime import datetime, timedelta
+
+@app.get("/decisions/escalations", response_model=ListType[DecisionResponse], tags=["Approval Workflow"])
+def get_escalated_decisions(
+    hours: int = 48,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.admin)),
+):
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+
+    decisions = db.execute(
+        select(Decision).where(
+            Decision.status == DecisionStatus.under_review,
+            Decision.created_at <= cutoff,
+        )
+    ).scalars().all()
+
+    for d in decisions:
+        d.creator_name = d.creator.full_name if d.creator else None
+
     return decisions
 
 @app.get("/decisions/{decision_id}", response_model=DecisionResponse, tags=["Decision Management"])
@@ -1268,4 +1291,374 @@ def admin_dashboard(
         archived_decisions=stats["archived_decisions"],
 
         recent_decisions=stats["recent_decisions"],
+    )
+
+# ============================================================
+# Decision Reports
+# ============================================================
+
+@app.get(
+    "/reports/decision",
+    response_model=DecisionReportResponse,
+    tags=["Reports"],
+)
+def get_decision_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Reports are available only to managers and admins
+    if current_user.role not in (UserRole.manager, UserRole.admin):
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers and admins can access reports."
+        )
+
+    # Total decisions
+    total_decisions = db.execute(
+        select(func.count(Decision.id))
+    ).scalar_one()
+
+    # Decisions by status
+    status_rows = db.execute(
+        select(
+            Decision.status,
+            func.count(Decision.id)
+        )
+        .group_by(Decision.status)
+    ).all()
+
+    by_status = [
+        {
+            "status": status.value,
+            "count": count,
+        }
+        for status, count in status_rows
+    ]
+
+    # Decisions by category
+    category_rows = db.execute(
+        select(
+            Decision.category,
+            func.count(Decision.id)
+        )
+        .where(Decision.category.is_not(None))
+        .group_by(Decision.category)
+        .order_by(func.count(Decision.id).desc())
+    ).all()
+
+    by_category = [
+        {
+            "category": category,
+            "count": count,
+        }
+        for category, count in category_rows
+    ]
+
+        # Decisions created over time
+    time_rows = db.execute(
+        select(
+            func.date(Decision.created_at).label("period"),
+            func.count(Decision.id)
+        )
+        .group_by(func.date(Decision.created_at))
+        .order_by(func.date(Decision.created_at))
+    ).all()
+
+    created_over_time = [
+        {
+            "period": str(period),
+            "count": count,
+        }
+        for period, count in time_rows
+    ]
+
+    # Recent decisions
+    recent_decisions = db.execute(
+        select(Decision)
+        .order_by(Decision.created_at.desc())
+        .limit(10)
+    ).scalars().all()
+
+    recent_data = [
+        {
+            "id": decision.id,
+            "title": decision.title,
+            "status": decision.status.value,
+            "category": decision.category,
+            "created_at": decision.created_at,
+        }
+        for decision in recent_decisions
+    ]
+
+    return {
+        "total_decisions": total_decisions,
+        "by_status": by_status,
+        "by_category": by_category,
+        "created_over_time": created_over_time,
+        "recent_decisions": recent_data,
+    }
+
+# ============================================================
+# Approval Reports
+# ============================================================
+
+@app.get(
+    "/reports/approvals",
+    response_model=ApprovalReportResponse,
+    tags=["Reports"],
+)
+def get_approval_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Only managers and admins can access reports
+    if current_user.role not in (UserRole.manager, UserRole.admin):
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers and admins can access reports."
+        )
+
+    # Total approval records
+    total_approvals = db.execute(
+        select(func.count(Approval.id))
+    ).scalar_one()
+
+    # Approved records
+    approved = db.execute(
+        select(func.count(Approval.id))
+        .where(Approval.action == ApprovalAction.approved)
+    ).scalar_one()
+
+    # Rejected records
+    rejected = db.execute(
+        select(func.count(Approval.id))
+        .where(Approval.action == ApprovalAction.rejected)
+    ).scalar_one()
+
+    # Resubmitted records
+    # For now, we treat resubmissions as escalated workflow activity.
+    escalated = db.execute(
+        select(func.count(Approval.id))
+        .where(Approval.action == ApprovalAction.resubmitted)
+    ).scalar_one()
+
+    # Pending approvals
+    #
+    # A decision is considered pending when it is currently
+    # under review and has not been finally approved/rejected.
+    pending = db.execute(
+        select(func.count(Decision.id))
+        .where(Decision.status == DecisionStatus.under_review)
+    ).scalar_one()
+
+    # Approval counts by stage
+    level_rows = db.execute(
+        select(
+            Approval.stage,
+            Approval.action,
+            func.count(Approval.id)
+        )
+        .group_by(Approval.stage, Approval.action)
+        .order_by(Approval.stage)
+    ).all()
+
+    levels = {}
+
+    for stage, action, count in level_rows:
+        if stage not in levels:
+            levels[stage] = {
+                "level": stage,
+                "pending": 0,
+                "approved": 0,
+                "rejected": 0,
+                "escalated": 0,
+            }
+
+        if action == ApprovalAction.approved:
+            levels[stage]["approved"] = count
+
+        elif action == ApprovalAction.rejected:
+            levels[stage]["rejected"] = count
+
+        elif action == ApprovalAction.resubmitted:
+            levels[stage]["escalated"] = count
+
+    by_level = list(levels.values())
+
+    return {
+        "total_approvals": total_approvals,
+        "pending": pending,
+        "approved": approved,
+        "rejected": rejected,
+        "escalated": escalated,
+        "average_completion_hours": None,
+        "by_level": by_level,
+    }
+
+# ============================================================
+# Audit Report
+# ============================================================
+
+@app.get(
+    "/reports/audit",
+    response_model=AuditReportResponse,
+    tags=["Reports"],
+)
+def get_audit_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Only admins can access audit reports
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Only admins can access audit reports."
+        )
+
+    # --------------------------------------------------------
+    # Total audit events
+    # --------------------------------------------------------
+    total_events = db.execute(
+        select(func.count(AuditLog.id))
+    ).scalar_one()
+
+    # --------------------------------------------------------
+    # Events grouped by action
+    # --------------------------------------------------------
+    action_rows = db.execute(
+        select(
+            AuditLog.action,
+            func.count(AuditLog.id)
+        )
+        .group_by(AuditLog.action)
+        .order_by(func.count(AuditLog.id).desc())
+    ).all()
+
+    by_action = [
+        {
+            "action": action,
+            "count": count
+        }
+        for action, count in action_rows
+    ]
+
+    # --------------------------------------------------------
+    # Events grouped by user
+    # --------------------------------------------------------
+    actor_rows = db.execute(
+        select(
+            User.id,
+            User.full_name,
+            func.count(AuditLog.id)
+        )
+        .join(AuditLog, AuditLog.user_id == User.id)
+        .group_by(User.id, User.full_name)
+        .order_by(func.count(AuditLog.id).desc())
+    ).all()
+
+    by_actor = [
+        {
+            "actor_id": actor_id,
+            "actor_name": actor_name,
+            "count": count
+        }
+        for actor_id, actor_name, count in actor_rows
+    ]
+
+    # --------------------------------------------------------
+    # Events over time
+    # --------------------------------------------------------
+    timeline_rows = db.execute(
+        select(
+            func.date(AuditLog.created_at),
+            func.count(AuditLog.id)
+        )
+        .group_by(func.date(AuditLog.created_at))
+        .order_by(func.date(AuditLog.created_at))
+    ).all()
+
+    timeline = [
+        {
+            "period": str(period),
+            "count": count
+        }
+        for period, count in timeline_rows
+    ]
+
+    # --------------------------------------------------------
+    # Security-related events
+    # --------------------------------------------------------
+    security_actions = [
+        "login",
+        "logout",
+        "password_change",
+        "role_change",
+        "user_deleted",
+        "user_created"
+    ]
+
+    security_rows = db.execute(
+        select(AuditLog)
+        .where(
+            func.lower(AuditLog.action).in_(
+                [action.lower() for action in security_actions]
+            )
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(20)
+    ).scalars().all()
+
+    security_events = [
+        {
+            "id": event.id,
+            "action": event.action,
+            "actor": (
+                {
+                    "id": event.user.id,
+                    "full_name": event.user.full_name,
+                    "email": event.user.email
+                }
+                if event.user
+                else None
+            ),
+            "created_at": event.created_at
+        }
+        for event in security_rows
+    ]
+
+    # --------------------------------------------------------
+    # Recent audit events
+    # --------------------------------------------------------
+    recent_rows = db.execute(
+        select(AuditLog)
+        .order_by(AuditLog.created_at.desc())
+        .limit(20)
+    ).scalars().all()
+
+    recent_events = [
+        {
+            "id": event.id,
+            "action": event.action,
+            "entity_type": event.entity_type,
+            "actor": (
+                {
+                    "id": event.user.id,
+                    "full_name": event.user.full_name,
+                    "email": event.user.email
+                }
+                if event.user
+                else None
+            ),
+            "created_at": event.created_at
+        }
+        for event in recent_rows
+    ]
+
+    return AuditReportResponse(
+        total_events=total_events,
+        by_action=by_action,
+        by_actor=by_actor,
+        timeline=timeline,
+        security_events=security_events,
+        recent_events=recent_events,
     )

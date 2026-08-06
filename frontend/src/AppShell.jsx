@@ -21,6 +21,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
     { key: "home", label: "Home", icon: "🏠" },
     { key: "dashboard", label: "Dashboard", icon: "📊" },
     { key: "decisions", label: "Decisions", icon: "📋" },
+    { key: "reports", label: "Reports", icon: "📈" },
   ];
 
   const adminNavItems = [
@@ -89,6 +90,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, children }) {
             {activeView === "home" && "Home"}
             {activeView === "dashboard" && "Dashboard"}
             {activeView === "decisions" && "Decisions"}
+            {activeView === "reports" && "Reports"}
             {activeView === "users" && "User Management"}
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}
