@@ -134,7 +134,6 @@ class Approval(Base):
     decision = relationship("Decision")
     reviewer = relationship("User")
 
-
 class Notification(Base):
     __tablename__ = "notifications"
 

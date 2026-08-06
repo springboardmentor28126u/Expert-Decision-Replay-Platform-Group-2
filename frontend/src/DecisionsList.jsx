@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import DecisionCard from "./DecisionCard";
 
-function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, pageSize = 10, statusFilter = "all", searchQuery = "" }) {
+function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, pageSize = 10, statusFilter = "all", searchQuery = "", ownerFilter = "all", currentUserId }) {
   const [decisions, setDecisions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,7 +87,6 @@ function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, page
           />
         ))}
       </div>
-
       {totalPages > 1 && (
         <div
           className="pagination-controls"

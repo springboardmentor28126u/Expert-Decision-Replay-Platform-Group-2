@@ -5,9 +5,8 @@ import CreateDecision from "./CreateDecision";
 import DecisionsList from "./DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "./ChangePassword";
-import NotificationsPage from "./NotificationsPage";
+import ReportsPage from "./ReportsPage";
 import useNotifications from "./useNotifications";
-import useDashboardData from "./useDashboardData";
 import {
   getEmployeeDashboard,
   getReviewerDashboard,
@@ -42,7 +41,6 @@ function DonutChart({ data, title }) {
                 const endPercent = cumulativePercent + (item.value / total);
                 cumulativePercent = endPercent;
 
-                // Handle single slice of 100%
                 if (item.value === total) {
                   return (
                     <circle key={idx} cx="0" cy="0" r="1" fill={item.color} className="chart-slice">
@@ -60,7 +58,6 @@ function DonutChart({ data, title }) {
                   `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
                   `L 0 0`,
                 ].join(" ");
-
                 return (
                   <path
                     key={idx}
@@ -139,7 +136,6 @@ function LineChart({ data, title }) {
   const chartWidth = width - paddingLeft - paddingRight;
   const chartHeight = height - paddingTop - paddingBottom;
 
-  // Compute points
   const points = data.map((d, i) => {
     const x = paddingLeft + (i * chartWidth) / Math.max(data.length - 1, 1);
     const y = paddingTop + chartHeight - (d.value * chartHeight) / maxValue;
@@ -154,12 +150,10 @@ function LineChart({ data, title }) {
       ) : (
         <div className="chart-container" style={{ display: "block" }}>
           <svg viewBox={`0 0 ${width} ${height}`} className="line-chart-svg" style={{ width: "100%", height: "auto" }}>
-            {/* Grid lines */}
             <line x1={paddingLeft} y1={paddingTop} x2={width - paddingRight} y2={paddingTop} stroke="var(--border)" strokeDasharray="4 4" />
             <line x1={paddingLeft} y1={paddingTop + chartHeight / 2} x2={width - paddingRight} y2={paddingTop + chartHeight / 2} stroke="var(--border)" strokeDasharray="4 4" />
             <line x1={paddingLeft} y1={paddingTop + chartHeight} x2={width - paddingRight} y2={paddingTop + chartHeight} stroke="var(--border)" />
 
-            {/* Area under the line */}
             {data.length > 1 && (
               <polygon
                 points={`${paddingLeft},${paddingTop + chartHeight} ${points} ${width - paddingRight},${paddingTop + chartHeight}`}
@@ -168,19 +162,12 @@ function LineChart({ data, title }) {
               />
             )}
 
-            {/* Line path */}
             {data.length > 1 ? (
-              <polyline
-                fill="none"
-                stroke="var(--accent)"
-                strokeWidth="3"
-                points={points}
-              />
+              <polyline fill="none" stroke="var(--accent)" strokeWidth="3" points={points} />
             ) : (
               <circle cx={paddingLeft + chartWidth / 2} cy={paddingTop + chartHeight - (data[0].value * chartHeight) / maxValue} r="5" fill="var(--accent)" />
             )}
 
-            {/* Points and labels */}
             {data.map((d, i) => {
               const x = paddingLeft + (i * chartWidth) / Math.max(data.length - 1, 1);
               const y = paddingTop + chartHeight - (d.value * chartHeight) / maxValue;
@@ -197,7 +184,6 @@ function LineChart({ data, title }) {
               );
             })}
 
-            {/* Gradients */}
             <defs>
               <linearGradient id="line-grad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--accent)" />
@@ -206,6 +192,105 @@ function LineChart({ data, title }) {
             </defs>
           </svg>
         </div>
+      )}
+    </div>
+  );
+}
+
+// --- Notification bell shown in the top bar ---
+function NotificationBell({ notifications, unreadCount, markAsRead, markAllAsRead }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          background: "none",
+          border: "1px solid var(--border)",
+          borderRadius: "8px",
+          width: "36px",
+          height: "36px",
+          cursor: "pointer",
+          fontSize: "16px",
+          position: "relative",
+        }}
+      >
+        🔔
+        {unreadCount > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: "-4px",
+              right: "-4px",
+              background: "var(--danger)",
+              color: "#fff",
+              borderRadius: "999px",
+              minWidth: "16px",
+              height: "16px",
+              fontSize: "10px",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setOpen(false)} />
+          <div
+            style={{
+              position: "absolute",
+              top: "44px",
+              right: 0,
+              width: "300px",
+              maxHeight: "360px",
+              overflowY: "auto",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: "10px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+              zIndex: 20,
+              padding: "10px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>Notifications</span>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11px", cursor: "pointer" }}
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+            {notifications.length === 0 ? (
+              <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>No notifications yet.</p>
+            ) : (
+              notifications.slice(0, 15).map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => markAsRead(n.id)}
+                  style={{
+                    padding: "8px",
+                    borderBottom: "1px solid var(--border)",
+                    cursor: "pointer",
+                    opacity: n.is_read ? 0.6 : 1,
+                  }}
+                >
+                  <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px" }}>{n.title}</p>
+                  <p style={{ fontSize: "11px", color: "var(--text-secondary)", margin: 0 }}>{n.message}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -222,15 +307,11 @@ function Dashboard({ token, onLogout }) {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
-  const [dashboardStats, setDashboardStats] = useState(null);
-  const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [dashboardError, setDashboardError] = useState("");
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-  } = useNotifications(token);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState("all");
+  const [auditReport, setAuditReport] = useState(null);
+
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(token);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -262,36 +343,6 @@ function Dashboard({ token, onLogout }) {
   }, [token, refreshKey]);
 
   useEffect(() => {
-    const fetchDashboardStats = async () => {
-      setDashboardLoading(true);
-      setDashboardError("");
-
-      try {
-        const fetchFn =
-          profile?.role === "admin"
-            ? getAdminDashboard
-            : profile?.role === "manager"
-            ? getManagerDashboard
-            : profile?.role === "reviewer"
-            ? getReviewerDashboard
-            : getEmployeeDashboard;
-
-        if (!profile) return;
-
-        const stats = await fetchFn(token);
-        setDashboardStats(stats);
-      } catch (err) {
-        console.error("Failed to load dashboard stats", err);
-        setDashboardError("Failed to load dashboard data.");
-      } finally {
-        setDashboardLoading(false);
-      }
-    };
-
-    fetchDashboardStats();
-  }, [profile, token, refreshKey]);
-
-  useEffect(() => {
     const fetchUsers = async () => {
       if (!profile || profile.role !== "admin") return;
       try {
@@ -306,16 +357,15 @@ function Dashboard({ token, onLogout }) {
     fetchUsers();
   }, [profile, token]);
 
-  const [auditLogs, setAuditLogs] = useState([]);
-
   useEffect(() => {
     const fetchAuditLogs = async () => {
       if (!profile || (profile.role !== "admin" && profile.role !== "manager")) return;
       try {
-        const res = await axios.get("http://127.0.0.1:8000/audit-logs", {
+        const res = await axios.get("http://127.0.0.1:8000/reports/audit", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setAuditLogs(res.data);
+        setAuditReport(res.data);
+        console.log("Audit Report:", res.data);
       } catch (err) {
         console.log("Failed to load audit logs for stats", err);
       }
@@ -327,21 +377,18 @@ function Dashboard({ token, onLogout }) {
     return <div style={{ padding: 40 }}>Loading dashboard...</div>;
   }
 
-  const statusCounts = dashboardStats
-    ? {
-        draft: dashboardStats.draft_decisions ?? 0,
-        under_review: dashboardStats.under_review_decisions ?? 0,
-        approved: dashboardStats.approved_decisions ?? 0,
-        rejected: dashboardStats.rejected_decisions ?? 0,
-        archived: dashboardStats.archived_decisions ?? 0,
-      }
-    : {
-        draft: 0,
-        under_review: 0,
-        approved: 0,
-        rejected: 0,
-        archived: 0,
-      };
+  const isEmployee = profile.role === "employee";
+  const isReviewer = profile.role === "reviewer";
+  const isManager = profile.role === "manager";
+  const isAdmin = profile.role === "admin";
+
+  const statusCounts = ["draft", "under_review", "approved", "rejected", "archived"].reduce(
+    (acc, status) => {
+      acc[status] = decisions.filter((d) => d.status === status).length;
+      return acc;
+    },
+    {}
+  );
 
   const myDecisions = decisions.filter((d) => d.created_by === profile.id);
   const myDecisionsCount = myDecisions.length;
@@ -354,7 +401,6 @@ function Dashboard({ token, onLogout }) {
     {}
   );
 
-  // Status breakdown data
   const targetStatusCounts = isEmployee ? myStatusCounts : statusCounts;
   const statusChartData = [
     { label: "Draft", value: targetStatusCounts.draft || 0, color: "var(--text-muted)" },
@@ -364,7 +410,6 @@ function Dashboard({ token, onLogout }) {
     { label: "Archived", value: targetStatusCounts.archived || 0, color: "#6366F1" },
   ];
 
-  // Category breakdown data
   const categoryCounts = {};
   const targetDecisions = isEmployee ? myDecisions : decisions;
   targetDecisions.forEach((d) => {
@@ -372,14 +417,9 @@ function Dashboard({ token, onLogout }) {
     categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
   });
   const categoryChartData = Object.entries(categoryCounts)
-    .map(([label, value]) => ({
-      label,
-      value,
-      color: "var(--accent)"
-    }))
+    .map(([label, value]) => ({ label, value, color: "var(--accent)" }))
     .sort((a, b) => b.value - a.value);
 
-  // User Roles breakdown data (Admin only)
   const roleCounts = {};
   (users || []).forEach((u) => {
     const r = u.role || "employee";
@@ -389,49 +429,30 @@ function Dashboard({ token, onLogout }) {
     label: label.charAt(0).toUpperCase() + label.slice(1),
     value,
     color:
-      label === "admin"
-        ? "var(--danger)"
-        : label === "manager"
-        ? "var(--warning)"
-        : label === "reviewer"
-        ? "var(--accent)"
-        : "var(--success)"
+      label === "admin" ? "var(--danger)" :
+      label === "manager" ? "var(--warning)" :
+      label === "reviewer" ? "var(--accent)" : "var(--success)"
   }));
 
-  // Audit activities breakdown data (Admin & Manager only)
   const last7Days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     last7Days.push(d.toISOString().split("T")[0]);
   }
-  const dailyCounts = {};
-  last7Days.forEach((day) => {
-    dailyCounts[day] = 0;
-  });
-  auditLogs.forEach((log) => {
-    if (log.created_at) {
-      const dateStr = log.created_at.split("T")[0];
-      if (dailyCounts[dateStr] !== undefined) {
-        dailyCounts[dateStr]++;
-      }
-    }
-  });
-  const auditChartData = Object.entries(dailyCounts).map(([date, count]) => {
-    const parts = date.split("-");
-    let label = date;
-    if (parts.length === 3) {
-      const utcDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
-      label = utcDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-    }
-    return { label, value: count };
-  });
+ const auditChartData =
+  auditReport?.timeline?.map(item => ({
+    label: new Date(item.period).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    value: item.count,
+  })) || [];
+  console.log(auditChartData);
 
   const handleNavigate = (view) => {
     setSelectedDecision(null);
-    if (view === "decisions") {
-      setStatusFilter("all");
-    }
+    if (view === "decisions") setStatusFilter("all");
     setActiveView(view);
   };
 
@@ -450,9 +471,7 @@ function Dashboard({ token, onLogout }) {
       await axios.put(`http://127.0.0.1:8000/users/${userId}/role`, { role: newRole }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-      );
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
     } catch (err) {
       console.error("Failed to update role", err);
       alert(err.response?.data?.detail || "Failed to update role");
@@ -478,68 +497,15 @@ function Dashboard({ token, onLogout }) {
       onNavigate={handleNavigate}
       onLogout={onLogout}
       unreadCount={unreadCount}
-    >
-      {activeView === "notifications" && (
-        <NotificationsPage
+      topbarExtra={
+        <NotificationBell
           notifications={notifications}
           unreadCount={unreadCount}
-          onMarkAsRead={markAsRead}
-          onMarkAllAsRead={markAllAsRead}
-          onNavigateToDecision={(id) => {
-            const decision = decisions.find((d) => d.id === id);
-            if (decision) {
-              setSelectedDecision(decision);
-              setActiveView("decision-details");
-            }
-          }}
+          markAsRead={markAsRead}
+          markAllAsRead={markAllAsRead}
         />
-      )}
-
-      {activeView === "dashboard" && (
-        <>
-          {dashboardLoading ? (
-            <div style={{ padding: "24px", color: "var(--text-secondary)" }}>
-              Loading dashboard metrics...
-            </div>
-          ) : dashboardError ? (
-            <div style={{ padding: "24px", color: "var(--danger)" }}>
-              {dashboardError}
-            </div>
-          ) : (
-            <>
-              <div className="stat-grid">
-            <div className="stat-card draft" onClick={() => handleStatCardClick("draft")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Draft</p>
-              <p className="stat-card-value">{statusCounts.draft}</p>
-            </div>
-            <div className="stat-card under_review" onClick={() => handleStatCardClick("under_review")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Under Review</p>
-              <p className="stat-card-value">{statusCounts.under_review}</p>
-            </div>
-            <div className="stat-card approved" onClick={() => handleStatCardClick("approved")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Approved</p>
-              <p className="stat-card-value">{statusCounts.approved}</p>
-            </div>
-            <div className="stat-card rejected" onClick={() => handleStatCardClick("rejected")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Rejected</p>
-              <p className="stat-card-value">{statusCounts.rejected}</p>
-            </div>
-            <div className="stat-card archived" onClick={() => handleStatCardClick("archived")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Archived</p>
-              <p className="stat-card-value">{statusCounts.archived}</p>
-            </div>
-          </div>
-              <div className="panel">
-                <p className="panel-title">Dashboard Overview</p>
-                <p style={{ color: "var(--text-secondary)", margin: "0" }}>
-                  This is your current dashboard overview with status counts for your decisions.
-                </p>
-              </div>
-            </>
-          )}
-        </>
-      )}
-
+      }
+    >
       {activeView === "home" && (
         <>
           <div className="panel">
@@ -558,27 +524,128 @@ function Dashboard({ token, onLogout }) {
               pageSize={3}
               statusFilter="all"
             />
+          </div>
+        </>
+      )}
 
-            {/* All roles have category chart (though employees only see their own decisions) */}
+      {activeView === "dashboard" && (
+        <>
+          <div className="dashboard-stat-row">
+            {isAdmin && (
+              <>
+                <div className="stat-metric-card">
+                  <p className="stat-metric-title">Total Users</p>
+                  <p className="stat-metric-num">{users ? users.length : 0}</p>
+                  <p className="stat-metric-desc">Registered platform users</p>
+                </div>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleNavigate("decisions")}>
+                  <p className="stat-metric-title">Total Decisions</p>
+                  <p className="stat-metric-num">{decisions.length}</p>
+                  <p className="stat-metric-desc">Decisions across all teams</p>
+                </div>
+                <div className="stat-metric-card">
+                  <p className="stat-metric-title">Active Reviewers</p>
+                  <p className="stat-metric-num">{users ? users.filter(u => u.role === "reviewer" && u.is_active).length : 0}</p>
+                  <p className="stat-metric-desc">Reviewers currently active</p>
+                </div>
+                <div className="stat-metric-card">
+                  <p className="stat-metric-title">Audit Events</p>
+                  <p className="stat-metric-num">{auditReport?.total_events || 0}</p>
+                  <p className="stat-metric-desc">Logged system events</p>
+                </div>
+              </>
+            )}
+
+            {isManager && (
+              <>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleNavigate("decisions")}>
+                  <p className="stat-metric-title">Total Decisions</p>
+                  <p className="stat-metric-num">{decisions.length}</p>
+                  <p className="stat-metric-desc">Global platform decisions</p>
+                </div>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("under_review")}>
+                  <p className="stat-metric-title">Under Review</p>
+                  <p className="stat-metric-num">{statusCounts.under_review || 0}</p>
+                  <p className="stat-metric-desc">Pending review decisions</p>
+                </div>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("approved")}>
+                  <p className="stat-metric-title">Approved Decisions</p>
+                  <p className="stat-metric-num">{statusCounts.approved || 0}</p>
+                  <p className="stat-metric-desc">Successfully approved</p>
+                </div>
+                <div className="stat-metric-card">
+                  <p className="stat-metric-title">Audit Logs</p>
+                  <p className="stat-metric-num">{auditReport?.total_events || 0}</p>
+                  <p className="stat-metric-desc">Events you can monitor</p>
+                </div>
+              </>
+            )}
+
+            {isReviewer && (
+              <>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleNavigate("decisions")}>
+                  <p className="stat-metric-title">Total Decisions</p>
+                  <p className="stat-metric-num">{decisions.length}</p>
+                  <p className="stat-metric-desc">Global platform decisions</p>
+                </div>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("under_review")}>
+                  <p className="stat-metric-title">Under Review</p>
+                  <p className="stat-metric-num">{statusCounts.under_review || 0}</p>
+                  <p className="stat-metric-desc">Awaiting your approval</p>
+                </div>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("approved")}>
+                  <p className="stat-metric-title">Approved Decisions</p>
+                  <p className="stat-metric-num">{statusCounts.approved || 0}</p>
+                  <p className="stat-metric-desc">Approved decisions</p>
+                </div>
+                <div className="stat-metric-card">
+                  <p className="stat-metric-title">My Created Decisions</p>
+                  <p className="stat-metric-num">{myDecisionsCount}</p>
+                  <p className="stat-metric-desc">Created by you</p>
+                </div>
+              </>
+            )}
+
+            {isEmployee && (
+              <>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleNavigate("decisions")}>
+                  <p className="stat-metric-title">My Decisions</p>
+                  <p className="stat-metric-num">{myDecisionsCount}</p>
+                  <p className="stat-metric-desc">Decisions authored by you</p>
+                </div>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("draft")}>
+                  <p className="stat-metric-title">My Drafts</p>
+                  <p className="stat-metric-num">{myStatusCounts.draft || 0}</p>
+                  <p className="stat-metric-desc">Work in progress</p>
+                </div>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("under_review")}>
+                  <p className="stat-metric-title">Under Review</p>
+                  <p className="stat-metric-num">{myStatusCounts.under_review || 0}</p>
+                  <p className="stat-metric-desc">Sent for approval</p>
+                </div>
+                <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("approved")}>
+                  <p className="stat-metric-title">Approved Decisions</p>
+                  <p className="stat-metric-num">{myStatusCounts.approved || 0}</p>
+                  <p className="stat-metric-desc">Approved and finalized</p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="analytics-grid">
+            <DonutChart
+              data={statusChartData}
+              title={isEmployee ? "My Decisions Status Breakdown" : "System Decisions Status Breakdown"}
+            />
             <BarChart
               data={categoryChartData}
               title={isEmployee ? "My Decisions by Category" : "System Decisions by Category"}
             />
-
-            {/* ONLY Admins and Managers see Audit Activity Logs */}
             {(isAdmin || isManager) && (
-              <LineChart
-                data={auditChartData}
-                title="System Activity Trend (Last 7 Days)"
-              />
+              <LineChart data={auditChartData} title="System Activity Trend (Last 7 Days)" />
             )}
-
-            {/* ONLY Admins see User Role Distribution */}
             {isAdmin && (
-              <DonutChart
-                data={roleChartData}
-                title="User Role Distribution"
-              />
+              <DonutChart data={roleChartData} title="User Role Distribution" />
             )}
           </div>
         </>
@@ -586,7 +653,20 @@ function Dashboard({ token, onLogout }) {
 
       {activeView === "decisions" && (
         <div className="panel">
-          <p className="panel-title">All Decisions</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <p className="panel-title" style={{ margin: 0 }}>All Decisions</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                padding: "8px 16px", background: "var(--accent)", border: "none",
+                borderRadius: "6px", color: "#fff", fontWeight: "600", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: "6px", fontSize: "13px"
+              }}
+            >
+              ➕ Create Decision
+            </button>
+          </div>
+
           <div className="filter-container" style={{ margin: "20px 0 16px 0", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px" }}>
             <div style={{ flex: "1 1 auto", display: "flex", alignItems: "center", gap: "10px" }}>
               <label htmlFor="decision-search" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
@@ -599,15 +679,9 @@ function Dashboard({ token, onLogout }) {
                 value={decisionSearchQuery}
                 onChange={(e) => setDecisionSearchQuery(e.target.value)}
                 style={{
-                  padding: "8px 12px",
-                  background: "#12161D",
-                  border: "1px solid #2E3646",
-                  borderRadius: "6px",
-                  color: "#F1F3F6",
-                  fontSize: "14px",
-                  width: "100%",
-                  maxWidth: "350px",
-                  outline: "none"
+                  padding: "8px 12px", background: "#12161D", border: "1px solid #2E3646",
+                  borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", width: "100%",
+                  maxWidth: "350px", outline: "none"
                 }}
               />
             </div>
@@ -621,14 +695,8 @@ function Dashboard({ token, onLogout }) {
                 value={ownerFilter}
                 onChange={(e) => setOwnerFilter(e.target.value)}
                 style={{
-                  padding: "8px 12px",
-                  background: "#12161D",
-                  border: "1px solid #2E3646",
-                  borderRadius: "6px",
-                  color: "#F1F3F6",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  outline: "none"
+                  padding: "8px 12px", background: "#12161D", border: "1px solid #2E3646",
+                  borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", cursor: "pointer", outline: "none"
                 }}
               >
                 <option value="all">All Decisions</option>
@@ -646,14 +714,8 @@ function Dashboard({ token, onLogout }) {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="status-select"
                 style={{
-                  padding: "8px 12px",
-                  background: "#12161D",
-                  border: "1px solid #2E3646",
-                  borderRadius: "6px",
-                  color: "#F1F3F6",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  outline: "none"
+                  padding: "8px 12px", background: "#12161D", border: "1px solid #2E3646",
+                  borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", cursor: "pointer", outline: "none"
                 }}
               >
                 <option value="all">All Statuses</option>
@@ -680,6 +742,8 @@ function Dashboard({ token, onLogout }) {
         </div>
       )}
 
+      {activeView === "reports" && <ReportsPage token={token} />}
+
       {activeView === "decision-details" && selectedDecision && (
         <DecisionDetails
           decision={selectedDecision}
@@ -703,7 +767,6 @@ function Dashboard({ token, onLogout }) {
         const totalUserPages = Math.ceil(filteredUsers.length / usersPerPage);
         const userStartIndex = (currentUserPage - 1) * usersPerPage;
         const paginatedUsers = filteredUsers.slice(userStartIndex, userStartIndex + usersPerPage);
-
         return (
           <div className="panel">
             <p className="panel-title">User Management</p>
@@ -719,15 +782,9 @@ function Dashboard({ token, onLogout }) {
                       setCurrentUserPage(1);
                     }}
                     style={{
-                      padding: "10px 16px",
-                      background: "#12161D",
-                      border: "1px solid #2E3646",
-                      borderRadius: "8px",
-                      color: "#F1F3F6",
-                      fontSize: "14px",
-                      width: "100%",
-                      maxWidth: "400px",
-                      outline: "none"
+                      padding: "10px 16px", background: "#12161D", border: "1px solid #2E3646",
+                      borderRadius: "8px", color: "#F1F3F6", fontSize: "14px", width: "100%",
+                      maxWidth: "400px", outline: "none"
                     }}
                   />
                 </div>
@@ -754,14 +811,9 @@ function Dashboard({ token, onLogout }) {
                               onChange={(e) => handleRoleChange(u.id, e.target.value)}
                               disabled={u.id === profile.id}
                               style={{
-                                padding: "6px 10px",
-                                background: "#12161D",
-                                border: "1px solid #2E3646",
-                                borderRadius: "6px",
-                                color: "#F1F3F6",
-                                fontSize: "13px",
-                                cursor: u.id === profile.id ? "not-allowed" : "pointer",
-                                outline: "none"
+                                padding: "6px 10px", background: "#12161D", border: "1px solid #2E3646",
+                                borderRadius: "6px", color: "#F1F3F6", fontSize: "13px",
+                                cursor: u.id === profile.id ? "not-allowed" : "pointer", outline: "none"
                               }}
                             >
                               <option value="employee">Employee</option>
@@ -773,11 +825,8 @@ function Dashboard({ token, onLogout }) {
                           <td>
                             <span
                               style={{
-                                display: "inline-block",
-                                padding: "4px 8px",
-                                borderRadius: "12px",
-                                fontSize: "11px",
-                                fontWeight: "700",
+                                display: "inline-block", padding: "4px 8px", borderRadius: "12px",
+                                fontSize: "11px", fontWeight: "700",
                                 background: u.is_active ? "rgba(45, 212, 167, 0.12)" : "rgba(240, 85, 90, 0.12)",
                                 color: u.is_active ? "var(--success)" : "var(--danger)"
                               }}
@@ -794,22 +843,8 @@ function Dashboard({ token, onLogout }) {
                                 background: u.id === profile.id ? "transparent" : "rgba(240, 85, 90, 0.08)",
                                 border: u.id === profile.id ? "1px solid var(--border)" : "1px solid var(--danger)",
                                 color: u.id === profile.id ? "var(--text-muted)" : "var(--danger)",
-                                borderRadius: "6px",
-                                fontSize: "12px",
-                                cursor: u.id === profile.id ? "not-allowed" : "pointer",
-                                transition: "all 0.2s"
-                              }}
-                              onMouseOver={(e) => {
-                                if (u.id !== profile.id) {
-                                  e.currentTarget.style.background = "var(--danger)";
-                                  e.currentTarget.style.color = "#0D1117";
-                                }
-                              }}
-                              onMouseOut={(e) => {
-                                if (u.id !== profile.id) {
-                                  e.currentTarget.style.background = "rgba(240, 85, 90, 0.08)";
-                                  e.currentTarget.style.color = "var(--danger)";
-                                }
+                                borderRadius: "6px", fontSize: "12px",
+                                cursor: u.id === profile.id ? "not-allowed" : "pointer", transition: "all 0.2s"
                               }}
                             >
                               Delete
@@ -826,33 +861,22 @@ function Dashboard({ token, onLogout }) {
                     )}
                   </tbody>
                 </table>
-
                 {totalUserPages > 1 && (
                   <div
                     className="pagination-controls"
                     style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: "12px",
-                      marginTop: "24px",
-                      paddingTop: "16px",
-                      borderTop: "1px solid var(--border)"
+                      display: "flex", justifyContent: "center", alignItems: "center", gap: "12px",
+                      marginTop: "24px", paddingTop: "16px", borderTop: "1px solid var(--border)"
                     }}
                   >
                     <button
                       onClick={() => setCurrentUserPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentUserPage === 1}
                       style={{
-                        padding: "8px 16px",
-                        background: "var(--surface)",
-                        border: "1px solid var(--border)",
+                        padding: "8px 16px", background: "var(--surface)", border: "1px solid var(--border)",
                         color: currentUserPage === 1 ? "var(--text-muted)" : "var(--text-primary)",
-                        borderRadius: "6px",
-                        cursor: currentUserPage === 1 ? "not-allowed" : "pointer",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        transition: "all 0.2s"
+                        borderRadius: "6px", cursor: currentUserPage === 1 ? "not-allowed" : "pointer",
+                        fontSize: "13px", fontWeight: "600"
                       }}
                     >
                       ← Previous
@@ -864,15 +888,10 @@ function Dashboard({ token, onLogout }) {
                       onClick={() => setCurrentUserPage((prev) => Math.min(prev + 1, totalUserPages))}
                       disabled={currentUserPage === totalUserPages}
                       style={{
-                        padding: "8px 16px",
-                        background: "var(--surface)",
-                        border: "1px solid var(--border)",
+                        padding: "8px 16px", background: "var(--surface)", border: "1px solid var(--border)",
                         color: currentUserPage === totalUserPages ? "var(--text-muted)" : "var(--text-primary)",
-                        borderRadius: "6px",
-                        cursor: currentUserPage === totalUserPages ? "not-allowed" : "pointer",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        transition: "all 0.2s"
+                        borderRadius: "6px", cursor: currentUserPage === totalUserPages ? "not-allowed" : "pointer",
+                        fontSize: "13px", fontWeight: "600"
                       }}
                     >
                       Next →
@@ -899,12 +918,12 @@ function Dashboard({ token, onLogout }) {
           <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ padding: "24px" }}>
             <button className="modal-close-btn" onClick={() => setShowCreateModal(false)}>&times;</button>
             <div style={{ marginTop: "12px" }}>
-              <CreateDecision 
-                token={token} 
+              <CreateDecision
+                token={token}
                 onCreated={() => {
                   setRefreshKey((k) => k + 1);
                   setShowCreateModal(false);
-                }} 
+                }}
               />
             </div>
           </div>

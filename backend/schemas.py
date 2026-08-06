@@ -174,6 +174,19 @@ class ApprovalResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    message: str
+    type: str
+    link: str | None
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
         
 class NotificationResponse(BaseModel):
     id: int
@@ -243,3 +256,97 @@ class AdminDashboardResponse(BaseModel):
     archived_decisions: int
 
     recent_decisions: list[RecentDecisionResponse]
+
+# ============================================================
+# Milestone 3 - Reports
+# ============================================================
+
+class ReportStatusCount(BaseModel):
+    status: str
+    count: int
+
+
+class ReportCategoryCount(BaseModel):
+    category: str
+    count: int
+
+
+class ReportTimeCount(BaseModel):
+    period: str
+    count: int
+
+
+class ReportRecentDecision(BaseModel):
+    id: int
+    title: str
+    status: str
+    category: str | None = None
+    created_at: datetime
+
+
+class DecisionReportResponse(BaseModel):
+    total_decisions: int
+    by_status: list[ReportStatusCount]
+    by_category: list[ReportCategoryCount]
+    created_over_time: list[ReportTimeCount]
+    recent_decisions: list[ReportRecentDecision]
+
+class ApprovalLevelReport(BaseModel):
+    level: int
+    pending: int
+    approved: int
+    rejected: int
+    escalated: int
+
+
+class ApprovalReportResponse(BaseModel):
+    total_approvals: int
+    pending: int
+    approved: int
+    rejected: int
+    escalated: int
+    average_completion_hours: float | None
+    by_level: list[ApprovalLevelReport]
+
+# ============================================================
+# Audit Reports
+# ============================================================
+
+class AuditActionCount(BaseModel):
+    action: str
+    count: int
+
+
+class AuditActorCount(BaseModel):
+    actor_id: int
+    actor_name: str
+    count: int
+
+
+class AuditTimelineCount(BaseModel):
+    period: str
+    count: int
+
+
+class AuditSecurityEvent(BaseModel):
+    id: int
+    action: str
+    actor: dict | None = None
+    created_at: datetime
+
+
+class AuditRecentEvent(BaseModel):
+    id: int
+    action: str
+    entity_type: str
+    actor: dict | None = None
+    created_at: datetime
+
+
+class AuditReportResponse(BaseModel):
+    total_events: int
+    by_action: list[AuditActionCount]
+    by_actor: list[AuditActorCount]
+    timeline: list[AuditTimelineCount]
+    security_events: list[AuditSecurityEvent]
+    recent_events: list[AuditRecentEvent]
