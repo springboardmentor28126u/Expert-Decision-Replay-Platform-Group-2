@@ -31,6 +31,7 @@ function AppShell({
     { key: "dashboard", label: "Dashboard", icon: "📊" },
     { key: "decisions", label: "Decisions", icon: "📋" },
     { key: "reports", label: "Reports", icon: "📈" },
+    { key: "notifications", label: "Notifications", icon: "🔔" },
   ];
 
   const adminNavItems = [
@@ -115,6 +116,7 @@ function AppShell({
             {activeView === "dashboard" && "Dashboard"}
             {activeView === "decisions" && "Decisions"}
             {activeView === "reports" && "Reports"}
+            {activeView === "notifications" && "Notifications"}
             {activeView === "users" && "User Management"}
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}

@@ -34,8 +34,8 @@ function formatTimestamp(isoString) {
 // useNotifications hook (owned by Dashboard) so this page, the sidebar
 // badge, and the header bell always agree on what's read/unread.
 export default function NotificationsPage({
-  notifications,
-  unreadCount,
+  notifications = [],
+  unreadCount = 0,
   onMarkAsRead,
   onMarkAllAsRead,
   onNavigateToDecision,
@@ -43,15 +43,20 @@ export default function NotificationsPage({
   const [filter, setFilter] = useState("all"); // all | unread
 
   const handleClick = (item) => {
-    if (!item.is_read) onMarkAsRead(item.id);
-    if (item.link && onNavigateToDecision) {
+    if (!item?.is_read && onMarkAsRead) onMarkAsRead(item.id);
+    if (item?.link && onNavigateToDecision) {
       const match = item.link.match(/\/decisions\/(\d+)/);
       if (match) onNavigateToDecision(Number(match[1]));
     }
   };
 
+  // Ensure safe array handling even if null/undefined is explicitly passed
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+
   const visibleNotifications =
-    filter === "unread" ? notifications.filter((n) => !n.is_read) : notifications;
+    filter === "unread"
+      ? safeNotifications.filter((n) => !n?.is_read)
+      : safeNotifications;
 
   return (
     <div className="panel">
@@ -128,7 +133,7 @@ export default function NotificationsPage({
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {visibleNotifications.map((item) => {
-            const style = getTypeStyle(item.type);
+            const style = getTypeStyle(item?.type);
             return (
               <div
                 key={item.id}

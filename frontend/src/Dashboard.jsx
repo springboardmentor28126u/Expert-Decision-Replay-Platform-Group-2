@@ -6,6 +6,7 @@ import DecisionsList from "./DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "./ChangePassword";
 import ReportsPage from "./ReportsPage";
+import NotificationsPage from "./NotificationsPage";
 import useNotifications from "./useNotifications";
 import {
   getEmployeeDashboard,
@@ -198,7 +199,7 @@ function LineChart({ data, title }) {
 }
 
 // --- Notification bell shown in the top bar ---
-function NotificationBell({ notifications, unreadCount, markAsRead, markAllAsRead }) {
+function NotificationBell({ notifications, unreadCount, markAsRead, markAllAsRead, onViewAll }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -275,20 +276,38 @@ function NotificationBell({ notifications, unreadCount, markAsRead, markAllAsRea
             ) : (
               notifications.slice(0, 15).map((n) => (
                 <div
-                  key={n.id}
-                  onClick={() => markAsRead(n.id)}
+                  key={n.id || n._id}
+                  onClick={() => markAsRead(n.id || n._id)}
                   style={{
                     padding: "8px",
                     borderBottom: "1px solid var(--border)",
                     cursor: "pointer",
-                    opacity: n.is_read ? 0.6 : 1,
+                    opacity: n.is_read || n.read ? 0.6 : 1,
                   }}
                 >
-                  <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px" }}>{n.title}</p>
-                  <p style={{ fontSize: "11px", color: "var(--text-secondary)", margin: 0 }}>{n.message}</p>
+                  <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px" }}>{n.title || n.heading}</p>
+                  <p style={{ fontSize: "11px", color: "var(--text-secondary)", margin: 0 }}>{n.message || n.text}</p>
                 </div>
               ))
             )}
+            <div style={{ marginTop: "10px", textAlign: "center", borderTop: "1px solid var(--border)", paddingTop: "8px" }}>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  onViewAll();
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--accent)",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                View All Notifications →
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -434,21 +453,14 @@ function Dashboard({ token, onLogout }) {
       label === "reviewer" ? "var(--accent)" : "var(--success)"
   }));
 
-  const last7Days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    last7Days.push(d.toISOString().split("T")[0]);
-  }
- const auditChartData =
-  auditReport?.timeline?.map(item => ({
-    label: new Date(item.period).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    }),
-    value: item.count,
-  })) || [];
-  console.log(auditChartData);
+  const auditChartData =
+    auditReport?.timeline?.map(item => ({
+      label: new Date(item.period).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      value: item.count,
+    })) || [];
 
   const handleNavigate = (view) => {
     setSelectedDecision(null);
@@ -459,6 +471,19 @@ function Dashboard({ token, onLogout }) {
   const handleSelectDecision = (decision) => {
     setSelectedDecision(decision);
     setActiveView("decision-details");
+  };
+
+  // Notifications only carry a decision id (parsed from their `link`),
+  // not the full decision object DecisionDetails needs, so fetch it first.
+  const handleNavigateToDecisionFromNotification = async (decisionId) => {
+    try {
+      const res = await axios.get(`http://127.0.0.1:8000/decisions/${decisionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      handleSelectDecision(res.data);
+    } catch (err) {
+      console.error("Failed to load decision from notification:", err);
+    }
   };
 
   const handleStatCardClick = (status) => {
@@ -503,6 +528,7 @@ function Dashboard({ token, onLogout }) {
           unreadCount={unreadCount}
           markAsRead={markAsRead}
           markAllAsRead={markAllAsRead}
+          onViewAll={() => handleNavigate("notifications")}
         />
       }
     >
@@ -743,6 +769,16 @@ function Dashboard({ token, onLogout }) {
       )}
 
       {activeView === "reports" && <ReportsPage token={token} />}
+
+      {activeView === "notifications" && (
+        <NotificationsPage
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+          onNavigateToDecision={handleNavigateToDecisionFromNotification}
+        />
+      )}
 
       {activeView === "decision-details" && selectedDecision && (
         <DecisionDetails

@@ -14,12 +14,13 @@ from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
 from notifications import router as notifications_router
-from notifications import notify_all_users
+from notifications import notify_all_users, create_notification
 
 from schemas import UserCreate, UserLogin, UserResponse, Token
 
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_role
-# Create all tables (safe to keep, won't duplicate existing ones)
+
+# Create all tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -29,9 +30,11 @@ DISCUSSION_UPLOAD_DIR = UPLOAD_ROOT / "discussion"
 ALLOWED_DISCUSSION_EXTENSIONS = {".pdf", ".docx", ".jpg", ".jpeg", ".png"}
 UPLOAD_ROOT.mkdir(exist_ok=True)
 DISCUSSION_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT), name="uploads")
 app.include_router(uploads_router)
 app.include_router(notifications_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:5174"],
@@ -278,7 +281,6 @@ def approve_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-     # Find the highest approval stage reached so far for this decision
     last_approval = db.execute(
         select(Approval)
         .where(Approval.decision_id == decision_id, Approval.action == ApprovalAction.approved)
@@ -288,11 +290,9 @@ def approve_decision(
     next_stage = 1 if not last_approval else last_approval.stage + 1
 
     if next_stage == 1:
-        # Stage 1: Reviewer, Manager, or Admin can approve
         if current_user.role not in (UserRole.reviewer, UserRole.manager, UserRole.admin):
             raise HTTPException(status_code=403, detail="Only a Reviewer, Manager, or Admin can give the initial approval")
     elif next_stage == 2:
-        # Stage 2 (final): only Manager or Admin
         if current_user.role not in (UserRole.manager, UserRole.admin):
             raise HTTPException(status_code=403, detail="Only a Manager or Admin can give final approval")
     else:
@@ -307,7 +307,6 @@ def approve_decision(
     )
     db.add(new_approval)
 
-    # Only mark the decision as fully "approved" once stage 2 is done
     if next_stage == 2:
         decision.status = DecisionStatus.approved
 
@@ -488,7 +487,6 @@ def update_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    # Only the creator or an admin can change/remove an EXISTING attachment
     update_data = decision_update.model_dump(exclude_unset=True)
     if "attachment_url" in update_data and decision.attachment_url:
         if current_user.id != decision.created_by and current_user.role != UserRole.admin:
@@ -497,7 +495,6 @@ def update_decision(
                 detail="Only the decision's creator or an admin can change or remove its attachment"
             )
 
-    # Save a version snapshot of the CURRENT state, before making changes
     existing_versions = db.execute(
         select(DecisionVersion).where(DecisionVersion.decision_id == decision_id)
     ).scalars().all()
@@ -514,8 +511,6 @@ def update_decision(
     )
     db.add(snapshot)
 
-    # Now apply the updates
-    update_data = decision_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(decision, key, value)
 
@@ -608,7 +603,6 @@ def export_decision_pdf(
     line(f"Created on: {decision.created_at.strftime('%d %b %Y, %I:%M %p')}", gap=0.4)
 
     line("Problem Statement:", bold=True)
-    # wrap long text manually, simple version
     statement = decision.problem_statement
     words = statement.split()
     current_line = ""
@@ -843,35 +837,6 @@ def _save_discussion_attachment(attachment: UploadFile | None) -> str | None:
     "/discussion",
     response_model=DiscussionResponse,
     tags=["Discussion Module"],
-    openapi_extra={
-        "requestBody": {
-            "content": {
-                "application/json": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "decision_id": {"type": "integer"},
-                            "message": {"type": "string"},
-                            "attachment_url": {"type": "string"}
-                        },
-                        "required": ["decision_id", "message"]
-                    }
-                },
-                "multipart/form-data": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "decision_id": {"type": "integer"},
-                            "message": {"type": "string"},
-                            "attachment": {"type": "string", "format": "binary"},
-                            "attachment_url": {"type": "string"}
-                        },
-                        "required": ["decision_id", "message"]
-                    }
-                }
-            }
-        }
-    }
 )
 async def add_discussion_comment(
     request: Request,
@@ -915,35 +880,6 @@ async def add_discussion_comment(
     "/discussion/meeting-note",
     response_model=DiscussionResponse,
     tags=["Discussion Module"],
-    openapi_extra={
-        "requestBody": {
-            "content": {
-                "application/json": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "decision_id": {"type": "integer"},
-                            "message": {"type": "string"},
-                            "attachment_url": {"type": "string"}
-                        },
-                        "required": ["decision_id", "message"]
-                    }
-                },
-                "multipart/form-data": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "decision_id": {"type": "integer"},
-                            "message": {"type": "string"},
-                            "attachment": {"type": "string", "format": "binary"},
-                            "attachment_url": {"type": "string"}
-                        },
-                        "required": ["decision_id", "message"]
-                    }
-                }
-            }
-        }
-    }
 )
 async def add_discussion_meeting_note(
     request: Request,
@@ -973,35 +909,6 @@ async def add_discussion_meeting_note(
     "/discussion/reply",
     response_model=DiscussionResponse,
     tags=["Discussion Module"],
-    openapi_extra={
-        "requestBody": {
-            "content": {
-                "application/json": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "parent_id": {"type": "integer"},
-                            "message": {"type": "string"},
-                            "attachment_url": {"type": "string"}
-                        },
-                        "required": ["parent_id", "message"]
-                    }
-                },
-                "multipart/form-data": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "parent_id": {"type": "integer"},
-                            "message": {"type": "string"},
-                            "attachment": {"type": "string", "format": "binary"},
-                            "attachment_url": {"type": "string"}
-                        },
-                        "required": ["parent_id", "message"]
-                    }
-                }
-            }
-        }
-    }
 )
 async def reply_to_discussion_comment(
     request: Request,
@@ -1047,31 +954,6 @@ def get_decision_discussion_thread(
     "/discussion/{discussion_id}",
     response_model=DiscussionResponse, 
     tags=["Discussion Module"],
-    openapi_extra={
-        "requestBody": {
-            "content": {
-                "application/json": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "message": {"type": "string"},
-                            "attachment_url": {"type": "string"}
-                        }
-                    }
-                },
-                "multipart/form-data": {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "message": {"type": "string"},
-                            "attachment": {"type": "string", "format": "binary"},
-                            "attachment_url": {"type": "string"}
-                        }
-                    }
-                }
-            }
-        }
-    }
 )
 async def edit_discussion_comment(
     discussion_id: int,
@@ -1143,13 +1025,11 @@ def get_dashboard_stats(
             Decision.created_by == user_id
         )
 
-    # Total Decisions
     total_decisions = db.execute(
         select(func.count(Decision.id))
         .where(*filters)
     ).scalar_one()
 
-    # Status Counts
     status_counts = dict(
         db.execute(
             select(
@@ -1161,7 +1041,6 @@ def get_dashboard_stats(
         ).all()
     )
 
-    # Recent Decisions
     recent_decisions = db.execute(
         select(Decision)
         .where(*filters)
@@ -1196,7 +1075,6 @@ def employee_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     stats = get_dashboard_stats(
         db,
         current_user.id,
@@ -1221,7 +1099,6 @@ def reviewer_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     if current_user.role != UserRole.reviewer:
         raise HTTPException(
             status_code=403,
@@ -1307,21 +1184,17 @@ def admin_dashboard(
             detail="Only admins can access this dashboard."
         )
 
-    # Reuse dashboard statistics
     stats = get_dashboard_stats(db)
 
-    # Total Users
     total_users = db.execute(
         select(func.count(User.id))
     ).scalar_one()
 
-    # Active Users
     active_users = db.execute(
         select(func.count(User.id))
         .where(User.is_active == True)
     ).scalar_one()
 
-    # Role Counts
     role_counts = dict(
         db.execute(
             select(
@@ -1332,7 +1205,6 @@ def admin_dashboard(
         ).all()
     )
 
-    # Total Alternatives
     total_alternatives = db.execute(
         select(func.count(Alternative.id))
     ).scalar_one()
@@ -1340,21 +1212,17 @@ def admin_dashboard(
     return AdminDashboardResponse(
         total_users=total_users,
         active_users=active_users,
-
         employees=role_counts.get(UserRole.employee, 0),
         reviewers=role_counts.get(UserRole.reviewer, 0),
         managers=role_counts.get(UserRole.manager, 0),
         admins=role_counts.get(UserRole.admin, 0),
-
         total_alternatives=total_alternatives,
-
         total_decisions=stats["total_decisions"],
         draft_decisions=stats["draft_decisions"],
         under_review_decisions=stats["under_review_decisions"],
         approved_decisions=stats["approved_decisions"],
         rejected_decisions=stats["rejected_decisions"],
         archived_decisions=stats["archived_decisions"],
-
         recent_decisions=stats["recent_decisions"],
     )
 
@@ -1371,19 +1239,16 @@ def get_decision_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Reports are available only to managers and admins
     if current_user.role not in (UserRole.manager, UserRole.admin):
         raise HTTPException(
             status_code=403,
             detail="Only managers and admins can access reports."
         )
 
-    # Total decisions
     total_decisions = db.execute(
         select(func.count(Decision.id))
     ).scalar_one()
 
-    # Decisions by status
     status_rows = db.execute(
         select(
             Decision.status,
@@ -1400,7 +1265,6 @@ def get_decision_report(
         for status, count in status_rows
     ]
 
-    # Decisions by category
     category_rows = db.execute(
         select(
             Decision.category,
@@ -1419,7 +1283,6 @@ def get_decision_report(
         for category, count in category_rows
     ]
 
-        # Decisions created over time
     time_rows = db.execute(
         select(
             func.date(Decision.created_at).label("period"),
@@ -1437,7 +1300,6 @@ def get_decision_report(
         for period, count in time_rows
     ]
 
-    # Recent decisions
     recent_decisions = db.execute(
         select(Decision)
         .order_by(Decision.created_at.desc())
@@ -1476,47 +1338,36 @@ def get_approval_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Only managers and admins can access reports
     if current_user.role not in (UserRole.manager, UserRole.admin):
         raise HTTPException(
             status_code=403,
             detail="Only managers and admins can access reports."
         )
 
-    # Total approval records
     total_approvals = db.execute(
         select(func.count(Approval.id))
     ).scalar_one()
 
-    # Approved records
     approved = db.execute(
         select(func.count(Approval.id))
         .where(Approval.action == ApprovalAction.approved)
     ).scalar_one()
 
-    # Rejected records
     rejected = db.execute(
         select(func.count(Approval.id))
         .where(Approval.action == ApprovalAction.rejected)
     ).scalar_one()
 
-    # Resubmitted records
-    # For now, we treat resubmissions as escalated workflow activity.
     escalated = db.execute(
         select(func.count(Approval.id))
         .where(Approval.action == ApprovalAction.resubmitted)
     ).scalar_one()
 
-    # Pending approvals
-    #
-    # A decision is considered pending when it is currently
-    # under review and has not been finally approved/rejected.
     pending = db.execute(
         select(func.count(Decision.id))
         .where(Decision.status == DecisionStatus.under_review)
     ).scalar_one()
 
-    # Approval counts by stage
     level_rows = db.execute(
         select(
             Approval.stage,
@@ -1541,10 +1392,8 @@ def get_approval_report(
 
         if action == ApprovalAction.approved:
             levels[stage]["approved"] = count
-
         elif action == ApprovalAction.rejected:
             levels[stage]["rejected"] = count
-
         elif action == ApprovalAction.resubmitted:
             levels[stage]["escalated"] = count
 
@@ -1571,25 +1420,12 @@ def get_approval_report(
 )
 def get_audit_report(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role(UserRole.admin)),
 ):
-    # Only admins can access audit reports
-    if current_user.role != UserRole.admin:
-        raise HTTPException(
-            status_code=403,
-            detail="Only admins can access audit reports."
-        )
-
-    # --------------------------------------------------------
-    # Total audit events
-    # --------------------------------------------------------
     total_events = db.execute(
         select(func.count(AuditLog.id))
     ).scalar_one()
 
-    # --------------------------------------------------------
-    # Events grouped by action
-    # --------------------------------------------------------
     action_rows = db.execute(
         select(
             AuditLog.action,
@@ -1607,9 +1443,6 @@ def get_audit_report(
         for action, count in action_rows
     ]
 
-    # --------------------------------------------------------
-    # Events grouped by user
-    # --------------------------------------------------------
     actor_rows = db.execute(
         select(
             User.id,
@@ -1630,9 +1463,6 @@ def get_audit_report(
         for actor_id, actor_name, count in actor_rows
     ]
 
-    # --------------------------------------------------------
-    # Events over time
-    # --------------------------------------------------------
     timeline_rows = db.execute(
         select(
             func.date(AuditLog.created_at),
@@ -1650,9 +1480,6 @@ def get_audit_report(
         for period, count in timeline_rows
     ]
 
-    # --------------------------------------------------------
-    # Security-related events
-    # --------------------------------------------------------
     security_actions = [
         "login",
         "logout",
@@ -1691,9 +1518,6 @@ def get_audit_report(
         for event in security_rows
     ]
 
-    # --------------------------------------------------------
-    # Recent audit events
-    # --------------------------------------------------------
     recent_rows = db.execute(
         select(AuditLog)
         .order_by(AuditLog.created_at.desc())
