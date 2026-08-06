@@ -309,7 +309,7 @@ function Dashboard({ token, onLogout }) {
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState("all");
-  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditReport, setAuditReport] = useState(null);
 
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(token);
 
@@ -361,10 +361,11 @@ function Dashboard({ token, onLogout }) {
     const fetchAuditLogs = async () => {
       if (!profile || (profile.role !== "admin" && profile.role !== "manager")) return;
       try {
-        const res = await axios.get("http://127.0.0.1:8000/audit-logs", {
+        const res = await axios.get("http://127.0.0.1:8000/reports/audit", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setAuditLogs(res.data);
+        setAuditReport(res.data);
+        console.log("Audit Report:", res.data);
       } catch (err) {
         console.log("Failed to load audit logs for stats", err);
       }
@@ -439,23 +440,15 @@ function Dashboard({ token, onLogout }) {
     d.setDate(d.getDate() - i);
     last7Days.push(d.toISOString().split("T")[0]);
   }
-  const dailyCounts = {};
-  last7Days.forEach((day) => { dailyCounts[day] = 0; });
-  auditLogs.forEach((log) => {
-    if (log.created_at) {
-      const dateStr = log.created_at.split("T")[0];
-      if (dailyCounts[dateStr] !== undefined) dailyCounts[dateStr]++;
-    }
-  });
-  const auditChartData = Object.entries(dailyCounts).map(([date, count]) => {
-    const parts = date.split("-");
-    let label = date;
-    if (parts.length === 3) {
-      const utcDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
-      label = utcDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-    }
-    return { label, value: count };
-  });
+ const auditChartData =
+  auditReport?.timeline?.map(item => ({
+    label: new Date(item.period).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    value: item.count,
+  })) || [];
+  console.log(auditChartData);
 
   const handleNavigate = (view) => {
     setSelectedDecision(null);
@@ -557,7 +550,7 @@ function Dashboard({ token, onLogout }) {
                 </div>
                 <div className="stat-metric-card">
                   <p className="stat-metric-title">Audit Events</p>
-                  <p className="stat-metric-num">{auditLogs.length}</p>
+                  <p className="stat-metric-num">{auditReport?.total_events || 0}</p>
                   <p className="stat-metric-desc">Logged system events</p>
                 </div>
               </>
@@ -582,7 +575,7 @@ function Dashboard({ token, onLogout }) {
                 </div>
                 <div className="stat-metric-card">
                   <p className="stat-metric-title">Audit Logs</p>
-                  <p className="stat-metric-num">{auditLogs.length}</p>
+                  <p className="stat-metric-num">{auditReport?.total_events || 0}</p>
                   <p className="stat-metric-desc">Events you can monitor</p>
                 </div>
               </>

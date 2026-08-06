@@ -174,6 +174,19 @@ class ApprovalResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    message: str
+    type: str
+    link: str | None
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
         
 class RecentDecisionResponse(BaseModel):
     id: int
