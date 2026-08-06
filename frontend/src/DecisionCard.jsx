@@ -54,70 +54,78 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
         background: "var(--surface)",
         border: "1px solid var(--border)",
         borderRadius: "10px",
-        padding: "18px 20px",
-        marginBottom: "12px",
+        padding: "16px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        minHeight: "200px",
+        boxSizing: "border-box",
+        transition: "transform 0.2s, box-shadow 0.2s",
       }}
+      className="decision-card-item"
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
           <span
             onClick={() => onSelectDecision(decision)}
             style={{
               color: "var(--accent)",
               fontWeight: 600,
-              fontSize: "15px",
+              fontSize: "14px",
               cursor: "pointer",
+              lineHeight: "1.3",
             }}
           >
             {decision.title}
           </span>
-          <p style={{ color: "var(--text-secondary)", fontSize: "13px", margin: "6px 0 0" }}>
-            {decision.problem_statement.length > 120
-              ? decision.problem_statement.slice(0, 120) + "..."
-              : decision.problem_statement}
-          </p>
-        </div>
-        <span
-          style={{
-            background: style.bg,
-            color: style.color,
-            padding: "4px 12px",
-            borderRadius: "20px",
-            fontSize: "11px",
-            fontWeight: 700,
-            textTransform: "capitalize",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {decision.status.replace("_", " ")}
-        </span>
-          {decision.attachment_url && (
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <span
-              title="Has attachment"
-              style={{ fontSize: "13px", marginLeft: "6px" }}
+              style={{
+                background: style.bg,
+                color: style.color,
+                padding: "2px 8px",
+                borderRadius: "20px",
+                fontSize: "10px",
+                fontWeight: 700,
+                textTransform: "capitalize",
+                whiteSpace: "nowrap",
+              }}
             >
-              📎
+              {decision.status.replace("_", " ")}
             </span>
-          )}
+            {decision.attachment_url && (
+              <span
+                title="Has attachment"
+                style={{ fontSize: "12px" }}
+              >
+                📎
+              </span>
+            )}
+          </div>
+        </div>
+        <p style={{ color: "var(--text-secondary)", fontSize: "12px", margin: 0, lineHeight: "1.4" }}>
+          {decision.problem_statement.length > 90
+            ? decision.problem_statement.slice(0, 90) + "..."
+            : decision.problem_statement}
+        </p>
       </div>
 
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: "14px",
-          paddingTop: "14px",
+          marginTop: "12px",
+          paddingTop: "12px",
           borderTop: "1px solid var(--border)",
         }}
       >
-        <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "var(--text-muted)" }}>
-          <span>{decision.category || "Uncategorized"}</span>
-          <span>By {decision.creator_name || "Unknown"}</span>
-          <span>{new Date(decision.created_at).toLocaleString()}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "11px", color: "var(--text-muted)", marginBottom: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontWeight: "600", color: "var(--text-secondary)" }}>{decision.category || "Uncategorized"}</span>
+            <span>By {decision.creator_name ? decision.creator_name.split(" ")[0] : "Unknown"}</span>
+          </div>
+          <span>{new Date(decision.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
         </div>
 
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", alignItems: "center" }}>
           {canUpdateStatus && (
             <select
               value={decision.status}
@@ -128,8 +136,9 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
                 border: "1px solid var(--border)",
                 color: "var(--text-primary)",
                 borderRadius: "6px",
-                fontSize: "12px",
-                padding: "5px 8px",
+                fontSize: "11px",
+                padding: "4px 6px",
+                cursor: "pointer",
               }}
             >
               {allStatuses.map((s) => (
@@ -147,9 +156,10 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
                 border: "1px solid var(--danger)",
                 color: "var(--danger)",
                 borderRadius: "6px",
-                fontSize: "12px",
-                padding: "5px 10px",
+                fontSize: "11px",
+                padding: "4px 8px",
                 cursor: "pointer",
+                transition: "all 0.2s",
               }}
             >
               Delete
@@ -159,7 +169,7 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
       </div>
 
       {error && (
-        <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "8px" }}>{error}</p>
+        <p style={{ color: "var(--danger)", fontSize: "11px", marginTop: "6px", margin: 0 }}>{error}</p>
       )}
     </div>
   );
