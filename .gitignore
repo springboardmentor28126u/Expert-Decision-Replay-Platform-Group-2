@@ -217,7 +217,4 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Uploads
-uploads/
-
-old_main.py
+.Docs/

@@ -14,7 +14,7 @@ import StarRating from "../components/StarRating";
 import "./DecisionDetail.css";
 import { exportDecisionPDF } from "../services/api";
 import { deleteDecision } from "../services/api";
-import { deleteComment } from "../services/api";
+import { deleteComment, restoreDecisionVersion  } from "../services/api";
 
 
 const APPROVAL_LEVELS = ["Reviewer", "Manager", "Administrator"];
@@ -221,6 +221,18 @@ async function handleDeleteComment(commentId) {
   }
 }
 
+async function handleRestoreVersion(versionId, versionNumber) {
+  if (!window.confirm(`Restore this decision to version ${versionNumber}? Current content will be saved as a new version first.`)) {
+    return;
+  }
+  try {
+    await restoreDecisionVersion(id, versionId);
+    loadEverything();
+  } catch (err) {
+    setError(err.friendlyMessage);
+  }
+}
+
   if (!decision && !error) {
     return <p style={{ padding: 40, color: "var(--line)" }}>Loading case file...</p>;
   }
@@ -312,7 +324,6 @@ async function handleDeleteComment(commentId) {
             )}
           </div>
 
-          {/* ---- Version History ---- */}
           {versions.length > 0 && (
             <section className="detail-section">
               <h2 className="detail-section__title">Version History</h2>
@@ -330,6 +341,15 @@ async function handleDeleteComment(commentId) {
                       <p className="approval-entry__comment">
                         "{v.title}" — {v.status}
                       </p>
+                      {canEdit && (
+                        <button
+                          className="attachment-remove-button"
+                          onClick={() => handleRestoreVersion(v.id, v.version_number)}
+                          style={{ marginTop: 4 }}
+                        >
+                          Restore this version
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -377,9 +397,9 @@ async function handleDeleteComment(commentId) {
                   <button className="btn-reject" onClick={() => handleApprovalAction("Rejected")}>
                     Reject
                   </button>
-                  <button className="btn-ghost-light" onClick={() => handleApprovalAction("Escalated")}>
+                  {/* <button className="btn-ghost-light" onClick={() => handleApprovalAction("Escalated")}>
                     Escalate
-                  </button>
+                  </button> */}
                 </div>
               </div>
             )}
