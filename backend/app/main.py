@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.models import user, team, decision, decision_version, document, alternative, comment
-from app.routers import auth, team as team_router, decision as decision_router, alternative as alternative_router, comment as comment_router
+from app.models import user, team, decision, decision_version, document, alternative, comment, approval
+from app.routers import auth, team as team_router, decision as decision_router, alternative as alternative_router, comment as comment_router, approval as approval_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -21,6 +21,7 @@ app.include_router(team_router.router)
 app.include_router(decision_router.router)
 app.include_router(alternative_router.router)
 app.include_router(comment_router.router)
+app.include_router(approval_router.router)
 
 @app.get("/")
 def root():
