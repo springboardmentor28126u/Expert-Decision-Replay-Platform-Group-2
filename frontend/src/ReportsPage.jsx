@@ -62,8 +62,13 @@ function ReportsPage({ token }) {
   const handleExport = async (format) => {
     setExporting(format);
     try {
+      const reportPath =
+        activeReport === "approval"
+          ? "approvals"
+          : activeReport;
+
       const res = await axios.get(
-        `http://127.0.0.1:8000/reports/${activeReport}/export/${format}`,
+        `http://127.0.0.1:8000/reports/${reportPath}/export/${format}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           responseType: "blob",
@@ -106,7 +111,7 @@ function ReportsPage({ token }) {
             onClick={() => handleExport("pdf")}
             style={{ padding: "8px 16px", fontSize: "13px" }}
           >
-            {exporting === "pdf" ? "Exporting..." : "Γ¼ç Export PDF"}
+            {exporting === "pdf" ? "Exporting..." : "📄 Export PDF"}
           </button>
           <button
             className="form-btn primary"
@@ -114,7 +119,7 @@ function ReportsPage({ token }) {
             onClick={() => handleExport("excel")}
             style={{ padding: "8px 16px", fontSize: "13px" }}
           >
-            {exporting === "excel" ? "Exporting..." : "Γ¼ç Export Excel"}
+            {exporting === "excel" ? "Exporting..." : "📊 Export Excel"}
           </button>
         </div>
       </div>
