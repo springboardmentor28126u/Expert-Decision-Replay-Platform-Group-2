@@ -216,6 +216,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-backend/uploads/*
-!backend/uploads/.gitkeep
-backend/test.txt
+
+# React
+node_modules/
+
+# Build files
+dist/
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

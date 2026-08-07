@@ -1,30 +1,33 @@
 from pydantic import BaseModel
-from datetime import datetime
+
 
 class AlternativeCreate(BaseModel):
-    title: str
-    pros: str | None = None
-    cons: str | None = None
-    estimated_cost: float | None = None
-    risk_assessment: str | None = None
+    option_name: str
+    pros: str
+    cons: str
+    estimated_cost: str
+    feasibility: str
+    risk_level: str
+
 
 class AlternativeUpdate(BaseModel):
-    title: str | None = None
-    pros: str | None = None
-    cons: str | None = None
-    estimated_cost: float | None = None
-    risk_assessment: str | None = None
+    option_name: str
+    pros: str
+    cons: str
+    estimated_cost: str
+    feasibility: str
+    risk_level: str
 
-class AlternativeOut(BaseModel):
+
+class AlternativeResponse(BaseModel):
     id: int
     decision_id: int
-    title: str
-    pros: str | None
-    cons: str | None
-    estimated_cost: float | None
-    risk_assessment: str | None
-    created_by: int
-    created_at: datetime
+    option_name: str
+    pros: str
+    cons: str
+    estimated_cost: str
+    feasibility: str
+    risk_level: str
 
     class Config:
         from_attributes = True

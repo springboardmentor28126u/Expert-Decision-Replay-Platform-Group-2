@@ -1,24 +1,24 @@
 from pydantic import BaseModel
 from datetime import datetime
-from app.models.decision import DecisionStatus
+
 
 class DecisionCreate(BaseModel):
     title: str
-    problem_statement: str
-    category: str | None = None
+    description: str
+    category: str
 
 class DecisionUpdate(BaseModel):
-    title: str | None = None
-    problem_statement: str | None = None
-    category: str | None = None
-    status: DecisionStatus | None = None
+    title: str
+    description: str
+    category: str
+    status: str
 
-class DecisionOut(BaseModel):
+class DecisionResponse(BaseModel):
     id: int
     title: str
-    problem_statement: str
-    category: str | None
-    status: DecisionStatus
+    description: str
+    category: str
+    status: str
     created_by: int
     created_at: datetime
 

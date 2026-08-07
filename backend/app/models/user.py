@@ -1,12 +1,8 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey
-from app.database import Base
-import enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from datetime import datetime
 
-class RoleEnum(str, enum.Enum):
-    employee = "employee"
-    reviewer = "reviewer"
-    manager = "manager"
-    administrator = "administrator"
+from app.database.database import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -14,6 +10,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    role = Column(Enum(RoleEnum), default=RoleEnum.employee)
-    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    password = Column(String, nullable=False)
+    role = Column(String, default="Employee")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
