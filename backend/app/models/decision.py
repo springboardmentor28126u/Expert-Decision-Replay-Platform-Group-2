@@ -7,7 +7,7 @@ from app.database import Base
 
 
 class Decision(Base):
-    """Decision model representing the existing decisions table.
+    """Decision model representing the decisions table.
 
     Statuses: Draft, Under Review, Approved, Rejected, Archived
     """
@@ -23,7 +23,6 @@ class Decision(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, nullable=True, onupdate=func.now())
 
-    
     creator = relationship("User", back_populates="decisions", foreign_keys=[created_by])
     alternatives = relationship("Alternative", back_populates="decision", cascade="all, delete-orphan")
     discussions = relationship("Discussion", back_populates="decision", cascade="all, delete-orphan")

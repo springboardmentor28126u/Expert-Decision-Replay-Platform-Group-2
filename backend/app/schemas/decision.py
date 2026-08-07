@@ -45,6 +45,9 @@ class DecisionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+DecisionOut = DecisionResponse
+
+
 class DecisionListResponse(BaseModel):
     """Schema for paginated decision list."""
     items: List[DecisionResponse]

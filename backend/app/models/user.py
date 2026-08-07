@@ -1,4 +1,4 @@
-"""User model — maps to existing 'users' table."""
+"""User model — maps to 'users' table."""
 
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
@@ -7,7 +7,7 @@ from app.database import Base
 
 
 class User(Base):
-    """User model representing the existing users table.
+    """User model representing the users table.
 
     Roles: Employee, Reviewer, Manager, Administrator
     """
@@ -20,7 +20,6 @@ class User(Base):
     password = Column(String, nullable=False)
     role = Column(String, nullable=True)
 
-    
     decisions = relationship("Decision", back_populates="creator", foreign_keys="Decision.created_by")
     discussions = relationship("Discussion", back_populates="user")
     history_entries = relationship("DecisionHistory", back_populates="updater")
