@@ -1,32 +1,33 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
-from app.database.database import Base, engine
-from app.models.user import User
-from app.models.decision import Decision
-from app.api.auth import router as auth_router
-from app.core.dependencies import get_current_user
-from app.models.user import User
-from fastapi import Depends
-from app.api.decision import router as decision_router
-from app.models.decision_history import DecisionHistory
-from app.models.decision_document import DecisionDocument
-from app.models.alternative import Alternative
-from app.api.alternative import router as alternative_router
-from app.models.comment import Comment
-from app.api.comment import router as comment_router
-from app.api.history import router as history_router
-from app.models.approval import Approval
-from app.api.approval import router as approval_router
-from app.models.comment import Comment
-from app.models.notification import Notification
-from app.api.notification import router as notification_router
-from app.models.audit_log import AuditLog
-from app.api.audit import router as audit_router
-from app.api.report import router as report_router
+from sqlalchemy.exc import SQLAlchemyError
 
-# Create the database tables
-Base.metadata.create_all(bind=engine)
+from app.api.alternative import router as alternative_router
+from app.api.approval import router as approval_router
+from app.api.audit import router as audit_router
+from app.api.auth import router as auth_router
+from app.api.comment import router as comment_router
+from app.api.decision import router as decision_router
+from app.api.history import router as history_router
+from app.api.notification import router as notification_router
+from app.api.report import router as report_router
+from app.core.config import settings
+from app.core.dependencies import get_current_user
+from app.database.database import Base, engine
+from app.models.alternative import Alternative
+from app.models.approval import Approval
+from app.models.audit_log import AuditLog
+from app.models.comment import Comment
+from app.models.decision import Decision
+from app.models.decision_document import DecisionDocument
+from app.models.decision_history import DecisionHistory
+from app.models.notification import Notification
+from app.models.user import User
+
+try:
+    Base.metadata.create_all(bind=engine)
+except SQLAlchemyError as exc:
+    print(f"Warning: database initialization skipped: {exc}")
 
 app = FastAPI(title=settings.APP_NAME)
 app.add_middleware(

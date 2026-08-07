@@ -36,17 +36,27 @@ function Register() {
     e.preventDefault();
 
     try {
-      await api.post("/auth/register", formData);
+      const payload = {
+        full_name: formData.full_name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      };
+
+      await api.post("/auth/register", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       alert("Registration Successful");
-
       navigate("/");
     } catch (err) {
-      console.log(err);
-      alert(
-        err.response?.data?.detail ||
-          "Registration Failed"
-      );
+      console.error(err);
+      const detail = err.response?.data?.detail;
+      const message =
+        typeof detail === "string"
+          ? detail
+          : detail?.[0]?.msg || "Registration Failed";
+      alert(message);
     }
   };
 

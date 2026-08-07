@@ -30,8 +30,7 @@ function Login() {
         formData,
         {
           headers: {
-            "Content-Type":
-              "application/x-www-form-urlencoded",
+            "Content-Type": "application/x-www-form-urlencoded",
           },
         }
       );
