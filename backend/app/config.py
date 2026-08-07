@@ -15,10 +15,10 @@ class Settings(BaseSettings):
     )
 
     # Database
-    database_url: str
+    database_url: str = "sqlite:///./decision_vault.db"
 
     # JWT
-    jwt_secret_key: str
+    jwt_secret_key: str = "super-secret-development-key-change-in-production"
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
 
