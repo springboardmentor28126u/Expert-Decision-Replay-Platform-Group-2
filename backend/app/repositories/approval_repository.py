@@ -144,6 +144,20 @@ class ApprovalRepository(BaseRepository[Approval]):
 
         return result.scalar_one_or_none()
 
+    async def list_recent(
+        self,
+        limit: int = 5,
+    ) -> Sequence[Approval]:
+        """Most recently updated approvals, for the Dashboard's activity feed."""
+
+        result = await self.db.execute(
+            self._base_query()
+            .order_by(Approval.updated_at.desc())
+            .limit(limit)
+        )
+
+        return result.scalars().all()
+
     async def count_by_status_per_team(self) -> Sequence:
         """
         For the Team Report's per-team approval statistics. Joins through

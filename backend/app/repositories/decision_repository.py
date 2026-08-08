@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.decision import Decision
 from app.models.enums import DecisionStatus
+from app.models.user import User
 from app.repositories.base_repository import BaseRepository
 
 
@@ -117,14 +118,15 @@ class DecisionRepository(BaseRepository[Decision]):
 
         return dict(result.all())
 
-    async def count_by_period(self):
+    async def count_by_period(self, granularity: str = "day"):
         """
-        Decisions created per day (UTC) — the Decision Report's "created
-        over time" table. Truncation happens in SQL so only the already-
-        aggregated rows come back, not every Decision.
+        Decisions created per period (UTC) — the Decision Report's "created
+        over time" table (day granularity) and the Dashboard's monthly
+        trend chart (month granularity). Truncation happens in SQL so only
+        the already-aggregated rows come back, not every Decision.
         """
 
-        period = func.date_trunc("day", Decision.created_at)
+        period = func.date_trunc(granularity, Decision.created_at)
 
         result = await self.db.execute(
             select(period, func.count())
@@ -165,3 +167,24 @@ class DecisionRepository(BaseRepository[Decision]):
         )
 
         return result.scalars().all()
+
+    async def count_by_creator(
+        self,
+        limit: int = 5,
+    ) -> Sequence:
+        """
+        Top decision creators by volume, for the Dashboard's leaderboard.
+        Joined and grouped in SQL rather than pulling every Decision and
+        tallying in Python.
+        """
+
+        result = await self.db.execute(
+            select(User.id, User.full_name, func.count(Decision.id))
+            .join(User, User.id == Decision.created_by_id)
+            .where(Decision.is_deleted.is_(False))
+            .group_by(User.id, User.full_name)
+            .order_by(func.count(Decision.id).desc())
+            .limit(limit)
+        )
+
+        return result.all()

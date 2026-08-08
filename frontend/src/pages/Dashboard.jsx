@@ -7,6 +7,7 @@ import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "../components/ChangePassword";
 import NotificationsPage from "./NotificationsPage";
 import ReportsPage from "./ReportsPage";
+import AnalyticsDashboard from "../components/AnalyticsDashboard";
 import "../styles/dashboard.css";
 
 function Dashboard({ token, onLogout }) {
@@ -14,6 +15,7 @@ function Dashboard({ token, onLogout }) {
   const [users, setUsers] = useState(null);
   const [summary, setSummary] = useState(null);
   const [summaryError, setSummaryError] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeView, setActiveView] = useState("dashboard");
   const [selectedDecision, setSelectedDecision] = useState(null);
@@ -22,6 +24,7 @@ function Dashboard({ token, onLogout }) {
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
   const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -40,6 +43,7 @@ function Dashboard({ token, onLogout }) {
 
   useEffect(() => {
     const fetchSummary = async () => {
+      setSummaryLoading(true);
       try {
         const res = await axios.get("http://127.0.0.1:8000/api/v1/dashboard/summary", {
           headers: { Authorization: `Bearer ${token}` },
@@ -49,6 +53,8 @@ function Dashboard({ token, onLogout }) {
       } catch (err) {
         console.log("Failed to load dashboard summary", err);
         setSummaryError("Failed to load dashboard statistics.");
+      } finally {
+        setSummaryLoading(false);
       }
     };
     fetchSummary();
@@ -78,6 +84,8 @@ function Dashboard({ token, onLogout }) {
         setNotifications(res.data);
       } catch (err) {
         console.log("Failed to load notifications", err);
+      } finally {
+        setNotificationsLoading(false);
       }
     };
     fetchNotifications();
@@ -231,32 +239,15 @@ function Dashboard({ token, onLogout }) {
     >
       {activeView === "dashboard" && (
         <>
-          <div className="stat-grid">
-            <div className="stat-card draft" onClick={() => handleStatCardClick("draft")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Draft</p>
-              <p className="stat-card-value">{statusCounts.draft}</p>
-            </div>
-            <div className="stat-card under_review" onClick={() => handleStatCardClick("under_review")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Under Review</p>
-              <p className="stat-card-value">{statusCounts.under_review}</p>
-            </div>
-            <div className="stat-card approved" onClick={() => handleStatCardClick("approved")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Approved</p>
-              <p className="stat-card-value">{statusCounts.approved}</p>
-            </div>
-            <div className="stat-card rejected" onClick={() => handleStatCardClick("rejected")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Rejected</p>
-              <p className="stat-card-value">{statusCounts.rejected}</p>
-            </div>
-            <div className="stat-card archived" onClick={() => handleStatCardClick("archived")} role="button" tabIndex={0}>
-              <p className="stat-card-label">Archived</p>
-              <p className="stat-card-value">{statusCounts.archived}</p>
-            </div>
-          </div>
-
-          {summaryError && (
-            <p style={{ color: "var(--danger)", fontSize: "13px", margin: "0 0 16px" }}>{summaryError}</p>
-          )}
+          <AnalyticsDashboard
+            analytics={summary?.analytics}
+            statusCounts={statusCounts}
+            loading={summaryLoading}
+            error={summaryError}
+            onStatClick={handleStatCardClick}
+            notifications={notifications}
+            notificationsLoading={notificationsLoading}
+          />
 
           {adminStats && (
             <div className="panel">

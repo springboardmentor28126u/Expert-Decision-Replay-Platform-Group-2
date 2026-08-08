@@ -98,6 +98,25 @@ class CommentRepository(BaseRepository[Comment]):
 
         return result.scalars().all()
 
+    async def list_recent(
+        self,
+        limit: int = 5,
+    ) -> Sequence[Comment]:
+        """
+        Most recently posted comments, for the Dashboard's activity feed.
+        Adds `Comment.decision` on top of the base query's eager loads —
+        only this call needs the parent decision's title.
+        """
+
+        result = await self.db.execute(
+            self._base_query()
+            .options(selectinload(Comment.decision))
+            .order_by(Comment.created_at.desc())
+            .limit(limit)
+        )
+
+        return result.scalars().all()
+
     async def list_by_author(
         self,
         author_id: uuid.UUID,
