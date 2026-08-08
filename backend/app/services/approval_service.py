@@ -248,6 +248,15 @@ class ApprovalService:
                 "Reviewer not found."
             )
 
+        # Level 1 is the entry point of the approval chain — enforcing the
+        # role here (rather than for every level) keeps level 3+ free for
+        # administrators to assign at their discretion, per the workflow's
+        # existing "manual from level 3 up" design.
+        if payload.level == 1 and reviewer.role.name != RoleName.REVIEWER.value:
+            raise ValidationException(
+                "Level 1 reviewer must be a user with the reviewer role."
+            )
+
         existing = await self.approvals.find_assignment(
             decision_id,
             payload.reviewer_id,
@@ -284,12 +293,113 @@ class ApprovalService:
             related_entity_id=approval.id,
         )
 
+        # A valid level-1 assignment is the trigger for auto-assigning the
+        # decision creator's team manager at level 2 — see
+        # _maybe_auto_assign_level_2 for the full set of conditions. This
+        # never runs for level 2+ assignments themselves, so manually
+        # assigning/reassigning level 2 (or level 3+) behaves exactly as
+        # before.
+        if payload.level == 1:
+            await self._maybe_auto_assign_level_2(decision)
+
         created = await self.approvals.get_by_id(
             approval.id
         )
 
         return ApprovalOut.model_validate(
             created
+        )
+
+    async def _maybe_auto_assign_level_2(
+        self,
+        decision: Decision,
+    ) -> None:
+        """
+        Auto-assigns the decision creator's team manager as the level-2
+        reviewer, once a level-1 (reviewer-role) assignment exists.
+        Silently no-ops — this is a convenience, not a requirement, so a
+        decision missing any of these preconditions simply has no level-2
+        reviewer auto-assigned; a Manager/Administrator can still assign
+        one manually via the normal endpoint.
+
+        Conditions, all of which must hold:
+          - the creator holds the employee role
+          - the creator belongs to a team (User.team_id is set)
+          - that team has a manager (Team.manager_id is set)
+          - the manager isn't the creator themselves (no self-review)
+          - no level-2 approval already exists for this decision (manual
+            or from a prior call of this method — never double-assign)
+        """
+
+        creator = await self.users.get_by_id(
+            decision.created_by_id
+        )
+
+        if creator is None or creator.role.name != RoleName.EMPLOYEE.value:
+            return
+
+        if creator.team is None:
+            return
+
+        manager_id = creator.team.manager_id
+
+        if manager_id is None:
+            return
+
+        if manager_id == decision.created_by_id:
+            return
+
+        decision_approvals = await self.approvals.list_by_decision(
+            decision.id
+        )
+
+        if any(a.level == 2 for a in decision_approvals):
+            return
+
+        manager = await self.users.get_by_id(
+            manager_id
+        )
+
+        if manager is None:
+            return
+
+        approval = Approval(
+            decision_id=decision.id,
+            reviewer_id=manager_id,
+            level=2,
+            status=ApprovalStatus.PENDING,
+        )
+
+        self.approvals.add(
+            approval
+        )
+
+        await self.db.commit()
+
+        # System-triggered, not a user action — no actor to attribute it to.
+        await self.audit_logs.log_safely(
+            actor=None,
+            action="approval.auto_assigned",
+            entity_type="approval",
+            entity_id=approval.id,
+            log_metadata={
+                "decision_id": str(decision.id),
+                "level": 2,
+                "reviewer_id": str(manager_id),
+                "reason": "team_manager_auto_assignment",
+            },
+        )
+
+        await self._notify_safely(
+            recipient_id=manager_id,
+            notification_type=NotificationType.APPROVAL_REQUEST,
+            title="New review assignment",
+            message=(
+                f'You have been assigned to review "{decision.title}" '
+                f"at level 2, as manager of the team that created it."
+            ),
+            related_entity_type="approval",
+            related_entity_id=approval.id,
         )
 
     # --------------------------------------------------

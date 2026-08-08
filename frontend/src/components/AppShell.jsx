@@ -5,6 +5,7 @@ import {
   Bell,
   BarChart3,
   Users,
+  Building2,
   Settings,
   LogOut,
   PanelLeftClose,
@@ -20,6 +21,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const role = profile.role?.name;
   const isManagerOrAdmin = role === "manager" || role === "administrator";
+  const isManager = role === "manager";
   const isAdmin = role === "administrator";
 
   const navItems = [
@@ -29,6 +31,11 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
   ];
 
   const managerNavItems = [{ key: "reports", label: "Reports", icon: BarChart3 }];
+
+  // Read-only view of the team(s) a manager manages — administrators
+  // already see every team via User Management > Teams, so this is
+  // manager-only rather than isManagerOrAdmin.
+  const myTeamNavItems = [{ key: "my-team", label: "My Team", icon: Building2 }];
 
   const adminNavItems = [{ key: "users", label: "User Management", icon: Users }];
 
@@ -66,6 +73,13 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
               <div className="shell-nav-group">
                 <div className="shell-nav-section-label">Reports</div>
                 {managerNavItems.map(renderNavItem)}
+              </div>
+            )}
+
+            {isManager && (
+              <div className="shell-nav-group">
+                <div className="shell-nav-section-label">Team</div>
+                {myTeamNavItems.map(renderNavItem)}
               </div>
             )}
 
@@ -115,6 +129,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
               {activeView === "decisions" && "Decisions"}
               {activeView === "notifications" && "Notifications"}
               {activeView === "reports" && "Reports"}
+              {activeView === "my-team" && "My Team"}
               {activeView === "users" && "User Management"}
               {activeView === "account" && "Account Settings"}
               {activeView === "decision-details" && "Decision Details"}

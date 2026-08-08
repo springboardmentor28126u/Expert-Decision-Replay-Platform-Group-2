@@ -7,6 +7,7 @@ import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import AppShell from "../components/AppShell";
 import TeamManagement from "../components/TeamManagement";
+import MyTeams from "../components/MyTeams";
 import CreateDecision from "../components/CreateDecision";
 import DecisionsList from "../components/DecisionsList";
 import DecisionDetails from "./DecisionDetails";
@@ -575,9 +576,35 @@ function Dashboard({ token, onLogout }) {
           <ReportsPage token={token} />
         )}
 
+      {activeView === "my-team" && profile.role?.name === "manager" && (
+        <MyTeams token={token} profile={profile} />
+      )}
+
       {activeView === "account" && (
         <div className="panel">
           <p className="panel-title">Account Settings</p>
+
+          <div className="account-profile-summary">
+            <div className="account-profile-field">
+              <span className="account-profile-label">Full Name</span>
+              <span className="account-profile-value">{profile.full_name}</span>
+            </div>
+            <div className="account-profile-field">
+              <span className="account-profile-label">Email</span>
+              <span className="account-profile-value">{profile.email}</span>
+            </div>
+            <div className="account-profile-field">
+              <span className="account-profile-label">Role</span>
+              <Badge tone="accent">{profile.role?.name}</Badge>
+            </div>
+            <div className="account-profile-field">
+              <span className="account-profile-label">Team</span>
+              <span className="account-profile-value">
+                {profile.team?.name || <span style={{ color: "var(--text-muted)" }}>No team assigned</span>}
+              </span>
+            </div>
+          </div>
+
           <ChangePassword token={token} />
         </div>
       )}

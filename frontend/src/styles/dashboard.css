@@ -1222,7 +1222,44 @@
   color: var(--text-muted);
 }
 
+/* ---------------- Account Settings profile summary ---------------- */
+.account-profile-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.account-profile-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.account-profile-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.account-profile-value {
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
 @media (max-width: 640px) {
+  .account-profile-summary {
+    grid-template-columns: 1fr;
+  }
+
+
   .decision-header-card,
   .dash-card {
     padding: 16px;

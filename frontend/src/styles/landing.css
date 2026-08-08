@@ -103,73 +103,130 @@
   font-size: var(--text-md);
 }
 
-/* ---- Signature hero visual: animated decision flow ---- */
+/* ---- Signature hero visual: the decision record ----
+   Deliberately static (no entrance animation on the card or its rows) —
+   an earlier animated version of this visual silently failed to paint in
+   some environments because its animation depended on animation-delay
+   ever advancing. A plain, always-visible card has no such failure mode. */
 .landing-hero-visual {
   position: relative;
-  height: 420px;
 }
 
-.flow-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-/* Static by default (no draw-in/fade-in dependency) — a CSS-animation-only
-   entrance risks the diagram staying invisible if the animation timeline
-   never advances (backgrounded tab, reduced-motion, some headless
-   renderers), which is worse than just showing the finished diagram
-   immediately. Only the small "live" pulse on the Under Review dot below
-   is animated, per the "subtle and purposeful" direction. */
-.flow-path {
-  stroke: var(--border);
-  stroke-width: 2;
-  fill: none;
-}
-
-.flow-node {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.replay-card {
+  max-width: 420px;
+  margin: 0 auto;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  padding: 8px 16px;
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-secondary);
-  white-space: nowrap;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-md);
 }
 
-.flow-dot {
-  width: 8px;
-  height: 8px;
+.replay-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--divider);
+}
+
+.replay-card-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--accent);
   flex-shrink: 0;
 }
 
-.flow-node-draft .flow-dot { background: var(--text-secondary); }
-.flow-node-review .flow-dot { background: var(--warning); animation: pulse 2s ease-in-out infinite; animation-delay: 1.6s; }
-.flow-node-approved { border-color: var(--accent); color: var(--accent); }
-.flow-node-approved .flow-dot { background: var(--accent); }
-.flow-node-alt .flow-dot { background: var(--danger); }
-.flow-node-archived .flow-dot { background: var(--text-muted); }
+.replay-steps {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A single static connector spanning the icon column — simpler and more
+   robust than per-segment lines between each row. */
+.replay-steps::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: 15px;
+  width: 1px;
+  background: var(--border);
+}
+
+.replay-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+.replay-step:last-child {
+  padding-bottom: 0;
+}
+
+.replay-step-icon {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.replay-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 5px;
+}
+
+.replay-step-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.replay-step-note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* The payoff row — this is the one thing every other row exists to make
+   possible, so it gets the accent treatment the others don't. */
+.replay-step-final .replay-step-icon {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.replay-step-final .replay-step-label {
+  color: var(--accent);
+}
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(245, 166, 35, 0); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .landing-hero-text, .landing-hero-visual, .flow-node-review .flow-dot {
+  .landing-hero-text {
     animation: none !important;
     opacity: 1 !important;
   }
@@ -364,8 +421,8 @@
   .landing-hero {
     grid-template-columns: 1fr;
   }
-  .landing-hero-visual {
-    height: 320px;
+  .replay-card {
+    max-width: 440px;
   }
   .landing-title {
     font-size: 34px;
@@ -389,11 +446,8 @@
     padding: 48px 20px;
   }
 
-  /* The animated decision-flow diagram uses fixed-pixel absolute
-     positioning tuned for the desktop two-column layout — it doesn't
-     reflow at phone widths, so it's hidden rather than left half-broken. */
-  .landing-hero-visual {
-    display: none;
+  .replay-card {
+    max-width: none;
   }
 
   .landing-title {

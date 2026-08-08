@@ -47,6 +47,19 @@ const CAPABILITIES = [
   },
 ];
 
+// The hero's signature visual — what EDRP actually preserves for every
+// decision, in the order it accumulates. Distinct from LIFECYCLE_STEPS
+// below (that's the decision's *status* over time); this is the *record*
+// itself, which is the platform's real value proposition.
+const REPLAY_STEPS = [
+  { icon: FileText, label: "Problem", note: "What needs to be decided, and why." },
+  { icon: Scale, label: "Alternatives", note: "Every option considered, compared side-by-side." },
+  { icon: MessageSquare, label: "Discussion & Rationale", note: "Comments and reasoning, attached to the record." },
+  { icon: ClipboardCheck, label: "Approval Workflow", note: "Routed through the right reviewers, in order." },
+  { icon: CheckCircle2, label: "Outcome", note: "A recorded decision, with the reasoning intact." },
+  { icon: History, label: "Decision History", note: "Replay the full record — any decision, any time.", final: true },
+];
+
 const LIFECYCLE_STEPS = [
   {
     icon: FileText,
@@ -110,28 +123,28 @@ function Landing({ onLogin, onSignup }) {
           </div>
         </div>
 
-        <div className="landing-hero-visual" aria-hidden="true">
-          <svg className="flow-svg" viewBox="0 0 360 420" fill="none">
-            <path className="flow-path flow-path-1" d="M 180 50 L 180 150" />
-            <path className="flow-path flow-path-2" d="M 180 150 L 100 240" />
-            <path className="flow-path flow-path-3" d="M 180 150 L 260 240" />
-            <path className="flow-path flow-path-4" d="M 100 240 L 100 330" />
-          </svg>
-
-          <div className="flow-node flow-node-draft" style={{ top: '20px', left: '145px' }}>
-            <span className="flow-dot"></span>Draft
-          </div>
-          <div className="flow-node flow-node-review" style={{ top: '128px', left: '112px' }}>
-            <span className="flow-dot"></span>Under Review
-          </div>
-          <div className="flow-node flow-node-alt" style={{ top: '218px', left: '38px' }}>
-            <span className="flow-dot"></span>Rejected
-          </div>
-          <div className="flow-node flow-node-approved" style={{ top: '218px', left: '210px' }}>
-            <span className="flow-dot"></span>Approved
-          </div>
-          <div className="flow-node flow-node-archived" style={{ top: '308px', left: '38px' }}>
-            <span className="flow-dot"></span>Archived
+        <div className="landing-hero-visual">
+          <div className="replay-card" aria-hidden="true">
+            <div className="replay-card-header">
+              <span className="replay-card-dot" />
+              Decision record
+            </div>
+            <div className="replay-steps">
+              {REPLAY_STEPS.map((step) => {
+                const Icon = step.icon;
+                return (
+                  <div className={`replay-step ${step.final ? "replay-step-final" : ""}`} key={step.label}>
+                    <span className="replay-step-icon">
+                      <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                    </span>
+                    <span className="replay-step-body">
+                      <span className="replay-step-label">{step.label}</span>
+                      <span className="replay-step-note">{step.note}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </main>
