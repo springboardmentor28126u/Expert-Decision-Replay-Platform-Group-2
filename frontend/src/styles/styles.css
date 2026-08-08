@@ -133,7 +133,8 @@
 }
 
 .auth-empty-icon {
-  font-size: 26px;
+  display: flex;
+  color: var(--text-muted);
 }
 
 .auth-empty-state p {

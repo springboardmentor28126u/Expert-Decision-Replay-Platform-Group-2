@@ -1,3 +1,5 @@
+import { BarChart3 } from "lucide-react";
+
 // Reusable panel wrapper for a single chart: title, fixed-height plot area,
 // and the loading/empty states every chart on the dashboard needs. Chart
 // components render their Recharts tree as `children`; ChartCard decides
@@ -44,7 +46,7 @@ function ChartEmptyState({ message }) {
         color: "var(--text-muted)",
       }}
     >
-      <span style={{ fontSize: 22 }} aria-hidden="true">📊</span>
+      <BarChart3 size={22} strokeWidth={1.75} aria-hidden="true" />
       <p style={{ fontSize: "var(--text-sm)", margin: 0 }}>{message}</p>
     </div>
   );

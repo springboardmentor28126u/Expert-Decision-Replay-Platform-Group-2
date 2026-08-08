@@ -6,6 +6,7 @@ import { useToast } from "../components/ui/ToastContext";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import AppShell from "../components/AppShell";
+import TeamManagement from "../components/TeamManagement";
 import CreateDecision from "../components/CreateDecision";
 import DecisionsList from "../components/DecisionsList";
 import DecisionDetails from "./DecisionDetails";
@@ -30,6 +31,7 @@ function Dashboard({ token, onLogout }) {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
+  const [userMgmtTab, setUserMgmtTab] = useState("users");
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -64,6 +66,8 @@ function Dashboard({ token, onLogout }) {
     fetchSummary();
   }, [token, refreshKey]);
 
+  const [usersRefreshKey, setUsersRefreshKey] = useState(0);
+
   useEffect(() => {
     const fetchUsers = async () => {
       if (!profile || profile.role?.name !== "administrator") return;
@@ -75,7 +79,7 @@ function Dashboard({ token, onLogout }) {
       }
     };
     fetchUsers();
-  }, [profile, token]);
+  }, [profile, token, usersRefreshKey]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -414,30 +418,60 @@ function Dashboard({ token, onLogout }) {
         return (
           <div className="panel">
             <p className="panel-title">User Management</p>
-            {users ? (
+
+            <div className="tab-bar" role="tablist" aria-label="User management section">
+              <button
+                role="tab"
+                aria-selected={userMgmtTab === "users"}
+                className={`tab-btn ${userMgmtTab === "users" ? "active" : ""}`}
+                onClick={() => setUserMgmtTab("users")}
+              >
+                Users
+              </button>
+              <button
+                role="tab"
+                aria-selected={userMgmtTab === "teams"}
+                className={`tab-btn ${userMgmtTab === "teams" ? "active" : ""}`}
+                onClick={() => setUserMgmtTab("teams")}
+              >
+                Teams
+              </button>
+            </div>
+
+            {userMgmtTab === "teams" ? (
+              <TeamManagement
+                token={token}
+                users={users}
+                onUsersChanged={() => setUsersRefreshKey((k) => k + 1)}
+              />
+            ) : users ? (
               <>
-                <div style={{ marginBottom: "20px" }}>
-                  <input
-                    type="text"
-                    className="search-input"
-                    placeholder="🔍 Search users by name, email, or role..."
-                    aria-label="Search users"
-                    value={userSearchQuery}
-                    onChange={(e) => {
-                      setUserSearchQuery(e.target.value);
-                      setCurrentUserPage(1);
-                    }}
-                  />
+                <div className="filter-bar">
+                  <div className="filter-group filter-group-grow search-field">
+                    <Search size={15} strokeWidth={2} className="search-field-icon" aria-hidden="true" />
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder="Search users by name, email, or role..."
+                      aria-label="Search users"
+                      value={userSearchQuery}
+                      onChange={(e) => {
+                        setUserSearchQuery(e.target.value);
+                        setCurrentUserPage(1);
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <table className="dash-table user-table">
                   <thead>
                     <tr>
-                      <th style={{ width: "25%" }}>Name</th>
-                      <th style={{ width: "30%" }}>Email</th>
-                      <th style={{ width: "20%" }}>Role</th>
-                      <th style={{ width: "12%" }}>Status</th>
-                      <th style={{ width: "13%" }}>Actions</th>
+                      <th style={{ width: "22%" }}>Name</th>
+                      <th style={{ width: "26%" }}>Email</th>
+                      <th style={{ width: "16%" }}>Role</th>
+                      <th style={{ width: "14%" }}>Team</th>
+                      <th style={{ width: "10%" }}>Status</th>
+                      <th style={{ width: "12%" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -461,6 +495,9 @@ function Dashboard({ token, onLogout }) {
                               <option value="administrator">Admin</option>
                             </select>
                           </td>
+                          <td style={{ color: u.team ? "var(--text-secondary)" : "var(--text-muted)" }}>
+                            {u.team?.name || "—"}
+                          </td>
                           <td>
                             <Badge tone={u.is_active ? "success" : "danger"}>
                               {u.is_active ? "Active" : "Inactive"}
@@ -480,7 +517,7 @@ function Dashboard({ token, onLogout }) {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: "center", color: "var(--text-secondary)", padding: "20px" }}>
+                        <td colSpan="6" style={{ textAlign: "center", color: "var(--text-secondary)", padding: "20px" }}>
                           No users matched your search.
                         </td>
                       </tr>

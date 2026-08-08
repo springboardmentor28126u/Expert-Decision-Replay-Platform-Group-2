@@ -23,6 +23,22 @@ const STATUS_LABELS = {
   escalated: "Escalated",
 };
 
+// Audit actions come from the backend as dotted/snake_case identifiers
+// (e.g. "decision.status_changed", "user.login") — this is purely a display
+// formatter, the underlying action string is untouched everywhere else.
+function formatActionLabel(action) {
+  return action
+    .replace(/[._]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Shortens an axis tick so long names don't crowd the chart; the full
+// (already-cleaned) label is still shown in the tooltip on hover.
+function truncateLabel(label, max = 18) {
+  if (!label || label.length <= max) return label;
+  return `${label.slice(0, max - 1)}…`;
+}
+
 function formatDate(isoString) {
   if (!isoString) return "-";
   return new Date(isoString).toLocaleString(undefined, {
@@ -337,8 +353,19 @@ function TeamReportView({ data }) {
 }
 
 function AuditReportView({ data }) {
-  const actionData = data.by_action.map((a) => ({ name: a.action, value: a.count }));
-  const actorData = data.by_actor.map((a) => ({ name: a.actor_name, value: a.count }));
+  // Sorted descending (largest bar first) and capped to a readable top N —
+  // a long tail of one-off action types or rarely-active users would
+  // otherwise stretch the chart past the point of being scannable at a
+  // glance. The underlying report totals (stat cards, tables) are untouched.
+  const TOP_N = 10;
+  const actionData = data.by_action
+    .map((a) => ({ name: formatActionLabel(a.action), value: a.count }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, TOP_N);
+  const actorData = data.by_actor
+    .map((a) => ({ name: a.actor_name, value: a.count }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, TOP_N);
 
   return (
     <>
@@ -349,16 +376,22 @@ function AuditReportView({ data }) {
       <div className="analytics-grid-2">
         <BarChartCard
           title="Events by Type"
-          subtitle="Audit log actions, by type"
+          subtitle={`Top ${Math.min(TOP_N, actionData.length)} audit action types`}
           data={actionData}
+          orientation="horizontal"
+          height={Math.max(160, (actionData.length || 3) * 38)}
+          categoryAxisWidth={132}
+          categoryTickFormatter={(v) => truncateLabel(v, 16)}
           emptyMessage="No audit events yet."
         />
         <BarChartCard
           title="Events by User"
-          subtitle="Most active users in the audit log"
+          subtitle={`Top ${Math.min(TOP_N, actorData.length)} most active users`}
           data={actorData}
           orientation="horizontal"
           height={Math.max(160, (actorData.length || 3) * 38)}
+          categoryAxisWidth={132}
+          categoryTickFormatter={(v) => truncateLabel(v, 16)}
           emptyMessage="No audit events yet."
         />
       </div>

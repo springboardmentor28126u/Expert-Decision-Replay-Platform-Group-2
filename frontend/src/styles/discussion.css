@@ -24,6 +24,9 @@
 }
 
 .form-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -330,6 +333,9 @@
 }
 
 .message-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -356,6 +362,10 @@
 }
 
 .discussion-closed-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: var(--danger-soft);
   border: 1px dashed rgba(240, 85, 90, 0.35);
   border-radius: 10px;

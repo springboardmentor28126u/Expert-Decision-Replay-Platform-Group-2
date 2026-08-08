@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { X } from "lucide-react";
 
 const ToastContext = createContext(null);
 let idCounter = 0;
@@ -44,7 +45,7 @@ export function ToastProvider({ children }) {
               aria-label="Dismiss notification"
               onClick={() => dismiss(t.id)}
             >
-              ✕
+              <X size={13} strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
         ))}

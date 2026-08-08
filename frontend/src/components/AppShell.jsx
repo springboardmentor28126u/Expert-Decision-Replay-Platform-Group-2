@@ -123,7 +123,19 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
 
           {/* Header Controls */}
           <div className="shell-topbar-right">
-            <ProfileMenu profile={profile} />
+            <button
+              type="button"
+              className="shell-notif-btn"
+              onClick={() => onNavigate("notifications")}
+              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+              title="Notifications"
+            >
+              <Bell size={ICON_SIZE} strokeWidth={ICON_STROKE} aria-hidden="true" />
+              {!!unreadCount && (
+                <span className="shell-notif-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+              )}
+            </button>
+            <ProfileMenu profile={profile} onNavigate={onNavigate} onLogout={onLogout} />
           </div>
         </header>
 

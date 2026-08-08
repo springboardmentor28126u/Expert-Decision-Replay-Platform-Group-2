@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ArrowLeft, Pencil, Download, Paperclip } from "lucide-react";
+import { ArrowLeft, Pencil, Download, Paperclip, MessageSquare, Trash2, Lock, ClipboardList } from "lucide-react";
 import apiClient, { authHeaders, API_BASE_URL } from "../api/client";
 import VersionHistory from "../components/VersionHistory";
 import AlternativesPanel from "../components/AlternativesPanel";
@@ -373,7 +373,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                         setReplyText("");
                       }}
                     >
-                      💬 Reply
+                      <MessageSquare size={12} strokeWidth={2} aria-hidden="true" />
+                      Reply
                     </button>
                   )}
                   {isOwner && (
@@ -384,12 +385,14 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                         setEditText(msg.content);
                       }}
                     >
-                      ✏️ Edit
+                      <Pencil size={12} strokeWidth={2} aria-hidden="true" />
+                      Edit
                     </button>
                   )}
                   {canDelete && (
                     <button className="message-action-btn delete" onClick={() => handleDelete(msg.id)}>
-                      🗑️ Delete
+                      <Trash2 size={12} strokeWidth={2} aria-hidden="true" />
+                      Delete
                     </button>
                   )}
                 </div>
@@ -739,7 +742,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
         <div className="discussion-board">
           {isClosed ? (
             <div className="discussion-closed-notice">
-              🔒 This decision has been {decision.status}. Comments and replies are closed.
+              <Lock size={14} strokeWidth={2} aria-hidden="true" />
+              This decision has been {decision.status}. Comments and replies are closed.
             </div>
           ) : (
             <div className="comment-form-card">
@@ -750,14 +754,16 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                     className={`form-tab-btn ${newMessageType === "comment" ? "active" : ""}`}
                     onClick={() => setNewMessageType("comment")}
                   >
-                    💬 Add Comment
+                    <MessageSquare size={13} strokeWidth={2} aria-hidden="true" />
+                    Add Comment
                   </button>
                   <button
                     type="button"
                     className={`form-tab-btn ${newMessageType === "meeting_note" ? "active" : ""}`}
                     onClick={() => setNewMessageType("meeting_note")}
                   >
-                    📝 Add Meeting Note
+                    <ClipboardList size={13} strokeWidth={2} aria-hidden="true" />
+                    Add Meeting Note
                   </button>
                 </div>
 

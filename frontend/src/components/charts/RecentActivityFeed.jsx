@@ -1,4 +1,4 @@
-import { FileText, ClipboardCheck, MessageSquare } from "lucide-react";
+import { FileText, ClipboardCheck, MessageSquare, Inbox } from "lucide-react";
 import { STATUS_COLORS, APPROVAL_COLORS } from "./chartTheme";
 
 function timeAgo(isoString) {
@@ -86,7 +86,7 @@ function RecentActivityFeed({ recentActivity, loading }) {
   if (isEmpty) {
     return (
       <div className="activity-feed-empty">
-        <span aria-hidden="true">📭</span>
+        <Inbox size={22} strokeWidth={1.75} aria-hidden="true" />
         <p>No activity yet.</p>
       </div>
     );

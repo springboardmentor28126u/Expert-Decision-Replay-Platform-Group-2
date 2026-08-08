@@ -25,6 +25,8 @@ function BarChartCard({
   colors = SERIES_ACCENT,
   height = 236,
   onBarClick,
+  categoryAxisWidth = 110, // YAxis width when horizontal — widen for longer labels
+  categoryTickFormatter, // shortens long category ticks; full value still shown in the tooltip
 }) {
   const rows = data || [];
   const isEmpty = !loading && rows.every((d) => d.value === 0);
@@ -50,8 +52,9 @@ function BarChartCard({
                 tick={AXIS_STYLE}
                 axisLine={{ stroke: CHART_GRID }}
                 tickLine={false}
-                width={110}
+                width={categoryAxisWidth}
                 interval={0}
+                tickFormatter={categoryTickFormatter}
               />
             </>
           ) : (

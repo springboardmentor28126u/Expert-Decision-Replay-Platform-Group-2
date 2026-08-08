@@ -687,10 +687,6 @@
   font-size: var(--text-sm);
 }
 
-.activity-feed-empty span {
-  font-size: 22px;
-}
-
 /* ---------------- Notifications ---------------- */
 .view-section-title-count {
   display: inline-block;
@@ -1026,6 +1022,206 @@
   color: var(--text-secondary);
 }
 
+/* ---------------- Team management (User Management > Teams tab) ---------------- */
+.team-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  transition: border-color 0.15s ease;
+}
+
+.team-card:hover {
+  border-color: #3B4557;
+}
+
+.team-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.team-card-name {
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
+  font-size: var(--text-md);
+  margin: 0;
+}
+
+.team-card-manager {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+
+.team-card-manager strong {
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
+}
+
+.team-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--divider);
+}
+
+.team-card-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.team-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.team-members-panel {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--divider);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.team-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.team-member-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.team-member-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+.team-member-email {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.team-member-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.team-member-remove-btn:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.team-members-empty {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  padding: var(--space-2) 0;
+}
+
+/* Wider variant of .ui-modal for forms (team create/edit) that need more
+   room than the plain confirm dialog. */
+.ui-modal-lg {
+  max-width: 540px;
+}
+
+.ui-modal-form-field {
+  margin-bottom: var(--space-4);
+}
+
+.ui-modal-form-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.multi-select-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.multi-select-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--divider);
+  cursor: pointer;
+}
+
+.multi-select-row:last-child {
+  border-bottom: none;
+}
+
+.multi-select-row:hover {
+  background: var(--surface-hover);
+}
+
+.multi-select-row input[type="checkbox"] {
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+
+.multi-select-label {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.multi-select-name {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.multi-select-hint {
+  font-size: 10.5px;
+  color: var(--warning);
+}
+
+.multi-select-empty {
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 @media (max-width: 640px) {
   .decision-header-card,
   .dash-card {
@@ -1040,9 +1236,15 @@
     width: 100%;
   }
 
-  .decision-card-footer {
+  .decision-card-footer,
+  .team-card-footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .team-card-actions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 
   /* Segmented/underline tab bars scroll horizontally instead of wrapping

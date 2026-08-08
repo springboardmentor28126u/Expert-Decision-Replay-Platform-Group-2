@@ -1,20 +1,27 @@
 .shell-wrapper {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   background: var(--bg);
   font-family: var(--font-sans);
   color: var(--text-primary);
+  overflow: hidden;
 }
 
 /* ---------------- Sidebar ---------------- */
+/* Fixed to the viewport height (a flex sibling of .shell-main inside a
+   height:100vh/overflow:hidden wrapper) so it never scrolls with page
+   content — only .shell-nav's own item list scrolls internally if it ever
+   overflows, keeping the footer (Account Settings/Log Out) always visible. */
 .shell-sidebar {
   width: 232px;
   flex-shrink: 0;
+  height: 100%;
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: var(--space-5) var(--space-3);
+  overflow: hidden;
 }
 
 .shell-logo {
@@ -159,12 +166,15 @@
 /* ---------------- Top bar ---------------- */
 .shell-main {
   flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
 }
 
 .shell-topbar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -179,9 +189,15 @@
   color: var(--text-primary);
 }
 
+/* The one scrollable region in the shell — sidebar and topbar stay put
+   while page content scrolls independently underneath them. */
 .shell-content {
   flex: 1;
+  overflow-y: auto;
   padding: var(--space-6);
+}
+
+.shell-content > * {
   max-width: 1340px;
   width: 100%;
   margin: 0 auto;
@@ -304,6 +320,46 @@
   margin: 0 0 var(--space-4);
 }
 
+/* ---------------- Notification bell ---------------- */
+.shell-notif-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.shell-notif-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.shell-notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--danger);
+  color: var(--text-primary);
+  border-radius: var(--radius-full);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: 2px solid var(--surface);
+}
+
 /* ---------------- Profile menu ---------------- */
 .profile-menu {
   position: relative;
@@ -403,6 +459,40 @@
   margin: 0;
   overflow-wrap: anywhere;
   word-break: normal;
+}
+
+.profile-menu-dropdown-divider {
+  border-top: 1px solid var(--divider);
+  margin: var(--space-3) 0;
+}
+
+.profile-menu-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px var(--space-2);
+  margin: 0 calc(var(--space-2) * -1);
+  width: calc(100% + var(--space-4));
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.profile-menu-dropdown-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.profile-menu-dropdown-item.danger:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 @media (max-width: 860px) {
