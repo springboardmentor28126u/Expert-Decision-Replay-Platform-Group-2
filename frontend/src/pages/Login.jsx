@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import apiClient from "../api/client";
 import "../styles/styles.css";
 
 function Login({ onLoginSuccess, onSwitch, onForgotPassword, onBackToLanding }) {
@@ -14,10 +14,7 @@ function Login({ onLoginSuccess, onSwitch, onForgotPassword, onBackToLanding }) 
       const formBody = new URLSearchParams();
       formBody.append("username", email);
       formBody.append("password", password);
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/v1/auth/login",
-        formBody
-      );
+      const response = await apiClient.post("/api/v1/auth/login", formBody);
       setMessage("Login successful!");
       setIsError(false);
       onLoginSuccess(response.data.access_token);
@@ -45,6 +42,7 @@ function Login({ onLoginSuccess, onSwitch, onForgotPassword, onBackToLanding }) 
             <input
               type="email"
               placeholder="Email"
+              aria-label="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -54,6 +52,7 @@ function Login({ onLoginSuccess, onSwitch, onForgotPassword, onBackToLanding }) 
             <input
               type="password"
               placeholder="Password"
+              aria-label="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -63,7 +62,7 @@ function Login({ onLoginSuccess, onSwitch, onForgotPassword, onBackToLanding }) 
         </form>
 
         {message && (
-          <div className={`auth-message ${isError ? "error" : "success"}`}>
+          <div className={`auth-message ${isError ? "error" : "success"}`} role="status">
             {message}
           </div>
         )}

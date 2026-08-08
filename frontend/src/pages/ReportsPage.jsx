@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import apiClient, { authHeaders } from "../api/client";
+import { useToast } from "../components/ui/ToastContext";
+import Button from "../components/ui/Button";
 
 const REPORT_TABS = [
   { key: "decision", label: "Decisions" },
@@ -31,6 +33,7 @@ function formatDate(isoString) {
 // aggregation happens here, only formatting into the existing
 // stat-card/dash-table patterns already used elsewhere in the Dashboard.
 function ReportsPage({ token }) {
+  const showToast = useToast();
   const [activeReport, setActiveReport] = useState("decision");
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,9 +44,9 @@ function ReportsPage({ token }) {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/v1/reports/${activeReport}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await apiClient.get(
+        `/api/v1/reports/${activeReport}`,
+        authHeaders(token)
       );
       setReportData(res.data);
     } catch (err) {
@@ -62,10 +65,10 @@ function ReportsPage({ token }) {
   const handleExport = async (format) => {
     setExporting(format);
     try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/v1/reports/${activeReport}/export/${format}`,
+      const res = await apiClient.get(
+        `/api/v1/reports/${activeReport}/export/${format}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: authHeaders(token).headers,
           responseType: "blob",
         }
       );
@@ -79,7 +82,7 @@ function ReportsPage({ token }) {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error(`Failed to export ${activeReport} report as ${format}`, err);
-      alert("Failed to export report.");
+      showToast("Failed to export report.", { tone: "error" });
     } finally {
       setExporting(null);
     }
@@ -87,52 +90,36 @@ function ReportsPage({ token }) {
 
   return (
     <div className="panel">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "12px",
-          marginBottom: "16px",
-        }}
-      >
+      <div className="panel-toolbar">
         <p className="panel-title" style={{ margin: 0 }}>Reports</p>
 
         <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            className="form-btn"
+          <Button
+            variant="secondary"
+            size="sm"
             disabled={!reportData || !!exporting}
             onClick={() => handleExport("pdf")}
-            style={{ padding: "8px 16px", fontSize: "13px" }}
           >
             {exporting === "pdf" ? "Exporting..." : "⬇ Export PDF"}
-          </button>
-          <button
-            className="form-btn primary"
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             disabled={!reportData || !!exporting}
             onClick={() => handleExport("excel")}
-            style={{ padding: "8px 16px", fontSize: "13px" }}
           >
             {exporting === "excel" ? "Exporting..." : "⬇ Export Excel"}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          background: "var(--bg)",
-          border: "1px solid var(--border)",
-          borderRadius: "8px",
-          padding: "3px",
-          marginBottom: "20px",
-          width: "fit-content",
-        }}
-      >
+      <div className="tab-bar" role="tablist" aria-label="Report type">
         {REPORT_TABS.map((tab) => (
           <button
             key={tab.key}
+            role="tab"
+            aria-selected={activeReport === tab.key}
+            className={`tab-btn ${activeReport === tab.key ? "active" : ""}`}
             onClick={() => {
               // Clear the previous tab's data in the same state update
               // that switches tabs — otherwise fetchReport() (which
@@ -144,17 +131,6 @@ function ReportsPage({ token }) {
               // whichever ReportView renders next.
               setActiveReport(tab.key);
               setReportData(null);
-            }}
-            style={{
-              padding: "8px 18px",
-              fontSize: "13px",
-              fontWeight: 600,
-              borderRadius: "6px",
-              border: "none",
-              cursor: "pointer",
-              background: activeReport === tab.key ? "var(--accent-soft)" : "transparent",
-              color: activeReport === tab.key ? "var(--accent)" : "var(--text-secondary)",
-              transition: "all 0.15s",
             }}
           >
             {tab.label}
@@ -189,11 +165,9 @@ function StatCard({ label, value }) {
 
 function ReportSection({ title, children }) {
   return (
-    <div style={{ marginTop: "24px" }}>
-      <p style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "10px" }}>
-        {title}
-      </p>
-      <div style={{ overflowX: "auto" }}>{children}</div>
+    <div className="report-section">
+      <p className="report-section-title">{title}</p>
+      <div className="report-section-scroll">{children}</div>
     </div>
   );
 }
@@ -201,7 +175,7 @@ function ReportSection({ title, children }) {
 function EmptyRow({ colSpan, text = "No data yet." }) {
   return (
     <tr>
-      <td colSpan={colSpan} style={{ textAlign: "center", color: "var(--text-secondary)", padding: "16px" }}>
+      <td colSpan={colSpan} className="report-empty-row">
         {text}
       </td>
     </tr>

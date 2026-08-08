@@ -57,46 +57,19 @@ export default function NotificationsPage({
 
   return (
     <div className="panel">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "12px",
-          marginBottom: "16px",
-        }}
-      >
+      <div className="panel-toolbar">
         <p className="panel-title" style={{ margin: 0 }}>
           All Notifications {unreadCount > 0 && `(${unreadCount} unread)`}
         </p>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
-            style={{
-              display: "flex",
-              background: "var(--bg)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "3px",
-            }}
-          >
+        <div className="notif-toolbar-actions">
+          <div className="notif-filter-group" role="group" aria-label="Filter notifications">
             {["all", "unread"].map((f) => (
               <button
                 key={f}
+                className={`notif-filter-btn ${filter === f ? "active" : ""}`}
                 onClick={() => setFilter(f)}
-                style={{
-                  padding: "6px 14px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  borderRadius: "6px",
-                  border: "none",
-                  cursor: "pointer",
-                  background: filter === f ? "var(--accent-soft)" : "transparent",
-                  color: filter === f ? "var(--accent)" : "var(--text-secondary)",
-                  textTransform: "capitalize",
-                  transition: "all 0.15s",
-                }}
+                aria-pressed={filter === f}
               >
                 {f}
               </button>
@@ -104,19 +77,7 @@ export default function NotificationsPage({
           </div>
 
           {unreadCount > 0 && (
-            <button
-              onClick={onMarkAllAsRead}
-              style={{
-                padding: "8px 14px",
-                fontSize: "13px",
-                fontWeight: 600,
-                borderRadius: "6px",
-                border: "1px solid var(--accent)",
-                background: "transparent",
-                color: "var(--accent)",
-                cursor: "pointer",
-              }}
-            >
+            <button className="notif-mark-all-btn" onClick={onMarkAllAsRead}>
               Mark all as read
             </button>
           )}
@@ -124,64 +85,36 @@ export default function NotificationsPage({
       </div>
 
       {visibleNotifications.length === 0 ? (
-        <p style={{ color: "var(--text-secondary)", padding: "20px 0", textAlign: "center" }}>
+        <p className="notif-empty">
           {filter === "unread" ? "You're all caught up — no unread notifications." : "No notifications yet."}
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div className="notif-list">
           {visibleNotifications.map((item) => {
             const style = getTypeStyle(item.type);
             return (
-              <div
+              <button
                 key={item.id}
+                type="button"
+                className={`notif-item ${item.is_read ? "" : "unread"}`}
                 onClick={() => handleClick(item)}
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  alignItems: "flex-start",
-                  padding: "14px 16px",
-                  borderRadius: "10px",
-                  cursor: "pointer",
-                  border: `1px solid ${item.is_read ? "var(--border)" : style.color}`,
-                  background: item.is_read ? "var(--surface)" : style.soft,
-                  borderLeft: `4px solid ${item.is_read ? "var(--border)" : style.color}`,
-                  transition: "all 0.15s",
-                }}
+                style={{ "--item-color": style.color, "--item-soft": style.soft }}
+                aria-label={`${item.is_read ? "" : "Unread: "}${item.title}. ${item.message} ${formatTimestamp(item.created_at)}`}
               >
-                <div style={{ fontSize: "20px", lineHeight: 1 }}>{style.icon}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}>
-                    <span
-                      style={{
-                        fontWeight: item.is_read ? 500 : 700,
-                        fontSize: "14px",
-                        color: "var(--text-primary)",
-                      }}
-                    >
+                <span className="notif-item-icon" aria-hidden="true">{style.icon}</span>
+                <span className="notif-item-body">
+                  <span className="notif-item-top">
+                    <span className={`notif-item-title ${item.is_read ? "" : "unread"}`}>
                       {item.title}
                     </span>
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                      {formatTimestamp(item.created_at)}
-                    </span>
-                  </div>
-                  <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--text-secondary)" }}>
-                    {item.message}
-                  </p>
-                </div>
+                    <span className="notif-item-time">{formatTimestamp(item.created_at)}</span>
+                  </span>
+                  <span className="notif-item-message">{item.message}</span>
+                </span>
                 {!item.is_read && (
-                  <span
-                    title="Unread"
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      background: style.color,
-                      marginTop: "6px",
-                      flexShrink: 0,
-                    }}
-                  />
+                  <span className="notif-item-dot" aria-hidden="true" />
                 )}
-              </div>
+              </button>
             );
           })}
         </div>

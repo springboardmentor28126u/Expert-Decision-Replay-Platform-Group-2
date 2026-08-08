@@ -1,117 +1,55 @@
+/*
+ * Single source of truth for design tokens. This file is imported once,
+ * globally, in main.jsx — every other stylesheet (auth, landing, dashboard,
+ * discussion, reports...) consumes these variables instead of redefining
+ * its own :root block or hardcoding hex values.
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --bg: #0F1115;
+  --surface: #171A21;
+  --surface-hover: #1E222B;
+  --border: #262B36;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --text-primary: #E8EAED;
+  --text-secondary: #9198A8;
+  --text-muted: #5B6272;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --accent: #4FD1B5;
+  --accent-soft: rgba(79, 209, 181, 0.12);
+  --accent-hover: #6EE0C8;
+  --accent-dark: #2C9D85;
+  --on-accent: #0A1410;
+
+  --success: #2DD4A7;
+  --success-soft: rgba(45, 212, 167, 0.12);
+  --warning: #F5A623;
+  --warning-soft: rgba(245, 166, 35, 0.12);
+  --danger: #F0555A;
+  --danger-soft: rgba(240, 85, 90, 0.12);
+  --neutral-soft: rgba(145, 152, 168, 0.12);
+
+  --role-reviewer: #C084FC;
+  --role-reviewer-soft: rgba(192, 132, 252, 0.12);
+
+  --input-bg: #12161D;
+
+  --font-sans: "Segoe UI", -apple-system, sans-serif;
+
+  color-scheme: dark;
 }
 
-@media (max-width: 1024px) {
-  :root {
-    font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-}
-
-/* high-contrast/safe override for the social icon in dark mode */
-@media (prefers-color-scheme: dark) {
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-}
-
-@media (max-width: 1024px) {
-  h1 {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-}
-
-@media (max-width: 1024px) {
-  h2 { font-size: 20px; }
-}
-
-p { margin: 0; }
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

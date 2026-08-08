@@ -27,6 +27,7 @@ export const APPROVAL_COLORS = {
   pending: "#c98500",
   approved: "#199e70",
   rejected: "#e66767",
+  escalated: "#3987e5",
 };
 
 // Single-hue accent for nominal, single-series charts (category volumes,

@@ -1,13 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import axios from "axios";
+import apiClient, { authHeaders, API_BASE_URL } from "../api/client";
 import VersionHistory from "../components/VersionHistory";
 import AlternativesPanel from "../components/AlternativesPanel";
 import "../styles/discussion.css";
 import "../styles/dashboard.css";
 import FileUpload from "../components/FileUpload";
 import ApprovalHistory from "../components/ApprovalHistory";
+import { useConfirm } from "../components/ui/ConfirmContext";
+import { useToast } from "../components/ui/ToastContext";
+import Badge from "../components/ui/Badge";
+import Button from "../components/ui/Button";
+
+const STATUS_TONE = {
+  approved: "success",
+  rejected: "danger",
+  under_review: "warning",
+};
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) {
+  const confirm = useConfirm();
+  const showToast = useToast();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,9 +65,9 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
     if (!decision?.id) return;
     setLoading(true);
     try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/v1/comments/decision/${decision.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await apiClient.get(
+        `/api/v1/comments/decision/${decision.id}`,
+        authHeaders(token)
       );
       setMessages(res.data);
       setError("");
@@ -76,9 +88,9 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
     if (!decision?.id) return;
     setAttachmentsLoading(true);
     try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/v1/attachments/decision/${decision.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await apiClient.get(
+        `/api/v1/attachments/decision/${decision.id}`,
+        authHeaders(token)
       );
       setAttachments(res.data);
       setAttachmentsError("");
@@ -99,8 +111,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const handleDownloadAttachment = async (attachmentId, fileName) => {
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/api/v1/attachments/${attachmentId}/download`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `${API_BASE_URL}/api/v1/attachments/${attachmentId}/download`,
+        authHeaders(token)
       );
       if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();
@@ -112,21 +124,26 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Failed to download attachment", err);
-      alert("Failed to download attachment.");
+      showToast("Failed to download attachment.", { tone: "error" });
     }
   };
 
   const handleDeleteAttachment = async (attachmentId) => {
-    if (!window.confirm("Delete this attachment?")) return;
+    const ok = await confirm("Delete this attachment?", {
+      title: "Delete attachment",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await axios.delete(
-        `http://127.0.0.1:8000/api/v1/attachments/${attachmentId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      await apiClient.delete(
+        `/api/v1/attachments/${attachmentId}`,
+        authHeaders(token)
       );
       fetchAttachments();
     } catch (err) {
       console.error("Failed to delete attachment", err);
-      alert(err?.response?.data?.detail || "Failed to delete attachment.");
+      showToast(err?.response?.data?.detail || "Failed to delete attachment.", { tone: "error" });
     }
   };
 
@@ -134,31 +151,34 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
     try {
-      const res = await axios.patch(
-        `http://127.0.0.1:8000/api/v1/decisions/${decision.id}/status`,
+      const res = await apiClient.patch(
+        `/api/v1/decisions/${decision.id}/status`,
         { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
       if (onStatusUpdated) {
         onStatusUpdated(res.data);
       }
     } catch (err) {
       console.error("Failed to update status", err);
-      alert(err?.response?.data?.detail || "Failed to update status.");
+      showToast(err?.response?.data?.detail || "Failed to update status.", { tone: "error" });
     }
   };
 
   // Delete message handler
   const handleDelete = async (msgId) => {
-    if (!window.confirm("Are you sure you want to delete this message?")) return;
+    const ok = await confirm("Are you sure you want to delete this message?", {
+      title: "Delete message",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/v1/comments/${msgId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.delete(`/api/v1/comments/${msgId}`, authHeaders(token));
       fetchThread();
     } catch (err) {
       console.error("Failed to delete comment", err);
-      alert(err?.response?.data?.detail || "Failed to delete comment.");
+      showToast(err?.response?.data?.detail || "Failed to delete comment.", { tone: "error" });
     }
   };
 
@@ -174,13 +194,13 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
     setFormError("");
 
     try {
-      await axios.post(
-        `http://127.0.0.1:8000/api/v1/comments/decision/${decision.id}`,
+      await apiClient.post(
+        `/api/v1/comments/decision/${decision.id}`,
         {
           content: newMessageText,
           is_meeting_note: newMessageType === "meeting_note",
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
 
       setNewMessageText("");
@@ -197,19 +217,19 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const handlePostReply = async (e, parentId) => {
     e.preventDefault();
     if (!replyText.trim()) {
-      alert("Please enter a message.");
+      showToast("Please enter a message.", { tone: "error" });
       return;
     }
 
     try {
-      await axios.post(
-        `http://127.0.0.1:8000/api/v1/comments/decision/${decision.id}`,
+      await apiClient.post(
+        `/api/v1/comments/decision/${decision.id}`,
         {
           content: replyText,
           parent_comment_id: parentId,
           is_meeting_note: false,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
 
       setReplyText("");
@@ -217,7 +237,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
       fetchThread();
     } catch (err) {
       console.error("Error posting reply", err);
-      alert(err?.response?.data?.detail || "Failed to post reply.");
+      showToast(err?.response?.data?.detail || "Failed to post reply.", { tone: "error" });
     }
   };
 
@@ -225,15 +245,15 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const handleSaveEdit = async (e, msgId) => {
     e.preventDefault();
     if (!editText.trim()) {
-      alert("Message cannot be empty.");
+      showToast("Message cannot be empty.", { tone: "error" });
       return;
     }
 
     try {
-      await axios.put(
-        `http://127.0.0.1:8000/api/v1/comments/${msgId}`,
+      await apiClient.put(
+        `/api/v1/comments/${msgId}`,
         { content: editText },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
 
       setEditingId(null);
@@ -241,7 +261,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
       fetchThread();
     } catch (err) {
       console.error("Error editing message", err);
-      alert(err?.response?.data?.detail || "Failed to edit comment.");
+      showToast(err?.response?.data?.detail || "Failed to edit comment.", { tone: "error" });
     }
   };
 
@@ -251,14 +271,14 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
     setIsSaving(true);
     setEditError("");
     try {
-      const res = await axios.put(
-        `http://127.0.0.1:8000/api/v1/decisions/${decision.id}`,
+      const res = await apiClient.put(
+        `/api/v1/decisions/${decision.id}`,
         {
           title: editTitle,
           problem_statement: editProblemStatement,
           category: editCategory,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
       if (onStatusUpdated) onStatusUpdated(res.data);
       setIsEditing(false);
@@ -418,19 +438,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
 
   return (
     <div className="decision-details-container">
-      <button
-        onClick={onBack}
-        style={{
-          background: "none",
-          border: "1px solid var(--border, #2E3646)",
-          color: "var(--text-secondary, #9AA5B5)",
-          padding: "8px 16px",
-          borderRadius: "6px",
-          fontSize: "13px",
-          cursor: "pointer",
-          marginBottom: "16px",
-        }}
-      >
+      <button className="dash-back-btn" onClick={onBack}>
         ← Back to Decisions
       </button>
       {/* Decision Summary Info — always visible */}
@@ -450,17 +458,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 value={editProblemStatement}
                 onChange={(e) => setEditProblemStatement(e.target.value)}
                 rows={4}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#12161D",
-                  border: "1px solid #2E3646",
-                  borderRadius: "6px",
-                  color: "#F1F3F6",
-                  fontSize: "14px",
-                  fontFamily: "inherit",
-                  resize: "vertical",
-                }}
               />
             </div>
             <div className="auth-field">
@@ -474,10 +471,6 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                     setEditCategory(e.target.value);
                     setShowEditCustomCategory(false);
                   }
-                }}
-                style={{
-                  width: "100%", padding: "10px 12px", background: "#12161D",
-                  border: "1px solid #2E3646", borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", boxSizing: "border-box",
                 }}
               >
                 <option value="">Select a category</option>
@@ -499,11 +492,11 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             </div>
             {editError && <div className="auth-message error">{editError}</div>}
             <div style={{ display: "flex", gap: "10px" }}>
-              <button className="auth-button" onClick={handleSaveDecisionEdit} disabled={isSaving}>
+              <Button variant="primary" onClick={handleSaveDecisionEdit} disabled={isSaving}>
                 {isSaving ? "Saving..." : "Save Changes"}
-              </button>
-              <button
-                className="dash-back-btn"
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => {
                   setIsEditing(false);
                   setEditTitle(decision.title);
@@ -512,26 +505,27 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 }}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
           <>
-            <div className="decision-header-section" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "20px", marginBottom: "20px" }}>
-              <div className="decision-title-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-                <h1 className="decision-title-main" style={{ fontSize: "26px", fontWeight: "700", color: "var(--text-primary)", margin: 0, flex: "1 1 auto" }}>
+            <div className="decision-header-section">
+              <div className="decision-title-row">
+                <h1 className="decision-title-main" style={{ margin: 0, flex: "1 1 auto" }}>
                   {decision.title}
                 </h1>
-                
-               <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
-                 <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
+
+               <div className="decision-title-actions">
+                 <Button variant="secondary" onClick={() => setIsEditing(true)}>
                    ✏️ Edit Decision
-                 </button>
-                 <a
-                  href={`http://127.0.0.1:8000/decisions/${decision.id}/export`}
+                 </Button>
+                 <Button
+                  as="a"
+                  href={`${API_BASE_URL}/decisions/${decision.id}/export`}
                   onClick={(e) => {
                     e.preventDefault();
-                    fetch(`http://127.0.0.1:8000/decisions/${decision.id}/export`, {
+                    fetch(`${API_BASE_URL}/decisions/${decision.id}/export`, {
                       headers: { Authorization: `Bearer ${token}` },
                     })
                       .then((res) => res.blob())
@@ -543,60 +537,24 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                          a.click();
                       });
                   }}
-                  className="dash-back-btn"
-                  style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                  variant="secondary"
+                  style={{ textDecoration: "none" }}
                 >
                   ⬇ Download PDF
-                 </a>
+                 </Button>
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "16px", flexWrap: "wrap" }}>
+              <div className="decision-meta-row">
                 {decision.category && (
-                  <span className="decision-category-pill" style={{ background: "rgba(145, 152, 168, 0.15)", color: "var(--text-secondary)", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "600" }}>
-                    {decision.category}
-                  </span>
+                  <span className="decision-category-pill">{decision.category}</span>
                 )}
-                
-                <span
-                  className="decision-status-badge"
-                  style={{
-                    padding: "4px 12px",
-                    borderRadius: "20px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    textTransform: "capitalize",
-                    background:
-                      decision.status === "approved"
-                        ? "rgba(45, 212, 167, 0.12)"
-                        : decision.status === "rejected"
-                        ? "rgba(240, 85, 90, 0.12)"
-                        : decision.status === "under_review"
-                        ? "rgba(245, 166, 35, 0.12)"
-                        : "rgba(145, 152, 168, 0.12)",
-                    color:
-                      decision.status === "approved"
-                        ? "var(--success)"
-                        : decision.status === "rejected"
-                        ? "var(--danger)"
-                        : decision.status === "under_review"
-                        ? "var(--warning)"
-                        : "var(--text-secondary)",
-                    border: `1px solid ${
-                      decision.status === "approved"
-                        ? "var(--success)"
-                        : decision.status === "rejected"
-                        ? "var(--danger)"
-                        : decision.status === "under_review"
-                        ? "var(--warning)"
-                        : "var(--text-secondary)"
-                    }`
-                  }}
-                >
+
+                <Badge tone={STATUS_TONE[decision.status] || "neutral"}>
                   {decision.status.replace("_", " ")}
-                </span>
-                
-                <span className="decision-date" style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
+                </Badge>
+
+                <span className="decision-date">
                   Created {new Date(decision.created_at).toLocaleString()} by <strong>{decision.created_by?.full_name || "Unknown"}</strong>
                 </span>
               </div>
@@ -608,12 +566,13 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             </div>
 
             {decision.attachment_url && (
-              <div style={{ marginTop: "12px", display: "flex", gap: "16px" }}>
+              <div className="decision-attachment-row">
                 <a
-                  href={`http://127.0.0.1:8000${decision.attachment_url}`}
+                  href={`${API_BASE_URL}${decision.attachment_url}`}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: "#4FD1B5", fontSize: "13px", textDecoration: "none" }}
+                  className="decision-attachment-link"
+                  style={{ color: "var(--accent)" }}
                 >
                  📎 View file
                 </a>
@@ -622,7 +581,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   href="#"
                   onClick={(e) => {
                    e.preventDefault();
-                   fetch(`http://127.0.0.1:8000${decision.attachment_url}?download=true`)
+                   fetch(`${API_BASE_URL}${decision.attachment_url}?download=true`)
                       .then((res) => res.blob())
                       .then((blob) => {
                         const url = window.URL.createObjectURL(blob);
@@ -632,7 +591,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                         a.click();
                       });
                     }}
-                    style={{ color: "#9AA5B5", fontSize: "13px", textDecoration: "none" }}
+                    className="decision-attachment-link"
+                    style={{ color: "var(--text-secondary)" }}
                 >
                   ⬇ Download
                 </a>
@@ -658,15 +618,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
       </div>
 
       {/* Tab bar */}
-      <div
-        style={{
-          display: "flex",
-          gap: "4px",
-          borderBottom: "1px solid var(--border, #2E3646)",
-          marginTop: "20px",
-          marginBottom: "20px",
-        }}
-      >
+      <div className="underline-tabs" role="tablist" aria-label="Decision sections">
         {[
           { key: "alternatives", label: "Alternatives" },
           { key: "discussion", label: "Discussion" },
@@ -676,17 +628,10 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
         ].map((tab) => (
           <button
             key={tab.key}
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={`underline-tab-btn ${activeTab === tab.key ? "active" : ""}`}
             onClick={() => setActiveTab(tab.key)}
-            style={{
-              background: "none",
-              border: "none",
-              borderBottom: activeTab === tab.key ? "2px solid #4FD1B5" : "2px solid transparent",
-              color: activeTab === tab.key ? "#4FD1B5" : "var(--text-secondary, #9AA5B5)",
-              fontWeight: activeTab === tab.key ? 700 : 500,
-              fontSize: "14px",
-              padding: "10px 16px",
-              cursor: "pointer",
-            }}
           >
             {tab.label}
           </button>
@@ -710,7 +655,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           />
 
           {attachmentsError && (
-            <div className="dash-card-note" style={{ color: "#FF6B6B", marginTop: 12 }}>
+            <div className="dash-card-note" style={{ color: "var(--danger)", marginTop: 12 }}>
               {attachmentsError}
             </div>
           )}
@@ -739,22 +684,20 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                     <td>{att.uploaded_by?.full_name || "Unknown"}</td>
                     <td>
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <button
-                          className="dash-logout"
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           onClick={() => handleDownloadAttachment(att.id, att.file_name)}
-                          style={{ padding: "6px 10px" }}
-                          type="button"
                         >
                           ⬇ Download
-                        </button>
-                        <button
-                          className="dash-logout"
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
                           onClick={() => handleDeleteAttachment(att.id)}
-                          style={{ padding: "6px 10px", borderColor: "#FF6B6B", color: "#FF6B6B" }}
-                          type="button"
                         >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

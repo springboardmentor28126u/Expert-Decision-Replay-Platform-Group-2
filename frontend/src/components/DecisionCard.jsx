@@ -1,9 +1,21 @@
 import { useState } from "react";
-import axios from "axios";
+import apiClient, { authHeaders } from "../api/client";
+import { useConfirm } from "./ui/ConfirmContext";
+import { useToast } from "./ui/ToastContext";
+import Badge from "./ui/Badge";
+import Button from "./ui/Button";
+
+const STATUS_TONE = {
+  approved: "success",
+  rejected: "danger",
+  under_review: "warning",
+};
 
 function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged, onDeleted }) {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
+  const confirm = useConfirm();
+  const showToast = useToast();
 
   const canUpdateStatus = role === "manager" || role === "administrator";
   const isAdmin = role === "administrator";
@@ -12,24 +24,15 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
   // free-form status selector.
   const allStatuses = ["draft", "under_review", "archived"];
 
-  const statusStyle = (status) => {
-    if (status === "approved") return { bg: "var(--success-soft)", color: "var(--success)" };
-    if (status === "rejected") return { bg: "var(--danger-soft)", color: "var(--danger)" };
-    if (status === "under_review") return { bg: "var(--warning-soft)", color: "var(--warning)" };
-    return { bg: "var(--neutral-soft)", color: "var(--text-secondary)" };
-  };
-
-  const style = statusStyle(decision.status);
-
   const handleStatusChange = async (e) => {
     const nextStatus = e.target.value;
     setUpdating(true);
     setError("");
     try {
-      await axios.patch(
-        `http://127.0.0.1:8000/api/v1/decisions/${decision.id}/status`,
+      await apiClient.patch(
+        `/api/v1/decisions/${decision.id}/status`,
         { status: nextStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
       onStatusChanged(decision.id, nextStatus);
     } catch (err) {
@@ -40,100 +43,63 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Delete this decision permanently?")) return;
+    const ok = await confirm("Delete this decision permanently?", {
+      title: "Delete decision",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/v1/decisions/${decision.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.delete(`/api/v1/decisions/${decision.id}`, authHeaders(token));
       onDeleted(decision.id);
     } catch (err) {
-      alert(err?.response?.data?.detail || "Failed to delete decision.");
+      showToast(err?.response?.data?.detail || "Failed to delete decision.", { tone: "error" });
     }
   };
 
   return (
-    <div
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: "10px",
-        padding: "18px 20px",
-        marginBottom: "12px",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+    <div className="decision-card">
+      <div className="decision-card-top">
         <div style={{ flex: 1, minWidth: 0 }}>
-          <span
+          <button
+            type="button"
+            className="decision-card-title"
             onClick={() => onSelectDecision(decision)}
-            style={{
-              color: "var(--accent)",
-              fontWeight: 600,
-              fontSize: "15px",
-              cursor: "pointer",
-            }}
           >
             {decision.title}
-          </span>
-          <p style={{ color: "var(--text-secondary)", fontSize: "13px", margin: "6px 0 0" }}>
+          </button>
+          <p className="decision-card-summary">
             {decision.problem_statement.length > 120
               ? decision.problem_statement.slice(0, 120) + "..."
               : decision.problem_statement}
           </p>
         </div>
-        <span
-          style={{
-            background: style.bg,
-            color: style.color,
-            padding: "4px 12px",
-            borderRadius: "20px",
-            fontSize: "11px",
-            fontWeight: 700,
-            textTransform: "capitalize",
-            whiteSpace: "nowrap",
-          }}
-        >
+        <Badge tone={STATUS_TONE[decision.status] || "neutral"}>
           {decision.status.replace("_", " ")}
-        </span>
-          {decision.attachment_url && (
-            <span
-              title="Has attachment"
-              style={{ fontSize: "13px", marginLeft: "6px" }}
-            >
-              📎
-            </span>
-          )}
+        </Badge>
+        {decision.attachment_url && (
+          <span title="Has attachment" aria-label="Has attachment" style={{ fontSize: "13px" }}>
+            📎
+          </span>
+        )}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: "14px",
-          paddingTop: "14px",
-          borderTop: "1px solid var(--border)",
-        }}
-      >
-        <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "var(--text-muted)" }}>
+      <div className="decision-card-footer">
+        <div className="decision-card-meta">
           <span>{decision.category || "Uncategorized"}</span>
           <span>By {decision.created_by?.full_name || "Unknown"}</span>
           <span>{new Date(decision.created_at).toLocaleString()}</span>
         </div>
 
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div className="decision-card-actions">
           {canUpdateStatus && (
             <select
+              className="status-select"
               value={decision.status}
               disabled={updating}
               onChange={handleStatusChange}
-              style={{
-                background: "var(--bg)",
-                border: "1px solid var(--border)",
-                color: "var(--text-primary)",
-                borderRadius: "6px",
-                fontSize: "12px",
-                padding: "5px 8px",
-              }}
+              aria-label="Update decision status"
+              style={{ fontSize: "12px", padding: "5px 8px" }}
             >
               {allStatuses.map((s) => (
                 <option key={s} value={s}>
@@ -143,20 +109,9 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
             </select>
           )}
           {isAdmin && (
-            <button
-              onClick={handleDelete}
-              style={{
-                background: "none",
-                border: "1px solid var(--danger)",
-                color: "var(--danger)",
-                borderRadius: "6px",
-                fontSize: "12px",
-                padding: "5px 10px",
-                cursor: "pointer",
-              }}
-            >
+            <Button variant="danger" size="sm" onClick={handleDelete}>
               Delete
-            </button>
+            </Button>
           )}
         </div>
       </div>

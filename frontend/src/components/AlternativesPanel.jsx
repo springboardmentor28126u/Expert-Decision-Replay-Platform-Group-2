@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import apiClient, { authHeaders } from "../api/client";
+import { useConfirm } from "./ui/ConfirmContext";
+import Button from "./ui/Button";
 
 const FEASIBILITY_SCORE_MAP = { Low: 3, Medium: 6, High: 9 };
 
@@ -14,6 +16,7 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
   const [alternatives, setAlternatives] = useState([]);
   const [loading, setLoading] = useState(false);
   const [panelError, setPanelError] = useState("");
+  const confirm = useConfirm();
 
   // Manage view (create/edit alternative)
   const [mode, setMode] = useState("create"); // create | edit
@@ -42,9 +45,9 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
     setPanelError("");
     setLoading(true);
     try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/v1/alternatives/decision/${decisionId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await apiClient.get(
+        `/api/v1/alternatives/decision/${decisionId}`,
+        authHeaders(token)
       );
       setAlternatives(res.data);
     } catch (err) {
@@ -127,16 +130,16 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
 
     try {
       if (mode === "create") {
-        await axios.post(
-          `http://127.0.0.1:8000/api/v1/alternatives/decision/${decisionId}`,
+        await apiClient.post(
+          `/api/v1/alternatives/decision/${decisionId}`,
           payload,
-          { headers: { Authorization: `Bearer ${token}` } }
+          authHeaders(token)
         );
       } else {
-        await axios.put(
-          `http://127.0.0.1:8000/api/v1/alternatives/${editingId}`,
+        await apiClient.put(
+          `/api/v1/alternatives/${editingId}`,
           payload,
-          { headers: { Authorization: `Bearer ${token}` } }
+          authHeaders(token)
         );
       }
 
@@ -152,7 +155,11 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
   };
 
   const handleDelete = async (alternativeId) => {
-    const ok = window.confirm("Delete this alternative?");
+    const ok = await confirm("Delete this alternative?", {
+      title: "Delete alternative",
+      confirmLabel: "Delete",
+      danger: true,
+    });
     if (!ok) return;
 
     // If the user deletes while comparing, go back to manage view to prevent stale UI.
@@ -160,9 +167,9 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
 
     setPanelError("");
     try {
-      await axios.delete(
-        `http://127.0.0.1:8000/api/v1/alternatives/${alternativeId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      await apiClient.delete(
+        `/api/v1/alternatives/${alternativeId}`,
+        authHeaders(token)
       );
       await fetchAlternatives();
       if (onUpdated) onUpdated();
@@ -178,10 +185,10 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
   const handleSelect = async (alternativeId) => {
     setPanelError("");
     try {
-      await axios.patch(
-        `http://127.0.0.1:8000/api/v1/alternatives/${alternativeId}/select`,
+      await apiClient.patch(
+        `/api/v1/alternatives/${alternativeId}/select`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
       await fetchAlternatives();
       if (onUpdated) onUpdated();
@@ -219,7 +226,7 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
       {panelError && (
         <div
           className="dash-card-note"
-          style={{ color: "#FF6B6B", marginBottom: 12 }}
+          style={{ color: "var(--danger)", marginBottom: 12 }}
         >
           {panelError}
         </div>
@@ -231,14 +238,9 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
       {isComparing && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <button
-              type="button"
-              className="auth-button"
-              style={{ marginTop: 12, flex: 1 }}
-              onClick={goBackToAlternatives}
-            >
+            <Button variant="primary" style={{ flex: 1 }} onClick={goBackToAlternatives}>
               Go Back
-            </button>
+            </Button>
           </div>
 
           {decisionTitle && (
@@ -295,40 +297,36 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
           ) : (
             <>
               {/* Buttons row: Compare (left) + Create Alternative (right), same size */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <button
-                    type="button"
-                    className="auth-button"
-                    style={{ marginTop: 12, flex: 1 }}
-                    onClick={onClickCompare}
-                    disabled={!decisionId || alternatives.length === 0}
-                  >
-                    Compare
-                  </button>
+              <div style={{ marginBottom: 12, display: "flex", gap: 12, alignItems: "center" }}>
+                <Button
+                  variant="primary"
+                  style={{ flex: 1 }}
+                  onClick={onClickCompare}
+                  disabled={!decisionId || alternatives.length === 0}
+                >
+                  Compare
+                </Button>
 
-                  <button
-                    type="button"
-                    className="auth-button"
-                    style={{ marginTop: 12, flex: 1 }}
-                    onClick={() => {
-                      setMode("create");
-                      setEditingId(null);
-                      setShowForm(true);
-                      setForm({
-                        title: "",
-                        description: "",
-                        pros: "",
-                        cons: "",
-                        cost_estimate: "",
-                        risk_assessment: "Low",
-                        feasibility_score: "Low",
-                      });
-                    }}
-                  >
-                    Create Alternative
-                  </button>
-                </div>
+                <Button
+                  variant="primary"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    setMode("create");
+                    setEditingId(null);
+                    setShowForm(true);
+                    setForm({
+                      title: "",
+                      description: "",
+                      pros: "",
+                      cons: "",
+                      cost_estimate: "",
+                      risk_assessment: "Low",
+                      feasibility_score: "Low",
+                    });
+                  }}
+                >
+                  Create Alternative
+                </Button>
               </div>
 
               {alternatives.length === 0 ? (
@@ -354,47 +352,23 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                         <td>{alt.cost_estimate ?? "—"}</td>
                         <td>{alt.is_selected ? "★ Winner" : "—"}</td>
                         <td>
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: 10,
-                              flexWrap: "wrap",
-                            }}
-                          >
+                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                             {!alt.is_selected && (
-                              <button
-                                className="dash-logout"
+                              <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => handleSelect(alt.id)}
-                                style={{
-                                  padding: "6px 10px",
-                                  borderColor: "#4FD1B5",
-                                  color: "#4FD1B5",
-                                }}
-                                type="button"
+                                style={{ borderColor: "var(--accent)", color: "var(--accent)" }}
                               >
                                 Select as Winner
-                              </button>
+                              </Button>
                             )}
-                            <button
-                              className="dash-logout"
-                              onClick={() => startEdit(alt)}
-                              style={{ padding: "6px 10px" }}
-                              type="button"
-                            >
+                            <Button variant="secondary" size="sm" onClick={() => startEdit(alt)}>
                               Edit
-                            </button>
-                            <button
-                              className="dash-logout"
-                              onClick={() => handleDelete(alt.id)}
-                              style={{
-                                padding: "6px 10px",
-                                borderColor: "#FF6B6B",
-                                color: "#FF6B6B",
-                              }}
-                              type="button"
-                            >
+                            </Button>
+                            <Button variant="danger" size="sm" onClick={() => handleDelete(alt.id)}>
                               Delete
-                            </button>
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -410,6 +384,7 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                     <input
                       type="text"
                       placeholder="Alternative title"
+                      aria-label="Alternative title"
                       value={form.title}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, title: e.target.value }))
@@ -421,23 +396,12 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                   <div className="auth-field">
                     <textarea
                       placeholder="Description"
+                      aria-label="Description"
                       value={form.description}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, description: e.target.value }))
                       }
                       rows={2}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        background: "#12161D",
-                        border: "1px solid #2E3646",
-                        borderRadius: "6px",
-                        color: "#F1F3F6",
-                        fontSize: "14px",
-                        fontFamily: "inherit",
-                        resize: "vertical",
-                        marginTop: 10,
-                      }}
                     />
                   </div>
 
@@ -445,6 +409,7 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                     <input
                       type="text"
                       placeholder="Pros"
+                      aria-label="Pros"
                       value={form.pros}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, pros: e.target.value }))
@@ -456,6 +421,7 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                     <input
                       type="text"
                       placeholder="Cons"
+                      aria-label="Cons"
                       value={form.cons}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, cons: e.target.value }))
@@ -468,6 +434,7 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                       type="number"
                       step="0.01"
                       placeholder="Cost (optional)"
+                      aria-label="Cost estimate (optional)"
                       value={form.cost_estimate}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, cost_estimate: e.target.value }))
@@ -478,6 +445,7 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                   <div className="auth-field">
                     <select
                       className="dash-select"
+                      aria-label="Risk assessment"
                       value={form.risk_assessment}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, risk_assessment: e.target.value }))
@@ -494,6 +462,7 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                   <div className="auth-field">
                     <select
                       className="dash-select"
+                      aria-label="Feasibility score"
                       value={form.feasibility_score}
                       onChange={(e) =>
                         setForm((p) => ({
@@ -510,22 +479,18 @@ function AlternativesPanel({ token, decisionId, decisionTitle, onUpdated }) {
                     </select>
                   </div>
 
-                  <button
-                    type="submit"
-                    className="auth-button"
-                    style={{ marginTop: 12 }}
-                  >
+                  <Button type="submit" variant="primary" style={{ marginTop: 12, width: "100%" }}>
                     {mode === "create" ? "Create Alternative" : "Update Alternative"}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     type="button"
-                    className="dash-logout"
+                    variant="secondary"
                     style={{ marginTop: 10, width: "100%" }}
                     onClick={resetForm}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </form>
               )}
             </>

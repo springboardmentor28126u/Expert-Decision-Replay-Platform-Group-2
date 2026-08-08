@@ -1,11 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import apiClient from "../api/client";
+import Badge from "./ui/Badge";
+import Button from "./ui/Button";
 
-const STATUS_STYLE = {
-  pending: { bg: "var(--warning-soft)", color: "var(--warning)" },
-  approved: { bg: "var(--success-soft)", color: "var(--success)" },
-  rejected: { bg: "var(--danger-soft)", color: "var(--danger)" },
-  escalated: { bg: "var(--neutral-soft)", color: "var(--text-secondary)" },
+const STATUS_TONE = {
+  pending: "warning",
+  approved: "success",
+  rejected: "danger",
+  escalated: "neutral",
+};
+
+const STATUS_BORDER_VAR = {
+  pending: "var(--warning)",
+  approved: "var(--success)",
+  rejected: "var(--danger)",
+  escalated: "var(--text-secondary)",
 };
 
 function ApprovalHistory({ token, decisionId, profile }) {
@@ -31,8 +40,8 @@ function ApprovalHistory({ token, decisionId, profile }) {
 
   const fetchApprovals = useCallback(async () => {
     try {
-      const res = await axios.get(
-        `http://127.0.0.1:8000/api/v1/approvals/decision/${decisionId}`,
+      const res = await apiClient.get(
+        `/api/v1/approvals/decision/${decisionId}`,
         authHeaders
       );
       setApprovals(res.data);
@@ -52,8 +61,8 @@ function ApprovalHistory({ token, decisionId, profile }) {
     if (!canAssignOrReset) return;
     const fetchReviewers = async () => {
       try {
-        const res = await axios.get(
-          "http://127.0.0.1:8000/api/v1/users/?page=1&page_size=100",
+        const res = await apiClient.get(
+          "/api/v1/users/?page=1&page_size=100",
           authHeaders
         );
         setReviewers(res.data.items || []);
@@ -74,8 +83,8 @@ function ApprovalHistory({ token, decisionId, profile }) {
     setAssigning(true);
     setAssignError("");
     try {
-      await axios.post(
-        `http://127.0.0.1:8000/api/v1/approvals/decision/${decisionId}`,
+      await apiClient.post(
+        `/api/v1/approvals/decision/${decisionId}`,
         { reviewer_id: assignReviewerId, level: Number(assignLevel) },
         authHeaders
       );
@@ -103,8 +112,8 @@ function ApprovalHistory({ token, decisionId, profile }) {
     setActingId(approval.id);
     setActionError("");
     try {
-      await axios.patch(
-        `http://127.0.0.1:8000/api/v1/approvals/${approval.id}`,
+      await apiClient.patch(
+        `/api/v1/approvals/${approval.id}`,
         { status, comments },
         authHeaders
       );
@@ -120,8 +129,8 @@ function ApprovalHistory({ token, decisionId, profile }) {
     setActingId(approval.id);
     setActionError("");
     try {
-      await axios.patch(
-        `http://127.0.0.1:8000/api/v1/approvals/${approval.id}/reset`,
+      await apiClient.patch(
+        `/api/v1/approvals/${approval.id}/reset`,
         {},
         authHeaders
       );
@@ -140,28 +149,13 @@ function ApprovalHistory({ token, decisionId, profile }) {
       {error && <p style={{ color: "var(--danger)", fontSize: "13px", marginBottom: "12px" }}>{error}</p>}
 
       {canAssignOrReset && (
-        <form
-          onSubmit={handleAssign}
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "10px",
-            padding: "16px",
-            marginBottom: "16px",
-          }}
-        >
-          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "10px" }}>
-            Assign a reviewer
-          </p>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+        <form onSubmit={handleAssign} className="approval-assign-form">
+          <p className="approval-assign-title">Assign a reviewer</p>
+          <div className="approval-assign-row">
             <select
               value={assignReviewerId}
               onChange={(e) => setAssignReviewerId(e.target.value)}
-              style={{
-                flex: "1 1 220px", padding: "8px 10px", background: "var(--bg)",
-                border: "1px solid var(--border)", borderRadius: "6px",
-                color: "var(--text-primary)", fontSize: "13px",
-              }}
+              aria-label="Select reviewer"
             >
               <option value="">Select reviewer...</option>
               {reviewers.map((u) => (
@@ -177,20 +171,11 @@ function ApprovalHistory({ token, decisionId, profile }) {
               value={assignLevel}
               onChange={(e) => setAssignLevel(e.target.value)}
               title="Review level"
-              style={{
-                width: "80px", padding: "8px 10px", background: "var(--bg)",
-                border: "1px solid var(--border)", borderRadius: "6px",
-                color: "var(--text-primary)", fontSize: "13px",
-              }}
+              aria-label="Review level"
             />
-            <button
-              type="submit"
-              disabled={assigning}
-              className="form-btn primary"
-              style={{ padding: "8px 16px", fontSize: "13px", height: "auto" }}
-            >
+            <Button type="submit" variant="primary" size="sm" disabled={assigning}>
               {assigning ? "Assigning..." : "Assign"}
-            </button>
+            </Button>
           </div>
           {assignError && <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "8px" }}>{assignError}</p>}
         </form>
@@ -203,94 +188,79 @@ function ApprovalHistory({ token, decisionId, profile }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {approvals.map((a) => {
-            const style = STATUS_STYLE[a.status] || STATUS_STYLE.pending;
             const canReview = a.status === "pending" && (profile.id === a.reviewer.id || isAdministrator);
             const draft = draftFor(a.id);
 
             return (
               <div
                 key={a.id}
-                style={{
-                  background: "var(--surface)", border: "1px solid var(--border)",
-                  borderRadius: "8px", padding: "14px 16px",
-                  borderLeft: `3px solid ${style.color}`,
-                }}
+                className="approval-card"
+                style={{ borderLeft: `3px solid ${STATUS_BORDER_VAR[a.status] || STATUS_BORDER_VAR.pending}` }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)" }}>
+                <div className="approval-card-header">
+                  <span className="approval-card-level">
                     Level {a.level} — {a.reviewer.full_name}
                   </span>
-                  <span
-                    style={{
-                      background: style.bg, color: style.color, padding: "3px 10px",
-                      borderRadius: "20px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
-                    }}
-                  >
+                  <Badge tone={STATUS_TONE[a.status] || "warning"} style={{ textTransform: "uppercase" }}>
                     {a.status}
-                  </span>
+                  </Badge>
                 </div>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "0 0 6px" }}>
-                  {a.reviewer.email}
-                </p>
-                {a.comments && (
-                  <p style={{ fontSize: "13px", color: "var(--text-primary)", margin: "0 0 6px" }}>{a.comments}</p>
-                )}
-                <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0 }}>
+                <p className="approval-card-email">{a.reviewer.email}</p>
+                {a.comments && <p className="approval-card-comment">{a.comments}</p>}
+                <p className="approval-card-timestamps">
                   Assigned {new Date(a.created_at).toLocaleString()}
                   {a.decided_at && ` · Decided ${new Date(a.decided_at).toLocaleString()}`}
                 </p>
 
                 {canReview && (
-                  <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+                  <div className="approval-review-section">
                     <textarea
                       placeholder="Add a comment (optional)"
                       value={draft.comments}
                       onChange={(e) => updateDraft(a.id, { comments: e.target.value })}
                       rows={2}
-                      style={{
-                        width: "100%", padding: "8px 10px", background: "var(--bg)",
-                        border: "1px solid var(--border)", borderRadius: "6px",
-                        color: "var(--text-primary)", fontSize: "13px", marginBottom: "8px", resize: "vertical",
-                      }}
+                      className="form-textarea"
+                      aria-label="Review comment"
                     />
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button
+                    <div className="approval-review-actions">
+                      <Button
+                        variant="success"
+                        size="sm"
                         disabled={actingId === a.id}
                         onClick={() => handleReview(a, "approved")}
-                        style={{ background: "var(--success)", color: "#0A1410", border: "none", padding: "6px 14px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                       >
                         Approve
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
                         disabled={actingId === a.id}
                         onClick={() => handleReview(a, "rejected")}
-                        style={{ background: "none", color: "var(--danger)", border: "1px solid var(--danger)", padding: "6px 14px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                       >
                         Reject
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         disabled={actingId === a.id}
                         onClick={() => handleReview(a, "escalated")}
-                        style={{ background: "none", color: "var(--text-secondary)", border: "1px solid var(--border)", padding: "6px 14px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                       >
                         Escalate
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
 
                 {canAssignOrReset && a.status !== "pending" && (
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     disabled={actingId === a.id}
                     onClick={() => handleReset(a)}
-                    style={{
-                      marginTop: "10px", background: "none", color: "var(--text-secondary)",
-                      border: "1px solid var(--border)", padding: "5px 12px", borderRadius: "6px",
-                      fontSize: "11px", fontWeight: 600, cursor: "pointer",
-                    }}
+                    style={{ marginTop: "10px" }}
                   >
                     Reset to pending
-                  </button>
+                  </Button>
                 )}
               </div>
             );

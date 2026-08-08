@@ -1,5 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
+import apiClient, { authHeaders } from "../api/client";
+import Button from "./ui/Button";
 
 function ChangePassword({ token }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -19,16 +20,18 @@ function ChangePassword({ token }) {
     }
 
     try {
-      const res = await axios.put(
-        "http://127.0.0.1:8000/me/change-password",
+      // 204 No Content on success — there's no response body/message to
+      // read, so the success text is a fixed string here instead.
+      await apiClient.post(
+        "/api/v1/users/me/password",
         {
           current_password: currentPassword,
           new_password: newPassword,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
       setIsError(false);
-      setMessage(res.data.message);
+      setMessage("Password updated successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -46,6 +49,7 @@ function ChangePassword({ token }) {
           <input
             type="password"
             placeholder="Current password"
+            aria-label="Current password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             required
@@ -55,6 +59,7 @@ function ChangePassword({ token }) {
           <input
             type="password"
             placeholder="New password (min. 8 characters)"
+            aria-label="New password, minimum 8 characters"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
@@ -65,15 +70,16 @@ function ChangePassword({ token }) {
           <input
             type="password"
             placeholder="Confirm new password"
+            aria-label="Confirm new password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
         </div>
-        <button type="submit" className="auth-button">Update password</button>
+        <Button type="submit" variant="primary" style={{ width: "100%" }}>Update password</Button>
       </form>
       {message && (
-        <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }}>
+        <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }} role="status">
           {message}
         </div>
       )}

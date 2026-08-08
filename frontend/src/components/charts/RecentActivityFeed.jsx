@@ -1,12 +1,5 @@
 import ChartCard from "./ChartCard";
-import { STATUS_COLORS } from "./chartTheme";
-
-const APPROVAL_STATUS_COLOR = {
-  pending: "#c98500",
-  approved: "#199e70",
-  rejected: "#e66767",
-  escalated: "#3987e5",
-};
+import { STATUS_COLORS, APPROVAL_COLORS } from "./chartTheme";
 
 function timeAgo(isoString) {
   const then = new Date(isoString).getTime();
@@ -44,7 +37,7 @@ function buildFeed(recentActivity) {
     key: `approval-${a.id}`,
     timestamp: a.updated_at,
     icon: "✅",
-    accent: APPROVAL_STATUS_COLOR[a.status] || "var(--text-secondary)",
+    accent: APPROVAL_COLORS[a.status] || "var(--text-secondary)",
     text: (
       <>
         <strong>{a.reviewer_name}</strong> {a.status === "pending" ? "was assigned to review" : a.status} decision{" "}

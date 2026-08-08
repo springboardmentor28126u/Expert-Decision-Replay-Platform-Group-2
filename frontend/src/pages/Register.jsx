@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import apiClient from "../api/client";
 import "../styles/styles.css";
 
 function Register({ onSwitch, onBackToLanding }) {
@@ -12,7 +12,7 @@ function Register({ onSwitch, onBackToLanding }) {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/v1/auth/register", {
+      const response = await apiClient.post("/api/v1/auth/register", {
         full_name: fullName,
         email,
         password,
@@ -43,6 +43,7 @@ function Register({ onSwitch, onBackToLanding }) {
             <input
               type="text"
               placeholder="Full name"
+              aria-label="Full name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
@@ -52,6 +53,7 @@ function Register({ onSwitch, onBackToLanding }) {
             <input
               type="email"
               placeholder="Email"
+              aria-label="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -61,6 +63,7 @@ function Register({ onSwitch, onBackToLanding }) {
             <input
               type="password"
               placeholder="Password"
+              aria-label="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -70,7 +73,7 @@ function Register({ onSwitch, onBackToLanding }) {
         </form>
 
         {message && (
-          <div className={`auth-message ${isError ? "error" : "success"}`}>
+          <div className={`auth-message ${isError ? "error" : "success"}`} role="status">
             {message}
           </div>
         )}

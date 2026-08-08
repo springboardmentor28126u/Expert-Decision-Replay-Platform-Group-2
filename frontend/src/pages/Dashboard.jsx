@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import apiClient, { authHeaders } from "../api/client";
+import { useConfirm } from "../components/ui/ConfirmContext";
+import { useToast } from "../components/ui/ToastContext";
+import Badge from "../components/ui/Badge";
+import Button from "../components/ui/Button";
 import AppShell from "../components/AppShell";
 import CreateDecision from "../components/CreateDecision";
 import DecisionsList from "../components/DecisionsList";
@@ -11,6 +15,8 @@ import AnalyticsDashboard from "../components/AnalyticsDashboard";
 import "../styles/dashboard.css";
 
 function Dashboard({ token, onLogout }) {
+  const confirm = useConfirm();
+  const showToast = useToast();
   const [profile, setProfile] = useState(null);
   const [users, setUsers] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -29,9 +35,7 @@ function Dashboard({ token, onLogout }) {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/v1/users/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await apiClient.get("/api/v1/users/me", authHeaders(token));
         setProfile(res.data);
       } catch (err) {
         console.log("Failed to load profile", err);
@@ -45,9 +49,7 @@ function Dashboard({ token, onLogout }) {
     const fetchSummary = async () => {
       setSummaryLoading(true);
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/v1/dashboard/summary", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await apiClient.get("/api/v1/dashboard/summary", authHeaders(token));
         setSummary(res.data);
         setSummaryError("");
       } catch (err) {
@@ -64,9 +66,7 @@ function Dashboard({ token, onLogout }) {
     const fetchUsers = async () => {
       if (!profile || profile.role?.name !== "administrator") return;
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/v1/users/?page=1&page_size=100", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await apiClient.get("/api/v1/users/?page=1&page_size=100", authHeaders(token));
         setUsers(res.data.items);
       } catch (err) {
         console.log("Not authorized or failed to load users", err);
@@ -78,9 +78,7 @@ function Dashboard({ token, onLogout }) {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/v1/notifications", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await apiClient.get("/api/v1/notifications", authHeaders(token));
         setNotifications(res.data);
       } catch (err) {
         console.log("Failed to load notifications", err);
@@ -142,9 +140,9 @@ function Dashboard({ token, onLogout }) {
       if (notification.related_entity_type === "decision") {
         decisionId = notification.related_entity_id;
       } else if (notification.related_entity_type === "approval") {
-        const approvalRes = await axios.get(
-          `http://127.0.0.1:8000/api/v1/approvals/${notification.related_entity_id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const approvalRes = await apiClient.get(
+          `/api/v1/approvals/${notification.related_entity_id}`,
+          authHeaders(token)
         );
         decisionId = approvalRes.data.decision_id;
       }
@@ -155,9 +153,7 @@ function Dashboard({ token, onLogout }) {
         return;
       }
 
-      const decisionRes = await axios.get(`http://127.0.0.1:8000/api/v1/decisions/${decisionId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const decisionRes = await apiClient.get(`/api/v1/decisions/${decisionId}`, authHeaders(token));
       handleSelectDecision(decisionRes.data);
     } catch (err) {
       console.error("Failed to open decision from notification", err);
@@ -169,10 +165,10 @@ function Dashboard({ token, onLogout }) {
   const handleMarkNotificationAsRead = async (id) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
     try {
-      await axios.patch(
-        `http://127.0.0.1:8000/api/v1/notifications/${id}/read`,
+      await apiClient.patch(
+        `/api/v1/notifications/${id}/read`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
     } catch (err) {
       console.error("Failed to mark notification as read", err);
@@ -182,10 +178,10 @@ function Dashboard({ token, onLogout }) {
   const handleMarkAllNotificationsAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     try {
-      await axios.patch(
-        "http://127.0.0.1:8000/api/v1/notifications/read-all",
+      await apiClient.patch(
+        "/api/v1/notifications/read-all",
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
     } catch (err) {
       console.error("Failed to mark all notifications as read", err);
@@ -200,32 +196,38 @@ function Dashboard({ token, onLogout }) {
   const handleRoleChange = async (userId, newRoleName) => {
     const roleId = roleIdByName[newRoleName];
     if (!roleId) {
-      alert(`Cannot assign "${newRoleName}" — no existing user currently holds that role, so its id can't be resolved.`);
+      showToast(
+        `Cannot assign "${newRoleName}" — no existing user currently holds that role, so its id can't be resolved.`,
+        { tone: "error" }
+      );
       return;
     }
     try {
-      const res = await axios.patch(
-        `http://127.0.0.1:8000/api/v1/users/${userId}/role`,
+      const res = await apiClient.patch(
+        `/api/v1/users/${userId}/role`,
         { role_id: roleId },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
       setUsers((prev) => prev.map((u) => (u.id === userId ? res.data : u)));
     } catch (err) {
       console.error("Failed to update role", err);
-      alert(err.response?.data?.detail || "Failed to update role");
+      showToast(err.response?.data?.detail || "Failed to update role", { tone: "error" });
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    const ok = await confirm("Are you sure you want to delete this user?", {
+      title: "Delete user",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/v1/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await apiClient.delete(`/api/v1/users/${userId}`, authHeaders(token));
       setUsers((prev) => prev.filter((u) => u.id !== userId));
     } catch (err) {
       console.error("Failed to delete user", err);
-      alert(err.response?.data?.detail || "Failed to delete user");
+      showToast(err.response?.data?.detail || "Failed to delete user", { tone: "error" });
     }
   };
 
@@ -309,33 +311,23 @@ function Dashboard({ token, onLogout }) {
           <p className="panel-title">All Decisions</p>
           <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
           
-          <div className="filter-container" style={{ margin: "20px 0 16px 0", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px" }}>
-            <div style={{ flex: "1 1 auto", display: "flex", alignItems: "center", gap: "10px" }}>
-              <label htmlFor="decision-search" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
+          <div className="filter-bar">
+            <div className="filter-group filter-group-grow">
+              <label htmlFor="decision-search" className="filter-label">
                 Search:
               </label>
               <input
                 id="decision-search"
                 type="text"
+                className="search-input"
                 placeholder="🔍 Search decisions by title or category..."
                 value={decisionSearchQuery}
                 onChange={(e) => setDecisionSearchQuery(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  background: "#12161D",
-                  border: "1px solid #2E3646",
-                  borderRadius: "6px",
-                  color: "#F1F3F6",
-                  fontSize: "14px",
-                  width: "100%",
-                  maxWidth: "350px",
-                  outline: "none"
-                }}
               />
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <label htmlFor="status-filter" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
+            <div className="filter-group">
+              <label htmlFor="status-filter" className="filter-label">
                 Filter by Status:
               </label>
               <select
@@ -343,16 +335,6 @@ function Dashboard({ token, onLogout }) {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="status-select"
-                style={{
-                  padding: "8px 12px",
-                  background: "#12161D",
-                  border: "1px solid #2E3646",
-                  borderRadius: "6px",
-                  color: "#F1F3F6",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  outline: "none"
-                }}
               >
                 <option value="all">All Decisions</option>
                 <option value="draft">Draft</option>
@@ -408,22 +390,13 @@ function Dashboard({ token, onLogout }) {
                 <div style={{ marginBottom: "20px" }}>
                   <input
                     type="text"
+                    className="search-input"
                     placeholder="🔍 Search users by name, email, or role..."
+                    aria-label="Search users"
                     value={userSearchQuery}
                     onChange={(e) => {
                       setUserSearchQuery(e.target.value);
                       setCurrentUserPage(1);
-                    }}
-                    style={{
-                      padding: "10px 16px",
-                      background: "#12161D",
-                      border: "1px solid #2E3646",
-                      borderRadius: "8px",
-                      color: "#F1F3F6",
-                      fontSize: "14px",
-                      width: "100%",
-                      maxWidth: "400px",
-                      outline: "none"
                     }}
                   />
                 </div>
@@ -446,19 +419,12 @@ function Dashboard({ token, onLogout }) {
                           <td>{u.email}</td>
                           <td>
                             <select
+                              className="status-select"
                               value={u.role?.name}
                               onChange={(e) => handleRoleChange(u.id, e.target.value)}
                               disabled={u.id === profile.id}
-                              style={{
-                                padding: "6px 10px",
-                                background: "#12161D",
-                                border: "1px solid #2E3646",
-                                borderRadius: "6px",
-                                color: "#F1F3F6",
-                                fontSize: "13px",
-                                cursor: u.id === profile.id ? "not-allowed" : "pointer",
-                                outline: "none"
-                              }}
+                              aria-label={`Change role for ${u.full_name}`}
+                              style={{ fontSize: "13px", padding: "6px 10px" }}
                             >
                               <option value="employee">Employee</option>
                               <option value="reviewer">Reviewer</option>
@@ -467,49 +433,19 @@ function Dashboard({ token, onLogout }) {
                             </select>
                           </td>
                           <td>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                padding: "4px 8px",
-                                borderRadius: "12px",
-                                fontSize: "11px",
-                                fontWeight: "700",
-                                background: u.is_active ? "rgba(45, 212, 167, 0.12)" : "rgba(240, 85, 90, 0.12)",
-                                color: u.is_active ? "var(--success)" : "var(--danger)"
-                              }}
-                            >
+                            <Badge tone={u.is_active ? "success" : "danger"}>
                               {u.is_active ? "Active" : "Inactive"}
-                            </span>
+                            </Badge>
                           </td>
                           <td>
-                            <button
+                            <Button
+                              variant="danger"
+                              size="sm"
                               onClick={() => handleDeleteUser(u.id)}
                               disabled={u.id === profile.id}
-                              style={{
-                                padding: "6px 12px",
-                                background: u.id === profile.id ? "transparent" : "rgba(240, 85, 90, 0.08)",
-                                border: u.id === profile.id ? "1px solid var(--border)" : "1px solid var(--danger)",
-                                color: u.id === profile.id ? "var(--text-muted)" : "var(--danger)",
-                                borderRadius: "6px",
-                                fontSize: "12px",
-                                cursor: u.id === profile.id ? "not-allowed" : "pointer",
-                                transition: "all 0.2s"
-                              }}
-                              onMouseOver={(e) => {
-                                if (u.id !== profile.id) {
-                                  e.currentTarget.style.background = "var(--danger)";
-                                  e.currentTarget.style.color = "#0D1117";
-                                }
-                              }}
-                              onMouseOut={(e) => {
-                                if (u.id !== profile.id) {
-                                  e.currentTarget.style.background = "rgba(240, 85, 90, 0.08)";
-                                  e.currentTarget.style.color = "var(--danger)";
-                                }
-                              }}
                             >
                               Delete
-                            </button>
+                            </Button>
                           </td>
                         </tr>
                       ))
@@ -524,55 +460,26 @@ function Dashboard({ token, onLogout }) {
                 </table>
 
                 {totalUserPages > 1 && (
-                  <div
-                    className="pagination-controls"
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: "12px",
-                      marginTop: "24px",
-                      paddingTop: "16px",
-                      borderTop: "1px solid var(--border)"
-                    }}
-                  >
-                    <button
+                  <div className="pagination-controls">
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setCurrentUserPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentUserPage === 1}
-                      style={{
-                        padding: "8px 16px",
-                        background: "var(--surface)",
-                        border: "1px solid var(--border)",
-                        color: currentUserPage === 1 ? "var(--text-muted)" : "var(--text-primary)",
-                        borderRadius: "6px",
-                        cursor: currentUserPage === 1 ? "not-allowed" : "pointer",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        transition: "all 0.2s"
-                      }}
                     >
                       ← Previous
-                    </button>
-                    <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "500" }}>
+                    </Button>
+                    <span className="pagination-status">
                       Page {currentUserPage} of {totalUserPages}
                     </span>
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setCurrentUserPage((prev) => Math.min(prev + 1, totalUserPages))}
                       disabled={currentUserPage === totalUserPages}
-                      style={{
-                        padding: "8px 16px",
-                        background: "var(--surface)",
-                        border: "1px solid var(--border)",
-                        color: currentUserPage === totalUserPages ? "var(--text-muted)" : "var(--text-primary)",
-                        borderRadius: "6px",
-                        cursor: currentUserPage === totalUserPages ? "not-allowed" : "pointer",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        transition: "all 0.2s"
-                      }}
                     >
                       Next →
-                    </button>
+                    </Button>
                   </div>
                 )}
               </>

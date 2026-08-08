@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client';
 
 const FileUpload = ({ token, targetType, targetId, onUploadSuccess }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -28,8 +28,8 @@ const FileUpload = ({ token, targetType, targetId, onUploadSuccess }) => {
     const formData = new FormData();
     formData.append("file", selectedFile);
     try {
-      const response = await axios.post(
-        `http://127.0.0.1:8000/api/v1/attachments/${targetType}/${targetId}`,
+      const response = await apiClient.post(
+        `/api/v1/attachments/${targetType}/${targetId}`,
         formData,
         {
           headers: {
@@ -69,6 +69,7 @@ const FileUpload = ({ token, targetType, targetId, onUploadSuccess }) => {
               type="button"
               className="message-action-btn delete"
               onClick={() => setSelectedFile(null)}
+              aria-label={`Remove selected file ${selectedFile.name}`}
             >
               ✕
             </button>

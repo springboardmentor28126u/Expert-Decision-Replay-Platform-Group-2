@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import apiClient, { authHeaders } from "../api/client";
 import DecisionCard from "./DecisionCard";
+import Button from "./ui/Button";
 
 function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 10, statusFilter = "all", searchQuery = "" }) {
   const [decisions, setDecisions] = useState([]);
@@ -10,9 +11,7 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
   useEffect(() => {
     const fetchDecisions = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/v1/decisions", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await apiClient.get("/api/v1/decisions", authHeaders(token));
         setDecisions(res.data.items);
       } catch (err) {
         console.log("Failed to load decisions", err);
@@ -85,55 +84,26 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
       </div>
 
       {totalPages > 1 && (
-        <div
-          className="pagination-controls"
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "12px",
-            marginTop: "24px",
-            paddingTop: "16px",
-            borderTop: "1px solid var(--border)"
-          }}
-        >
-          <button
+        <div className="pagination-controls">
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
-            style={{
-              padding: "8px 16px",
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              color: currentPage === 1 ? "var(--text-muted)" : "var(--text-primary)",
-              borderRadius: "6px",
-              cursor: currentPage === 1 ? "not-allowed" : "pointer",
-              fontSize: "13px",
-              fontWeight: "600",
-              transition: "all 0.2s"
-            }}
           >
             ← Previous
-          </button>
-          <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "500" }}>
+          </Button>
+          <span className="pagination-status">
             Page {currentPage} of {totalPages}
           </span>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
-            style={{
-              padding: "8px 16px",
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              color: currentPage === totalPages ? "var(--text-muted)" : "var(--text-primary)",
-              borderRadius: "6px",
-              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-              fontSize: "13px",
-              fontWeight: "600",
-              transition: "all 0.2s"
-            }}
           >
             Next →
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import axios from "axios";
+import apiClient, { authHeaders } from "../api/client";
+import Button from "./ui/Button";
 
 function CreateDecision({ token, onCreated }) {
   const [title, setTitle] = useState("");
@@ -17,14 +18,14 @@ function CreateDecision({ token, onCreated }) {
     submittingRef.current = true;
     setIsSubmitting(true);
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/v1/decisions",
+      const response = await apiClient.post(
+        "/api/v1/decisions",
         {
           title,
           problem_statement: problemStatement,
           category,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        authHeaders(token)
       );
       setMessage("Decision created successfully!");
       setIsError(false);
@@ -51,6 +52,7 @@ function CreateDecision({ token, onCreated }) {
           <input
             type="text"
             placeholder="Decision title"
+            aria-label="Decision title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -59,21 +61,11 @@ function CreateDecision({ token, onCreated }) {
         <div className="auth-field">
           <textarea
             placeholder="Problem statement"
+            aria-label="Problem statement"
             value={problemStatement}
             onChange={(e) => setProblemStatement(e.target.value)}
             rows={3}
             required
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              background: "#12161D",
-              border: "1px solid #2E3646",
-              borderRadius: "6px",
-              color: "#F1F3F6",
-              fontSize: "14px",
-              fontFamily: "inherit",
-              resize: "vertical",
-            }}
           />
         </div>
         <div className="auth-field">
@@ -88,10 +80,7 @@ function CreateDecision({ token, onCreated }) {
                 setShowCustomCategory(false);
               }
             }}
-            style={{
-              width: "100%", padding: "10px 12px", background: "#12161D",
-              border: "1px solid #2E3646", borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", boxSizing: "border-box",
-            }}
+            aria-label="Category"
           >
             <option value="">Select a category</option>
             <option value="Technical">Technical</option>
@@ -104,18 +93,19 @@ function CreateDecision({ token, onCreated }) {
             <input
               type="text"
               placeholder="Type your custom category"
+              aria-label="Custom category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               style={{ marginTop: "8px" }}
             />
           )}
         </div>
-        <button type="submit" className="auth-button" disabled={isSubmitting}>
+        <Button type="submit" variant="primary" style={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? "Creating..." : "Create decision"}
-        </button>
+        </Button>
       </form>
       {message && (
-        <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }}>
+        <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }} role="status">
           {message}
         </div>
       )}

@@ -25,7 +25,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
   return (
     <div className="shell-wrapper">
       {sidebarOpen && (
-        <aside className="shell-sidebar" style={{ display: "flex", flexDirection: "column" }}>
+        <aside className="shell-sidebar">
           <div className="shell-logo">
             <span className="full-name">EDRP</span>
           </div>
@@ -36,28 +36,12 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
                 key={item.key}
                 className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
                 onClick={() => onNavigate(item.key)}
-                style={{ position: "relative" }}
+                aria-current={activeView === item.key ? "page" : undefined}
               >
-                <span className="shell-nav-icon">{item.icon}</span>
+                <span className="shell-nav-icon" aria-hidden="true">{item.icon}</span>
                 <span className="label">{item.label}</span>
                 {!!item.badge && (
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      background: "var(--danger)",
-                      color: "#fff",
-                      borderRadius: "999px",
-                      minWidth: "18px",
-                      height: "18px",
-                      padding: "0 5px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      lineHeight: 1,
-                    }}
-                  >
+                  <span className="shell-nav-badge">
                     {item.badge > 99 ? "99+" : item.badge}
                   </span>
                 )}
@@ -73,8 +57,9 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
                     key={item.key}
                     className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
                     onClick={() => onNavigate(item.key)}
+                    aria-current={activeView === item.key ? "page" : undefined}
                   >
-                    <span className="shell-nav-icon">{item.icon}</span>
+                    <span className="shell-nav-icon" aria-hidden="true">{item.icon}</span>
                     <span className="label">{item.label}</span>
                   </button>
                 ))}
@@ -90,8 +75,9 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
                     key={item.key}
                     className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
                     onClick={() => onNavigate(item.key)}
+                    aria-current={activeView === item.key ? "page" : undefined}
                   >
-                    <span className="shell-nav-icon">{item.icon}</span>
+                    <span className="shell-nav-icon" aria-hidden="true">{item.icon}</span>
                     <span className="label">{item.label}</span>
                   </button>
                 ))}
@@ -99,20 +85,20 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
             )}
           </nav>
 
-          <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div className="shell-sidebar-footer">
             <button
               className={`shell-nav-item ${activeView === "account" ? "active" : ""}`}
               onClick={() => onNavigate("account")}
+              aria-current={activeView === "account" ? "page" : undefined}
             >
-              <span className="shell-nav-icon">⚙️</span>
+              <span className="shell-nav-icon" aria-hidden="true">⚙️</span>
               <span className="label">Account Settings</span>
             </button>
             <button
-              className="shell-nav-item"
+              className="shell-nav-item danger"
               onClick={onLogout}
-              style={{ color: "#F0555A" }}
             >
-              <span className="shell-nav-icon">🚪</span>
+              <span className="shell-nav-icon" aria-hidden="true">🚪</span>
               <span className="label">Log Out</span>
             </button>
           </div>
@@ -121,22 +107,12 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
 
       <div className="shell-main">
         <header className="shell-topbar">
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div className="shell-topbar-left">
             <button
+              className="shell-sidebar-toggle"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={{
-                background: "none",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                width: "34px",
-                height: "34px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "var(--text-secondary)",
-                fontSize: "16px",
-              }}
+              aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+              aria-expanded={sidebarOpen}
               title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
             >
               ☰
@@ -153,7 +129,7 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
           </div>
 
           {/* Header Controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div className="shell-topbar-right">
             <ProfileMenu profile={profile} />
           </div>
         </header>
