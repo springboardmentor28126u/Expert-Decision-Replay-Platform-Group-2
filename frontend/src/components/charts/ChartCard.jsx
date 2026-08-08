@@ -2,16 +2,14 @@
 // and the loading/empty states every chart on the dashboard needs. Chart
 // components render their Recharts tree as `children`; ChartCard decides
 // whether that, a skeleton, or an empty-state message is what's on screen.
-function ChartCard({ title, subtitle, loading, isEmpty, emptyMessage = "No data yet.", height = 260, children }) {
+function ChartCard({ title, subtitle, loading, isEmpty, emptyMessage = "No data yet.", height = 236, children }) {
   return (
-    <div className="panel" style={{ marginBottom: 0, display: "flex", flexDirection: "column" }}>
-      <div style={{ marginBottom: 16 }}>
-        <p className="panel-title" style={{ margin: 0 }}>{title}</p>
-        {subtitle && (
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--text-secondary)" }}>{subtitle}</p>
-        )}
+    <div className="chart-card">
+      <div className="chart-card-header">
+        <p className="chart-card-title">{title}</p>
+        {subtitle && <p className="chart-card-subtitle">{subtitle}</p>}
       </div>
-      <div style={{ height: typeof height === "number" ? height : undefined, minHeight: typeof height === "number" ? undefined : 140, minWidth: 0 }}>
+      <div style={{ height: typeof height === "number" ? height : undefined, minHeight: typeof height === "number" ? undefined : 120, minWidth: 0 }}>
         {loading ? <ChartSkeleton /> : isEmpty ? <ChartEmptyState message={emptyMessage} /> : children}
       </div>
     </div>
@@ -46,8 +44,8 @@ function ChartEmptyState({ message }) {
         color: "var(--text-muted)",
       }}
     >
-      <span style={{ fontSize: 26 }} aria-hidden="true">📊</span>
-      <p style={{ fontSize: 13, margin: 0 }}>{message}</p>
+      <span style={{ fontSize: 22 }} aria-hidden="true">📊</span>
+      <p style={{ fontSize: "var(--text-sm)", margin: 0 }}>{message}</p>
     </div>
   );
 }

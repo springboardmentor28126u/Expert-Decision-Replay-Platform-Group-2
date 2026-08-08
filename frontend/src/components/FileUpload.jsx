@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import { Paperclip, X } from 'lucide-react';
 import apiClient from '../api/client';
+import Button from './ui/Button';
 
 const FileUpload = ({ token, targetType, targetId, onUploadSuccess }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -54,7 +56,8 @@ const FileUpload = ({ token, targetType, targetId, onUploadSuccess }) => {
     <div className="file-upload-container">
       <div className="form-file-input-wrapper">
         <label htmlFor="file-input" className="form-file-label">
-          📎 Attach File
+          <Paperclip size={13} strokeWidth={2} aria-hidden="true" />
+          Attach File
         </label>
         <input
           id="file-input"
@@ -71,20 +74,15 @@ const FileUpload = ({ token, targetType, targetId, onUploadSuccess }) => {
               onClick={() => setSelectedFile(null)}
               aria-label={`Remove selected file ${selectedFile.name}`}
             >
-              ✕
+              <X size={12} strokeWidth={2} aria-hidden="true" />
             </button>
           </span>
         )}
       </div>
       {selectedFile && (
-        <button
-          type="button"
-          className="form-btn primary"
-          onClick={handleUpload}
-          disabled={uploading}
-        >
+        <Button type="button" variant="primary" onClick={handleUpload} disabled={uploading}>
           {uploading ? "Uploading..." : "Upload File"}
-        </button>
+        </Button>
       )}
       {error && <div className="auth-message error">{error}</div>}
     </div>

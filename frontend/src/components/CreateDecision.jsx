@@ -45,31 +45,20 @@ function CreateDecision({ token, onCreated }) {
   };
 
   return (
-    <div className="dash-card" style={{ marginBottom: "20px" }}>
-      <p className="dash-card-label" style={{ marginBottom: "12px" }}>Create a new decision</p>
+    <div className="create-decision-form">
       <form onSubmit={handleSubmit}>
-        <div className="auth-field">
+        <div className="create-decision-row">
           <input
             type="text"
+            className="create-decision-title-input"
             placeholder="Decision title"
             aria-label="Decision title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
           />
-        </div>
-        <div className="auth-field">
-          <textarea
-            placeholder="Problem statement"
-            aria-label="Problem statement"
-            value={problemStatement}
-            onChange={(e) => setProblemStatement(e.target.value)}
-            rows={3}
-            required
-          />
-        </div>
-        <div className="auth-field">
           <select
+            className="create-decision-category-select"
             value={["Technical", "HR", "Finance", "Operations"].includes(category) ? category : (category ? "Other" : "")}
             onChange={(e) => {
               if (e.target.value === "Other") {
@@ -82,33 +71,47 @@ function CreateDecision({ token, onCreated }) {
             }}
             aria-label="Category"
           >
-            <option value="">Select a category</option>
+            <option value="">Category</option>
             <option value="Technical">Technical</option>
             <option value="HR">HR</option>
             <option value="Finance">Finance</option>
             <option value="Operations">Operations</option>
             <option value="Other">Other</option>
           </select>
-          {showCustomCategory && (
-            <input
-              type="text"
-              placeholder="Type your custom category"
-              aria-label="Custom category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              style={{ marginTop: "8px" }}
-            />
+        </div>
+
+        {showCustomCategory && (
+          <input
+            type="text"
+            placeholder="Type your custom category"
+            aria-label="Custom category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={{ marginBottom: "var(--space-3)" }}
+          />
+        )}
+
+        <textarea
+          placeholder="Problem statement — what decision needs to be made, and why?"
+          aria-label="Problem statement"
+          value={problemStatement}
+          onChange={(e) => setProblemStatement(e.target.value)}
+          rows={2}
+          required
+          style={{ marginBottom: "var(--space-3)" }}
+        />
+
+        <div className="create-decision-footer">
+          {message && (
+            <span className={`inline-form-message ${isError ? "error" : "success"}`} role="status">
+              {message}
+            </span>
           )}
+          <Button type="submit" variant="primary" disabled={isSubmitting} style={{ marginLeft: "auto" }}>
+            {isSubmitting ? "Creating..." : "Create decision"}
+          </Button>
         </div>
-        <Button type="submit" variant="primary" style={{ width: "100%" }} disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create decision"}
-        </Button>
       </form>
-      {message && (
-        <div className={`auth-message ${isError ? "error" : "success"}`} style={{ marginTop: "12px" }} role="status">
-          {message}
-        </div>
-      )}
     </div>
   );
 }

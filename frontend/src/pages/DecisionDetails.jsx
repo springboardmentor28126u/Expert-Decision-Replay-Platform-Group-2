@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { ArrowLeft, Pencil, Download, Paperclip } from "lucide-react";
 import apiClient, { authHeaders, API_BASE_URL } from "../api/client";
 import VersionHistory from "../components/VersionHistory";
 import AlternativesPanel from "../components/AlternativesPanel";
@@ -344,17 +345,18 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 required
               />
               <div className="form-actions-row">
-                <button type="submit" className="form-btn primary">Save Changes</button>
-                <button
+                <Button type="submit" variant="primary" size="sm">Save Changes</Button>
+                <Button
                   type="button"
-                  className="form-btn secondary"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     setEditingId(null);
                     setEditText("");
                   }}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           ) : (
@@ -409,17 +411,18 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             />
             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
               <div className="form-actions-row">
-                <button type="submit" className="form-btn primary">Send Reply</button>
-                <button
+                <Button type="submit" variant="primary" size="sm">Send Reply</Button>
+                <Button
                   type="button"
-                  className="form-btn secondary"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     setReplyToId(null);
                     setReplyText("");
                   }}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           </form>
@@ -438,9 +441,10 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
 
   return (
     <div className="decision-details-container">
-      <button className="dash-back-btn" onClick={onBack}>
-        ← Back to Decisions
-      </button>
+      <Button variant="secondary" size="sm" onClick={onBack}>
+        <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
+        Back to Decisions
+      </Button>
       {/* Decision Summary Info — always visible */}
       <div className="decision-header-card">
         {isEditing ? (
@@ -518,7 +522,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
 
                <div className="decision-title-actions">
                  <Button variant="secondary" onClick={() => setIsEditing(true)}>
-                   ✏️ Edit Decision
+                   <Pencil size={14} strokeWidth={2} aria-hidden="true" />
+                   Edit Decision
                  </Button>
                  <Button
                   as="a"
@@ -540,7 +545,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   variant="secondary"
                   style={{ textDecoration: "none" }}
                 >
-                  ⬇ Download PDF
+                  <Download size={14} strokeWidth={2} aria-hidden="true" />
+                  Download PDF
                  </Button>
                 </div>
               </div>
@@ -574,7 +580,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   className="decision-attachment-link"
                   style={{ color: "var(--accent)" }}
                 >
-                 📎 View file
+                 <Paperclip size={13} strokeWidth={2} aria-hidden="true" /> View file
                 </a>
 
                 <a
@@ -594,7 +600,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                     className="decision-attachment-link"
                     style={{ color: "var(--text-secondary)" }}
                 >
-                  ⬇ Download
+                  <Download size={13} strokeWidth={2} aria-hidden="true" /> Download
                 </a>
                </div>
              )}
@@ -689,7 +695,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                           size="sm"
                           onClick={() => handleDownloadAttachment(att.id, att.file_name)}
                         >
-                          ⬇ Download
+                          <Download size={13} strokeWidth={2} aria-hidden="true" />
+                          Download
                         </Button>
                         <Button
                           variant="danger"
@@ -770,13 +777,13 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 {formError && <div className="auth-message error" style={{ marginBottom: "12px" }}>{formError}</div>}
 
                 <div className="form-actions-row">
-                  <button type="submit" className="form-btn primary" disabled={submitting}>
+                  <Button type="submit" variant="primary" disabled={submitting}>
                     {submitting
                       ? "Posting..."
                       : newMessageType === "meeting_note"
                       ? "Post Meeting Note"
                       : "Post Comment"}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>

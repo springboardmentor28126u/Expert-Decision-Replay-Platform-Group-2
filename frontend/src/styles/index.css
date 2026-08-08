@@ -1,19 +1,29 @@
 /*
- * Single source of truth for design tokens. This file is imported once,
+ * Single source of truth for the design system. This file is imported once,
  * globally, in main.jsx — every other stylesheet (auth, landing, dashboard,
  * discussion, reports...) consumes these variables instead of redefining
- * its own :root block or hardcoding hex values.
+ * its own :root block or hardcoding hex/px values.
  */
 :root {
+  /* ---------------- Surfaces ---------------- */
+  /* --bg: page background. --surface: standalone cards (panels, KPI tiles,
+     tables). --surface-2: a nested layer *within* a surface (e.g. a filter
+     bar inside a panel, a sunken input) — used instead of another border to
+     show grouping, so nesting doesn't compound into "card soup".
+     --surface-hover: hover/active state for interactive surfaces. */
   --bg: #0F1115;
   --surface: #171A21;
+  --surface-2: #1B1F28;
   --surface-hover: #1E222B;
   --border: #262B36;
+  --divider: #1D212B; /* hairline, lower-contrast than --border — for internal separators that shouldn't read as a full card edge */
 
+  /* ---------------- Text ---------------- */
   --text-primary: #E8EAED;
   --text-secondary: #9198A8;
   --text-muted: #5B6272;
 
+  /* ---------------- Accent / status ---------------- */
   --accent: #4FD1B5;
   --accent-soft: rgba(79, 209, 181, 0.12);
   --accent-hover: #6EE0C8;
@@ -33,7 +43,42 @@
 
   --input-bg: #12161D;
 
+  /* ---------------- Typography scale ---------------- */
   --font-sans: "Segoe UI", -apple-system, sans-serif;
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-base: 13.5px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* ---------------- Spacing scale (4px base) ---------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* ---------------- Radius scale ---------------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  /* ---------------- Elevation ---------------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.42);
 
   color-scheme: dark;
 }
@@ -47,9 +92,97 @@ body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
 }
 
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ---------------- Form controls ----------------
+   One canonical look for every bare input/select/textarea in the app —
+   pages no longer need a wrapper class to get consistent field styling. */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+textarea {
+  resize: vertical;
+  line-height: var(--leading-normal);
+}
+
+select {
+  cursor: pointer;
+}
+
+/* ---------------- Shared surface/section primitives ---------------- */
+
+/* A page-level grouping (e.g. "Overview", "Analytics"). No border/background
+   of its own — organizes via typography + spacing so nested cards don't
+   compound into another bordered box. */
+.view-section {
+  margin-bottom: var(--space-8);
+}
+
+.view-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.view-section-title {
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.view-section-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-top: 2px;
 }

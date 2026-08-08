@@ -1,4 +1,4 @@
-import ChartCard from "./ChartCard";
+import { FileText, ClipboardCheck, MessageSquare } from "lucide-react";
 import { STATUS_COLORS, APPROVAL_COLORS } from "./chartTheme";
 
 function timeAgo(isoString) {
@@ -24,7 +24,7 @@ function buildFeed(recentActivity) {
   const decisions = (recentActivity.decisions || []).map((d) => ({
     key: `decision-${d.id}`,
     timestamp: d.created_at,
-    icon: "📋",
+    icon: FileText,
     accent: STATUS_COLORS[d.status] || "var(--text-secondary)",
     text: (
       <>
@@ -36,7 +36,7 @@ function buildFeed(recentActivity) {
   const approvals = (recentActivity.approvals || []).map((a) => ({
     key: `approval-${a.id}`,
     timestamp: a.updated_at,
-    icon: "✅",
+    icon: ClipboardCheck,
     accent: APPROVAL_COLORS[a.status] || "var(--text-secondary)",
     text: (
       <>
@@ -49,7 +49,7 @@ function buildFeed(recentActivity) {
   const comments = (recentActivity.comments || []).map((c) => ({
     key: `comment-${c.id}`,
     timestamp: c.created_at,
-    icon: "💬",
+    icon: MessageSquare,
     accent: "var(--accent)",
     text: (
       <>
@@ -68,39 +68,47 @@ function RecentActivityFeed({ recentActivity, loading }) {
   const feed = buildFeed(recentActivity);
   const isEmpty = !loading && feed.length === 0;
 
-  return (
-    <ChartCard
-      title="Recent Activity"
-      subtitle="Latest decisions, approvals, and discussion"
-      loading={loading}
-      isEmpty={isEmpty}
-      emptyMessage="No activity yet."
-      height="auto"
-    >
-      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-        {feed.map((item) => (
-          <li
-            key={item.key}
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 12,
-              padding: "10px 4px",
-              borderLeft: `2px solid ${item.accent}`,
-              paddingLeft: 12,
-            }}
-          >
-            <span style={{ fontSize: 15, lineHeight: "20px" }} aria-hidden="true">{item.icon}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 13, color: "var(--text-primary)", lineHeight: 1.5, overflowWrap: "anywhere" }}>
-                {item.text}
-              </p>
-              <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)" }}>{timeAgo(item.timestamp)}</p>
+  if (loading) {
+    return (
+      <div className="activity-feed">
+        {[70, 55, 62].map((w, i) => (
+          <div key={i} className="activity-row">
+            <div className="activity-icon-chip chart-skeleton-bar" style={{ height: 28, width: 28, borderRadius: "var(--radius-sm)" }} />
+            <div style={{ flex: 1 }}>
+              <div className="chart-skeleton-bar" style={{ height: 12, width: `${w}%`, borderRadius: 4 }} />
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
-    </ChartCard>
+      </div>
+    );
+  }
+
+  if (isEmpty) {
+    return (
+      <div className="activity-feed-empty">
+        <span aria-hidden="true">📭</span>
+        <p>No activity yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="activity-feed">
+      {feed.map((item) => {
+        const Icon = item.icon;
+        return (
+          <div key={item.key} className="activity-row">
+            <span className="activity-icon-chip" style={{ color: item.accent, background: `color-mix(in srgb, ${item.accent} 14%, transparent)` }}>
+              <Icon size={14} strokeWidth={2} aria-hidden="true" />
+            </span>
+            <div className="activity-row-body">
+              <p className="activity-row-text">{item.text}</p>
+              <p className="activity-row-time">{timeAgo(item.timestamp)}</p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

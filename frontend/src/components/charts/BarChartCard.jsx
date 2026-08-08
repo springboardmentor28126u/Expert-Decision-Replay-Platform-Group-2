@@ -23,7 +23,7 @@ function BarChartCard({
   emptyMessage = "No data yet.",
   orientation = "vertical", // "vertical" = columns, "horizontal" = horizontal bars
   colors = SERIES_ACCENT,
-  height = 260,
+  height = 236,
   onBarClick,
 }) {
   const rows = data || [];
@@ -63,8 +63,9 @@ function BarChartCard({
           <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
           <Bar
             dataKey="value"
-            radius={isHorizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+            radius={isHorizontal ? 0 : [4, 4, 0, 0]}
             barSize={22}
+            isAnimationActive={false}
             onClick={onBarClick ? (entry) => onBarClick(entry.name) : undefined}
             style={{ cursor: onBarClick ? "pointer" : "default" }}
           >

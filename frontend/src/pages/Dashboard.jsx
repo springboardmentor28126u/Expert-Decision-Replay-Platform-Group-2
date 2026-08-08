@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Plus, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import apiClient, { authHeaders } from "../api/client";
 import { useConfirm } from "../components/ui/ConfirmContext";
 import { useToast } from "../components/ui/ToastContext";
@@ -31,6 +32,7 @@ function Dashboard({ token, onLogout }) {
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -252,8 +254,10 @@ function Dashboard({ token, onLogout }) {
           />
 
           {adminStats && (
-            <div className="panel">
-              <p className="panel-title">Organization Overview</p>
+            <section className="view-section">
+              <div className="view-section-header">
+                <h2 className="view-section-title">Organization Overview</h2>
+              </div>
               <div className="stat-grid">
                 <div className="stat-card">
                   <p className="stat-card-label">Total Users</p>
@@ -284,16 +288,21 @@ function Dashboard({ token, onLogout }) {
                   <p className="stat-card-value">{adminStats.total_alternatives}</p>
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
-          <div className="panel">
-            <p className="panel-title">Welcome back, {profile.full_name.split(" ")[0]}</p>
+          <section className="view-section">
+            <div className="view-section-header">
+              <h2 className="view-section-title">Welcome back, {profile.full_name.split(" ")[0]}</h2>
+              <p className="view-section-subtitle">Create decision</p>
+            </div>
             <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
-          </div>
+          </section>
 
-          <div className="panel">
-            <p className="panel-title">Recent Decisions</p>
+          <section className="view-section">
+            <div className="view-section-header">
+              <h2 className="view-section-title">Recent Decisions</h2>
+            </div>
             <DecisionsList
               token={token}
               refreshKey={refreshKey}
@@ -302,25 +311,45 @@ function Dashboard({ token, onLogout }) {
               pageSize={3}
               statusFilter="all"
             />
-          </div>
+          </section>
         </>
       )}
 
       {activeView === "decisions" && (
-        <div className="panel">
-          <p className="panel-title">All Decisions</p>
-          <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
-          
+        <section className="view-section">
+          <div className="view-section-header">
+            <h2 className="view-section-title">All Decisions</h2>
+            <Button variant="primary" size="sm" onClick={() => setShowCreateForm((v) => !v)}>
+              {showCreateForm ? (
+                <X size={14} strokeWidth={2.25} aria-hidden="true" />
+              ) : (
+                <Plus size={14} strokeWidth={2.25} aria-hidden="true" />
+              )}
+              {showCreateForm ? "Cancel" : "New Decision"}
+            </Button>
+          </div>
+
+          {showCreateForm && (
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <CreateDecision
+                token={token}
+                onCreated={() => {
+                  setRefreshKey((k) => k + 1);
+                  setShowCreateForm(false);
+                }}
+              />
+            </div>
+          )}
+
           <div className="filter-bar">
-            <div className="filter-group filter-group-grow">
-              <label htmlFor="decision-search" className="filter-label">
-                Search:
-              </label>
+            <div className="filter-group filter-group-grow search-field">
+              <Search size={15} strokeWidth={2} className="search-field-icon" aria-hidden="true" />
               <input
                 id="decision-search"
                 type="text"
                 className="search-input"
-                placeholder="🔍 Search decisions by title or category..."
+                placeholder="Search decisions by title or category..."
+                aria-label="Search decisions"
                 value={decisionSearchQuery}
                 onChange={(e) => setDecisionSearchQuery(e.target.value)}
               />
@@ -328,7 +357,7 @@ function Dashboard({ token, onLogout }) {
 
             <div className="filter-group">
               <label htmlFor="status-filter" className="filter-label">
-                Filter by Status:
+                Status
               </label>
               <select
                 id="status-filter"
@@ -355,7 +384,7 @@ function Dashboard({ token, onLogout }) {
             statusFilter={statusFilter}
             searchQuery={decisionSearchQuery}
           />
-        </div>
+        </section>
       )}
 
       {activeView === "decision-details" && selectedDecision && (
@@ -464,10 +493,12 @@ function Dashboard({ token, onLogout }) {
                     <Button
                       variant="secondary"
                       size="sm"
+                      className="pagination-btn"
                       onClick={() => setCurrentUserPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentUserPage === 1}
                     >
-                      ← Previous
+                      <ChevronLeft size={14} strokeWidth={2} aria-hidden="true" />
+                      Previous
                     </Button>
                     <span className="pagination-status">
                       Page {currentUserPage} of {totalUserPages}
@@ -475,10 +506,12 @@ function Dashboard({ token, onLogout }) {
                     <Button
                       variant="secondary"
                       size="sm"
+                      className="pagination-btn"
                       onClick={() => setCurrentUserPage((prev) => Math.min(prev + 1, totalUserPages))}
                       disabled={currentUserPage === totalUserPages}
                     >
-                      Next →
+                      Next
+                      <ChevronRight size={14} strokeWidth={2} aria-hidden="true" />
                     </Button>
                   </div>
                 )}

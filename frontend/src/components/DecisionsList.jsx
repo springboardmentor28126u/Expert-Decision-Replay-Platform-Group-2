@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import apiClient, { authHeaders } from "../api/client";
 import DecisionCard from "./DecisionCard";
 import Button from "./ui/Button";
@@ -38,7 +39,13 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
   };
 
   if (loading) {
-    return <p style={{ color: "var(--text-muted)" }}>Loading decisions...</p>;
+    return (
+      <div className="list-skeleton">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="list-skeleton-row chart-skeleton-bar" />
+        ))}
+      </div>
+    );
   }
 
   // Filter decisions based on status and search query
@@ -59,7 +66,12 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
   });
 
   if (sortedDecisions.length === 0) {
-    return <p style={{ color: "var(--text-muted)", margin: "16px 0" }}>No decisions found.</p>;
+    return (
+      <div className="empty-state">
+        <Inbox size={22} strokeWidth={1.75} aria-hidden="true" />
+        <p>No decisions found.</p>
+      </div>
+    );
   }
 
   // Pagination math
@@ -88,10 +100,12 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
           <Button
             variant="secondary"
             size="sm"
+            className="pagination-btn"
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
           >
-            ← Previous
+            <ChevronLeft size={14} strokeWidth={2} aria-hidden="true" />
+            Previous
           </Button>
           <span className="pagination-status">
             Page {currentPage} of {totalPages}
@@ -99,10 +113,12 @@ function DecisionsList({ token, refreshKey, role, onSelectDecision, pageSize = 1
           <Button
             variant="secondary"
             size="sm"
+            className="pagination-btn"
             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
           >
-            Next →
+            Next
+            <ChevronRight size={14} strokeWidth={2} aria-hidden="true" />
           </Button>
         </div>
       )}

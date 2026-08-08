@@ -39,7 +39,7 @@ function DecisionStatusPie({ statusCounts, loading, onSliceClick }) {
       loading={loading}
       isEmpty={isEmpty}
       emptyMessage="No decisions have been created yet."
-      height={300}
+      height={264}
     >
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
@@ -49,14 +49,15 @@ function DecisionStatusPie({ statusCounts, loading, onSliceClick }) {
             nameKey="label"
             cx="50%"
             cy="46%"
-            innerRadius={58}
-            outerRadius={92}
+            innerRadius={50}
+            outerRadius={80}
             paddingAngle={2}
             cornerRadius={4}
             stroke="var(--surface)"
             strokeWidth={2}
             label={({ percent, value }) => (value > 0 ? `${(percent * 100).toFixed(0)}%` : "")}
             labelLine={false}
+            isAnimationActive={false}
             onClick={(entry) => onSliceClick?.(entry.status)}
             style={{ cursor: onSliceClick ? "pointer" : "default", outline: "none" }}
           >

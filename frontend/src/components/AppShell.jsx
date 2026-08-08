@@ -1,6 +1,20 @@
 import { useState } from "react";
+import {
+  LayoutDashboard,
+  FileText,
+  Bell,
+  BarChart3,
+  Users,
+  Settings,
+  LogOut,
+  PanelLeftClose,
+  PanelLeft,
+} from "lucide-react";
 import "../styles/dashboard-shell.css";
 import ProfileMenu from "./ProfileMenu";
+
+const ICON_SIZE = 18;
+const ICON_STROKE = 1.75;
 
 function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -9,79 +23,57 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
   const isAdmin = role === "administrator";
 
   const navItems = [
-    { key: "dashboard", label: "Dashboard", icon: "📊" },
-    { key: "decisions", label: "Decisions", icon: "📋" },
-    { key: "notifications", label: "Notifications", icon: "🔔", badge: unreadCount },
+    { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { key: "decisions", label: "Decisions", icon: FileText },
+    { key: "notifications", label: "Notifications", icon: Bell, badge: unreadCount },
   ];
 
-  const managerNavItems = [
-    { key: "reports", label: "Reports", icon: "📈" },
-  ];
+  const managerNavItems = [{ key: "reports", label: "Reports", icon: BarChart3 }];
 
-  const adminNavItems = [
-    { key: "users", label: "User Management", icon: "👥" },
-  ];
+  const adminNavItems = [{ key: "users", label: "User Management", icon: Users }];
+
+  const renderNavItem = (item) => {
+    const Icon = item.icon;
+    return (
+      <button
+        key={item.key}
+        className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
+        onClick={() => onNavigate(item.key)}
+        aria-current={activeView === item.key ? "page" : undefined}
+      >
+        <Icon className="shell-nav-icon" size={ICON_SIZE} strokeWidth={ICON_STROKE} aria-hidden="true" />
+        <span className="label">{item.label}</span>
+        {!!item.badge && (
+          <span className="shell-nav-badge">{item.badge > 99 ? "99+" : item.badge}</span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="shell-wrapper">
       {sidebarOpen && (
         <aside className="shell-sidebar">
           <div className="shell-logo">
+            <span className="shell-logo-mark" aria-hidden="true">E</span>
             <span className="full-name">EDRP</span>
           </div>
 
           <nav className="shell-nav">
-            {navItems.map((item) => (
-              <button
-                key={item.key}
-                className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
-                onClick={() => onNavigate(item.key)}
-                aria-current={activeView === item.key ? "page" : undefined}
-              >
-                <span className="shell-nav-icon" aria-hidden="true">{item.icon}</span>
-                <span className="label">{item.label}</span>
-                {!!item.badge && (
-                  <span className="shell-nav-badge">
-                    {item.badge > 99 ? "99+" : item.badge}
-                  </span>
-                )}
-              </button>
-            ))}
+            {navItems.map(renderNavItem)}
 
             {isManagerOrAdmin && (
-              <>
-                <div className="shell-nav-divider" />
+              <div className="shell-nav-group">
                 <div className="shell-nav-section-label">Reports</div>
-                {managerNavItems.map((item) => (
-                  <button
-                    key={item.key}
-                    className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
-                    onClick={() => onNavigate(item.key)}
-                    aria-current={activeView === item.key ? "page" : undefined}
-                  >
-                    <span className="shell-nav-icon" aria-hidden="true">{item.icon}</span>
-                    <span className="label">{item.label}</span>
-                  </button>
-                ))}
-              </>
+                {managerNavItems.map(renderNavItem)}
+              </div>
             )}
 
             {isAdmin && (
-              <>
-                <div className="shell-nav-divider" />
+              <div className="shell-nav-group">
                 <div className="shell-nav-section-label">Admin</div>
-                {adminNavItems.map((item) => (
-                  <button
-                    key={item.key}
-                    className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
-                    onClick={() => onNavigate(item.key)}
-                    aria-current={activeView === item.key ? "page" : undefined}
-                  >
-                    <span className="shell-nav-icon" aria-hidden="true">{item.icon}</span>
-                    <span className="label">{item.label}</span>
-                  </button>
-                ))}
-              </>
+                {adminNavItems.map(renderNavItem)}
+              </div>
             )}
           </nav>
 
@@ -91,14 +83,11 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
               onClick={() => onNavigate("account")}
               aria-current={activeView === "account" ? "page" : undefined}
             >
-              <span className="shell-nav-icon" aria-hidden="true">⚙️</span>
+              <Settings className="shell-nav-icon" size={ICON_SIZE} strokeWidth={ICON_STROKE} aria-hidden="true" />
               <span className="label">Account Settings</span>
             </button>
-            <button
-              className="shell-nav-item danger"
-              onClick={onLogout}
-            >
-              <span className="shell-nav-icon" aria-hidden="true">🚪</span>
+            <button className="shell-nav-item danger" onClick={onLogout}>
+              <LogOut className="shell-nav-icon" size={ICON_SIZE} strokeWidth={ICON_STROKE} aria-hidden="true" />
               <span className="label">Log Out</span>
             </button>
           </div>
@@ -115,7 +104,11 @@ function AppShell({ profile, activeView, onNavigate, onLogout, unreadCount, chil
               aria-expanded={sidebarOpen}
               title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
             >
-              ☰
+              {sidebarOpen ? (
+                <PanelLeftClose size={18} strokeWidth={1.75} aria-hidden="true" />
+              ) : (
+                <PanelLeft size={18} strokeWidth={1.75} aria-hidden="true" />
+              )}
             </button>
             <h1 className="shell-topbar-title">
               {activeView === "dashboard" && "Dashboard"}

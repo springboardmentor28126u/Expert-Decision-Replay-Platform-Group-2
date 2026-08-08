@@ -1,3 +1,4 @@
+import { Bell, MailOpen, Inbox } from "lucide-react";
 import KpiCard from "./KpiCard";
 
 // Derived entirely from the `notifications` array the Dashboard already
@@ -8,12 +9,15 @@ function NotificationsSummary({ notifications, loading }) {
   const read = total - unread;
 
   return (
-    <div className="panel" style={{ marginBottom: 0 }}>
-      <p className="panel-title">Notifications Summary</p>
-      <div className="stat-grid" style={{ marginBottom: 0 }}>
-        <KpiCard label="Unread" value={unread} icon="🔔" accent="var(--warning)" loading={loading} />
-        <KpiCard label="Read" value={read} icon="📖" loading={loading} />
-        <KpiCard label="Total" value={total} icon="📥" loading={loading} />
+    <div className="chart-card">
+      <div className="chart-card-header">
+        <p className="chart-card-title">Notifications Summary</p>
+        <p className="chart-card-subtitle">Unread vs. read, across all notifications</p>
+      </div>
+      <div className="mini-stat-grid">
+        <KpiCard label="Unread" value={unread} icon={Bell} accent="var(--warning)" loading={loading} />
+        <KpiCard label="Read" value={read} icon={MailOpen} loading={loading} />
+        <KpiCard label="Total" value={total} icon={Inbox} loading={loading} />
       </div>
     </div>
   );

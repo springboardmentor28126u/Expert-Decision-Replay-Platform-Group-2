@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ClipboardCheck, CheckCircle2, FileText, AlertTriangle, MessageSquare, Bell, Inbox } from "lucide-react";
+import Button from "../components/ui/Button";
 
 // Visual config per notification type — keyed to the real backend
 // NotificationType enum's serialized *value* (app/models/enums.py uses
@@ -6,12 +8,12 @@ import { useState } from "react";
 // "approval_request", not the uppercase member name). Falls back to a
 // generic bell for anything unrecognized.
 const TYPE_STYLES = {
-  approval_request: { color: "var(--accent)", soft: "var(--accent-soft)", icon: "📝" },
-  approval_decision: { color: "var(--success)", soft: "var(--success-soft)", icon: "✅" },
-  decision_status_change: { color: "var(--accent)", soft: "var(--accent-soft)", icon: "📄" },
-  escalation: { color: "var(--danger)", soft: "var(--danger-soft)", icon: "⚠️" },
-  comment_mention: { color: "var(--warning)", soft: "var(--warning-soft)", icon: "💬" },
-  system: { color: "var(--text-secondary)", soft: "var(--neutral-soft)", icon: "🔔" },
+  approval_request: { color: "var(--accent)", icon: ClipboardCheck },
+  approval_decision: { color: "var(--success)", icon: CheckCircle2 },
+  decision_status_change: { color: "var(--accent)", icon: FileText },
+  escalation: { color: "var(--danger)", icon: AlertTriangle },
+  comment_mention: { color: "var(--warning)", icon: MessageSquare },
+  system: { color: "var(--text-secondary)", icon: Bell },
 };
 
 function getTypeStyle(type) {
@@ -56,11 +58,11 @@ export default function NotificationsPage({
     filter === "unread" ? notifications.filter((n) => !n.is_read) : notifications;
 
   return (
-    <div className="panel">
-      <div className="panel-toolbar">
-        <p className="panel-title" style={{ margin: 0 }}>
-          All Notifications {unreadCount > 0 && `(${unreadCount} unread)`}
-        </p>
+    <section className="view-section">
+      <div className="view-section-header">
+        <h2 className="view-section-title">
+          Notifications {unreadCount > 0 && <span className="view-section-title-count">{unreadCount} unread</span>}
+        </h2>
 
         <div className="notif-toolbar-actions">
           <div className="notif-filter-group" role="group" aria-label="Filter notifications">
@@ -71,54 +73,56 @@ export default function NotificationsPage({
                 onClick={() => setFilter(f)}
                 aria-pressed={filter === f}
               >
-                {f}
+                {f === "all" ? "All" : "Unread"}
               </button>
             ))}
           </div>
 
           {unreadCount > 0 && (
-            <button className="notif-mark-all-btn" onClick={onMarkAllAsRead}>
+            <Button variant="secondary" size="sm" onClick={onMarkAllAsRead}>
               Mark all as read
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {visibleNotifications.length === 0 ? (
-        <p className="notif-empty">
-          {filter === "unread" ? "You're all caught up — no unread notifications." : "No notifications yet."}
-        </p>
+        <div className="empty-state">
+          <Inbox size={22} strokeWidth={1.75} aria-hidden="true" />
+          <p>{filter === "unread" ? "You're all caught up — no unread notifications." : "No notifications yet."}</p>
+        </div>
       ) : (
         <div className="notif-list">
           {visibleNotifications.map((item) => {
             const style = getTypeStyle(item.type);
+            const Icon = style.icon;
             return (
               <button
                 key={item.id}
                 type="button"
                 className={`notif-item ${item.is_read ? "" : "unread"}`}
                 onClick={() => handleClick(item)}
-                style={{ "--item-color": style.color, "--item-soft": style.soft }}
+                style={{ "--item-color": style.color }}
                 aria-label={`${item.is_read ? "" : "Unread: "}${item.title}. ${item.message} ${formatTimestamp(item.created_at)}`}
               >
-                <span className="notif-item-icon" aria-hidden="true">{style.icon}</span>
+                <span className="notif-item-icon" style={{ color: style.color, background: `color-mix(in srgb, ${style.color} 14%, transparent)` }} aria-hidden="true">
+                  <Icon size={15} strokeWidth={2} />
+                </span>
                 <span className="notif-item-body">
                   <span className="notif-item-top">
                     <span className={`notif-item-title ${item.is_read ? "" : "unread"}`}>
                       {item.title}
+                      {!item.is_read && <span className="notif-item-unread-tag">New</span>}
                     </span>
                     <span className="notif-item-time">{formatTimestamp(item.created_at)}</span>
                   </span>
                   <span className="notif-item-message">{item.message}</span>
                 </span>
-                {!item.is_read && (
-                  <span className="notif-item-dot" aria-hidden="true" />
-                )}
               </button>
             );
           })}
         </div>
       )}
-    </div>
+    </section>
   );
 }

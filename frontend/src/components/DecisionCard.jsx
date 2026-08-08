@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Tag, User, Clock, Paperclip } from "lucide-react";
 import apiClient, { authHeaders } from "../api/client";
 import { useConfirm } from "./ui/ConfirmContext";
 import { useToast } from "./ui/ToastContext";
@@ -61,13 +62,18 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
     <div className="decision-card">
       <div className="decision-card-top">
         <div style={{ flex: 1, minWidth: 0 }}>
-          <button
-            type="button"
-            className="decision-card-title"
-            onClick={() => onSelectDecision(decision)}
-          >
-            {decision.title}
-          </button>
+          <div className="decision-card-title-row">
+            <button
+              type="button"
+              className="decision-card-title"
+              onClick={() => onSelectDecision(decision)}
+            >
+              {decision.title}
+            </button>
+            {decision.attachment_url && (
+              <Paperclip size={13} strokeWidth={2} className="decision-card-attachment-icon" aria-label="Has attachment" />
+            )}
+          </div>
           <p className="decision-card-summary">
             {decision.problem_statement.length > 120
               ? decision.problem_statement.slice(0, 120) + "..."
@@ -77,43 +83,48 @@ function DecisionCard({ decision, role, token, onSelectDecision, onStatusChanged
         <Badge tone={STATUS_TONE[decision.status] || "neutral"}>
           {decision.status.replace("_", " ")}
         </Badge>
-        {decision.attachment_url && (
-          <span title="Has attachment" aria-label="Has attachment" style={{ fontSize: "13px" }}>
-            📎
-          </span>
-        )}
       </div>
 
       <div className="decision-card-footer">
         <div className="decision-card-meta">
-          <span>{decision.category || "Uncategorized"}</span>
-          <span>By {decision.created_by?.full_name || "Unknown"}</span>
-          <span>{new Date(decision.created_at).toLocaleString()}</span>
+          <span className="decision-card-meta-item">
+            <Tag size={12} strokeWidth={2} aria-hidden="true" />
+            {decision.category || "Uncategorized"}
+          </span>
+          <span className="decision-card-meta-item">
+            <User size={12} strokeWidth={2} aria-hidden="true" />
+            {decision.created_by?.full_name || "Unknown"}
+          </span>
+          <span className="decision-card-meta-item">
+            <Clock size={12} strokeWidth={2} aria-hidden="true" />
+            {new Date(decision.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+          </span>
         </div>
 
-        <div className="decision-card-actions">
-          {canUpdateStatus && (
-            <select
-              className="status-select"
-              value={decision.status}
-              disabled={updating}
-              onChange={handleStatusChange}
-              aria-label="Update decision status"
-              style={{ fontSize: "12px", padding: "5px 8px" }}
-            >
-              {allStatuses.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace("_", " ")}
-                </option>
-              ))}
-            </select>
-          )}
-          {isAdmin && (
-            <Button variant="danger" size="sm" onClick={handleDelete}>
-              Delete
-            </Button>
-          )}
-        </div>
+        {(canUpdateStatus || isAdmin) && (
+          <div className="decision-card-actions">
+            {canUpdateStatus && (
+              <select
+                className="status-select decision-card-status-select"
+                value={decision.status}
+                disabled={updating}
+                onChange={handleStatusChange}
+                aria-label="Update decision status"
+              >
+                {allStatuses.map((s) => (
+                  <option key={s} value={s}>
+                    {s.replace("_", " ")}
+                  </option>
+                ))}
+              </select>
+            )}
+            {isAdmin && (
+              <Button variant="ghost" size="sm" onClick={handleDelete}>
+                Delete
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {error && (

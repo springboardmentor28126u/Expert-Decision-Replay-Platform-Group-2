@@ -2,8 +2,9 @@
 // class (same look as the current status stat cards) so the new KPI row
 // reads as one family with the rest of the shell rather than a bolted-on
 // widget kit.
-function KpiCard({ label, value, icon, accent, loading, onClick }) {
+function KpiCard({ label, value, icon: Icon, accent, loading, onClick }) {
   const clickable = typeof onClick === "function";
+  const tint = accent || "var(--accent)";
 
   return (
     <div
@@ -20,16 +21,18 @@ function KpiCard({ label, value, icon, accent, loading, onClick }) {
       }
       style={{ cursor: clickable ? "pointer" : "default" }}
     >
-      <p className="stat-card-label">
-        {icon && <span aria-hidden="true" style={{ marginRight: 6 }}>{icon}</span>}
-        {label}
-      </p>
+      <div className="stat-card-top">
+        {Icon && (
+          <span className="stat-card-icon-chip" style={{ color: tint, background: `color-mix(in srgb, ${tint} 16%, transparent)` }} aria-hidden="true">
+            <Icon size={15} strokeWidth={2} />
+          </span>
+        )}
+        <p className="stat-card-label">{label}</p>
+      </div>
       {loading ? (
         <div className="kpi-skeleton" />
       ) : (
-        <p className="stat-card-value" style={accent ? { color: accent } : undefined}>
-          {value}
-        </p>
+        <p className="stat-card-value">{value}</p>
       )}
     </div>
   );

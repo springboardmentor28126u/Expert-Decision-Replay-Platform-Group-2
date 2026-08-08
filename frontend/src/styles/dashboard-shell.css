@@ -8,45 +8,71 @@
 
 /* ---------------- Sidebar ---------------- */
 .shell-sidebar {
-  width: 240px;
+  width: 232px;
   flex-shrink: 0;
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  padding: var(--space-5) var(--space-3);
 }
 
 .shell-logo {
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--accent);
-  letter-spacing: 0.03em;
-  padding: 0 8px;
-  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.shell-logo-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-bold);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.shell-logo .full-name {
+  font-weight: var(--font-bold);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
 }
 
 .shell-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   flex: 1;
+  overflow-y: auto;
+}
+
+.shell-nav-group {
+  margin-top: var(--space-4);
 }
 
 .shell-nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  gap: var(--space-3);
+  padding: 9px var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
   cursor: pointer;
   border: none;
   background: none;
   text-align: left;
   width: 100%;
+  position: relative;
   transition: background 0.12s ease, color 0.12s ease;
 }
 
@@ -58,14 +84,12 @@
 .shell-nav-item.active {
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
-.shell-nav-item {
-  position: relative;
-}
-
-.shell-nav-item.danger {
+.shell-nav-item.danger:hover {
+  background: var(--danger-soft);
   color: var(--danger);
 }
 
@@ -73,12 +97,12 @@
   margin-left: auto;
   background: var(--danger);
   color: var(--text-primary);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -86,26 +110,25 @@
 }
 
 .shell-sidebar-footer {
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--divider);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .shell-sidebar-toggle {
   background: none;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  width: 34px;
-  height: 34px;
+  border-radius: var(--radius-sm);
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--text-secondary);
-  font-size: 16px;
 }
 
 .shell-sidebar-toggle:hover {
@@ -117,32 +140,20 @@
 .shell-topbar-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .shell-nav-icon {
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
   flex-shrink: 0;
 }
 
-.shell-nav-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 12px 8px;
-}
-
 .shell-nav-section-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--text-muted);
-  padding: 8px 12px 4px;
+  padding: 0 var(--space-3) 6px;
 }
 
 /* ---------------- Top bar ---------------- */
@@ -157,65 +168,118 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px;
+  padding: var(--space-4) var(--space-6);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 
 .shell-topbar-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
-  margin: 0;
 }
 
 .shell-content {
   flex: 1;
-  padding: 32px;
-  max-width: 1100px;
+  padding: var(--space-6);
+  max-width: 1340px;
   width: 100%;
   margin: 0 auto;
 }
 
-/* ---------------- Stat cards ---------------- */
+/* ---------------- KPI / stat cards ---------------- */
+/* Deterministic column counts (rather than pure auto-fit) so a 6-tile KPI
+   row never breaks into an orphaned 5+1 — each breakpoint below picks a
+   column count that divides evenly. */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 14px;
-  margin-bottom: 28px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 1180px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Compact 3-tile variant used inside a single chart-card (e.g. Notifications
+   Summary sitting next to Top Decision Creators) rather than the 6-tile
+   page-level overview row. */
+.mini-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .mini-stat-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
   text-align: left;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  background: var(--surface-hover);
+  min-width: 0;
 }
 
 .stat-card-label {
-  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-card:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+}
+
+.stat-card-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.stat-card-icon-chip {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-card-label {
+  font-size: var(--text-xs);
   color: var(--text-secondary);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  margin: 0 0 8px;
+  margin: 0;
 }
 
 .stat-card-value {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
   margin: 0;
+  line-height: 1.15;
 }
 
 .stat-card.draft .stat-card-value { color: var(--text-muted); }
@@ -228,16 +292,16 @@
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 24px;
-  margin-bottom: 20px;
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
 }
 
 .panel-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-md);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
 }
 
 /* ---------------- Profile menu ---------------- */
@@ -248,14 +312,20 @@
 .profile-menu-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2);
   cursor: pointer;
   background: none;
   border: none;
-  padding: 0;
+  padding: 4px;
+  border-radius: var(--radius-sm);
   font: inherit;
   text-align: left;
   color: inherit;
+  transition: background 0.12s ease;
+}
+
+.profile-menu-trigger:hover {
+  background: var(--surface-hover);
 }
 
 .profile-menu-avatar-wrap {
@@ -263,24 +333,24 @@
 }
 
 .profile-menu-avatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
 }
 
 .profile-menu-online-dot {
   position: absolute;
   bottom: -1px;
   right: -1px;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--success);
   border: 2px solid var(--surface);
@@ -293,13 +363,13 @@
 }
 
 .profile-menu-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
 }
 
 .profile-menu-role {
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   color: var(--text-secondary);
   text-transform: capitalize;
 }
@@ -310,10 +380,12 @@
   right: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  width: 220px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  width: max-content;
+  min-width: 220px;
+  max-width: 280px;
+  box-shadow: var(--shadow-lg);
   z-index: 30;
 }
 
@@ -326,48 +398,59 @@
 }
 
 .profile-menu-dropdown-email {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--text-primary);
   margin: 0;
-  word-break: break-all;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 @media (max-width: 860px) {
   .shell-sidebar {
-    width: 72px;
-    padding: 20px 8px;
+    width: 68px;
+    padding: var(--space-5) var(--space-2);
   }
   .shell-nav-item span.label,
-  .shell-logo span.full-name {
+  .shell-logo span.full-name,
+  .shell-nav-section-label {
     display: none;
   }
+  .shell-logo {
+    justify-content: center;
+  }
+  .shell-nav-item {
+    justify-content: center;
+    padding: 10px;
+  }
+  .shell-nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    margin-left: 0;
+  }
   .shell-content {
-    padding: 24px;
+    padding: var(--space-5);
   }
 }
 
 @media (max-width: 640px) {
   .shell-topbar {
-    padding: 12px 16px;
+    padding: var(--space-3) var(--space-4);
   }
   .shell-topbar-title {
-    font-size: 16px;
+    font-size: var(--text-md);
   }
   .shell-content {
-    padding: 16px;
+    padding: var(--space-4);
   }
   .panel {
-    padding: 16px;
-  }
-  .stat-grid {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px;
+    padding: var(--space-4);
   }
   .stat-card {
-    padding: 14px 16px;
+    padding: var(--space-3);
   }
   .stat-card-value {
-    font-size: 22px;
+    font-size: var(--text-xl);
   }
   .profile-menu-identity {
     display: none;

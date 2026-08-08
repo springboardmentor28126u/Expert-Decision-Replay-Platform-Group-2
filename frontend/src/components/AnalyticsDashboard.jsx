@@ -1,3 +1,4 @@
+import { FileText, Clock, CheckCircle2, XCircle, Users, MessageSquare } from "lucide-react";
 import KpiCard from "./charts/KpiCard";
 import DecisionStatusPie from "./charts/DecisionStatusPie";
 import TrendLineChart from "./charts/TrendLineChart";
@@ -30,52 +31,69 @@ function AnalyticsDashboard({ analytics, statusCounts, loading, error, onStatCli
         <p style={{ color: "var(--danger)", fontSize: "13px", margin: "0 0 16px" }}>{error}</p>
       )}
 
-      <div className="stat-grid">
-        <KpiCard label="Total Decisions" value={analytics?.total_decisions} icon="📋" loading={loading} onClick={() => onStatClick?.("all")} />
-        <KpiCard label="Pending Reviews" value={analytics?.pending_reviews} icon="⏳" accent="var(--warning)" loading={loading} />
-        <KpiCard label="Approved Decisions" value={analytics?.approved_decisions} icon="✅" accent="var(--success)" loading={loading} onClick={() => onStatClick?.("approved")} />
-        <KpiCard label="Rejected Decisions" value={analytics?.rejected_decisions} icon="✕" accent="var(--danger)" loading={loading} onClick={() => onStatClick?.("rejected")} />
-        <KpiCard label="Active Users" value={analytics?.active_users} icon="👥" loading={loading} />
-        <KpiCard label="Total Comments" value={analytics?.total_comments} icon="💬" loading={loading} />
-      </div>
+      <section className="view-section">
+        <div className="view-section-header">
+          <h2 className="view-section-title">Overview</h2>
+        </div>
+        <div className="stat-grid">
+          <KpiCard label="Total Decisions" value={analytics?.total_decisions} icon={FileText} loading={loading} onClick={() => onStatClick?.("all")} />
+          <KpiCard label="Pending Reviews" value={analytics?.pending_reviews} icon={Clock} accent="var(--warning)" loading={loading} />
+          <KpiCard label="Approved" value={analytics?.approved_decisions} icon={CheckCircle2} accent="var(--success)" loading={loading} onClick={() => onStatClick?.("approved")} />
+          <KpiCard label="Rejected" value={analytics?.rejected_decisions} icon={XCircle} accent="var(--danger)" loading={loading} onClick={() => onStatClick?.("rejected")} />
+          <KpiCard label="Active Users" value={analytics?.active_users} icon={Users} loading={loading} />
+          <KpiCard label="Total Comments" value={analytics?.total_comments} icon={MessageSquare} loading={loading} />
+        </div>
+      </section>
 
-      <div className="analytics-grid-2">
-        <DecisionStatusPie statusCounts={statusCounts} loading={loading} onSliceClick={onStatClick} />
-        <TrendLineChart periods={analytics?.created_over_time} loading={loading} />
-      </div>
+      <section className="view-section">
+        <div className="view-section-header">
+          <h2 className="view-section-title">Analytics</h2>
+          <p className="view-section-subtitle">Status mix, volume trend, and approval outcomes</p>
+        </div>
+        <div className="analytics-grid-2">
+          <DecisionStatusPie statusCounts={statusCounts} loading={loading} onSliceClick={onStatClick} />
+          <TrendLineChart periods={analytics?.created_over_time} loading={loading} />
+        </div>
 
-      <div className="analytics-grid-2">
-        <BarChartCard
-          title="Decisions by Category"
-          subtitle="Volume of decisions per category"
-          data={categoryData}
-          loading={loading}
-          emptyMessage="No categorized decisions yet."
-        />
-        <BarChartCard
-          title="Approval Performance"
-          subtitle="Approval outcomes across all decisions"
-          data={approvalData}
-          loading={loading}
-          emptyMessage="No approvals have been recorded yet."
-          colors={{ Pending: APPROVAL_COLORS.pending, Approved: APPROVAL_COLORS.approved, Rejected: APPROVAL_COLORS.rejected }}
-        />
-      </div>
+        <div className="analytics-grid-2">
+          <BarChartCard
+            title="Decisions by Category"
+            subtitle="Volume of decisions per category"
+            data={categoryData}
+            loading={loading}
+            emptyMessage="No categorized decisions yet."
+          />
+          <BarChartCard
+            title="Approval Performance"
+            subtitle="Approval outcomes across all decisions"
+            data={approvalData}
+            loading={loading}
+            emptyMessage="No approvals have been recorded yet."
+            colors={{ Pending: APPROVAL_COLORS.pending, Approved: APPROVAL_COLORS.approved, Rejected: APPROVAL_COLORS.rejected }}
+          />
+        </div>
 
-      <div className="analytics-grid-2">
-        <BarChartCard
-          title="Top Decision Creators"
-          subtitle="Most active decision authors"
-          data={creatorData}
-          loading={loading}
-          emptyMessage="No decisions have been created yet."
-          orientation="horizontal"
-          height={Math.max(180, (creatorData.length || 3) * 44)}
-        />
-        <NotificationsSummary notifications={notifications} loading={notificationsLoading} />
-      </div>
+        <div className="analytics-grid-2">
+          <BarChartCard
+            title="Top Decision Creators"
+            subtitle="Most active decision authors"
+            data={creatorData}
+            loading={loading}
+            emptyMessage="No decisions have been created yet."
+            orientation="horizontal"
+            height={Math.max(160, (creatorData.length || 3) * 38)}
+          />
+          <NotificationsSummary notifications={notifications} loading={notificationsLoading} />
+        </div>
+      </section>
 
-      <RecentActivityFeed recentActivity={analytics?.recent_activity} loading={loading} />
+      <section className="view-section">
+        <div className="view-section-header">
+          <h2 className="view-section-title">Recent Activity</h2>
+          <p className="view-section-subtitle">Latest decisions, approvals, and discussion</p>
+        </div>
+        <RecentActivityFeed recentActivity={analytics?.recent_activity} loading={loading} />
+      </section>
     </div>
   );
 }
