@@ -1,43 +1,26 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from decimal import Decimal
 
+class AlternativeBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    pros: Optional[str] = None
+    cons: Optional[str] = None
+    cost: Optional[Decimal] = None
+    feasibility_score: Optional[int] = None
+    risk_level: Optional[str] = None
 
-# -----------------------------
-# Create Alternative
-# -----------------------------
-class AlternativeCreate(BaseModel):
+class AlternativeCreate(AlternativeBase):
     decision_id: int
-    title: str
-    description: str
-    pros: Optional[str] = None
-    cons: Optional[str] = None
-    score: Optional[float] = 0.0
 
+class AlternativeUpdate(AlternativeBase):
+    pass
 
-# -----------------------------
-# Update Alternative
-# -----------------------------
-class AlternativeUpdate(BaseModel):
-    title: str
-    description: str
-    pros: Optional[str] = None
-    cons: Optional[str] = None
-    score: Optional[float] = 0.0
-
-
-# -----------------------------
-# Alternative Response
-# -----------------------------
-class AlternativeResponse(BaseModel):
+class AlternativeResponse(AlternativeBase):
     id: int
     decision_id: int
-    title: str
-    description: str
-    pros: Optional[str]
-    cons: Optional[str]
-    score: float
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
+    
+    model_config = {
+        "from_attributes": True
+    }
