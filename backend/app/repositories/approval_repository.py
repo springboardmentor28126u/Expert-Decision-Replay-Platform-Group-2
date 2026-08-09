@@ -30,14 +30,10 @@ class ApprovalRepository(BaseRepository[Approval]):
         """Get all approvals assigned to a reviewer."""
         return (
             self.db.query(Approval)
-            .options(joinedload(Approval.decision))
+            .options(
+                joinedload(Approval.decision),
+                joinedload(Approval.reviewer),
+            )
             .filter(Approval.reviewer_id == reviewer_id)
             .all()
         )
-
-    def get_by_reviewer(self, reviewer_id: int):
-        return (
-        self.db.query(Approval)
-        .filter(Approval.reviewer_id == reviewer_id)
-        .all()
-    )

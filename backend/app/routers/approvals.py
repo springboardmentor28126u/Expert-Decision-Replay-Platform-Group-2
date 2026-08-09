@@ -40,7 +40,24 @@ def my_approvals(
     db: Session = Depends(get_db),
 ):
     service = ApprovalService(db)
-    return service.get_my_approvals(current_user.id)
+    approvals = service.get_my_approvals(current_user.id)
+
+    # Enrich response with decision title and reviewer username
+    result = []
+    for a in approvals:
+        result.append({
+            "id": a.id,
+            "decision_id": a.decision_id,
+            "reviewer_id": a.reviewer_id,
+            "status": a.status,
+            "comments": a.comments,
+            "approved_at": a.approved_at,
+            "created_at": a.created_at,
+            "decision_title": a.decision.title if a.decision else None,
+            "reviewer_name": a.reviewer.username if a.reviewer else None,
+        })
+
+    return result
 
 
 @router.get("/{decision_id}", response_model=List[ApprovalResponse])

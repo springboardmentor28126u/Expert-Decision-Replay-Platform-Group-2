@@ -158,14 +158,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   },
 ];    
 
-  let links = [...baseLinks];
+  let links = [...baseLinks, ...reviewerLinks];
 
 if (user?.role === "Administrator") {
-  links = [...baseLinks, ...adminLinks];
-}
-
-if (user?.role === "Reviewer") {
-  links = [...baseLinks, ...reviewerLinks];
+  links = [...baseLinks, ...reviewerLinks, ...adminLinks];
 }
 
   return (
