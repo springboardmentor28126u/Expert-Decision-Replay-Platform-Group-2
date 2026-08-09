@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { decisionsApi } from "../api/decisions";
 import { Decision } from "../types";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const DecisionReportPage: React.FC = () => {
   const [decisions, setDecisions] = useState<Decision[]>([]);
@@ -30,6 +33,45 @@ const DecisionReportPage: React.FC = () => {
       (d.category ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const exportExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      filtered.map((d) => ({
+        ID: d.id,
+        Title: d.title ?? "-",
+        Category: d.category ?? "-",
+        Status: d.status ?? "-",
+        "Created At": d.created_at
+          ? new Date(d.created_at).toLocaleDateString()
+          : "-",
+      }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Decision Report");
+    XLSX.writeFile(workbook, "DecisionReport.xlsx");
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Decision Report", 14, 15);
+
+    autoTable(doc, {
+      startY: 25,
+      head: [["ID", "Title", "Category", "Status", "Created At"]],
+      body: filtered.map((d) => [
+        d.id,
+        d.title ?? "-",
+        d.category ?? "-",
+        d.status ?? "-",
+        d.created_at
+          ? new Date(d.created_at).toLocaleDateString()
+          : "-",
+      ]),
+    });
+
+    doc.save("DecisionReport.pdf");
+  };
+
   return (
     <div
       style={{
@@ -56,6 +98,7 @@ const DecisionReportPage: React.FC = () => {
       {/* Export Buttons */}
       <div style={{ marginBottom: "20px" }}>
         <button
+          onClick={exportExcel}
           style={{
             background: "#16a34a",
             color: "white",
@@ -70,6 +113,7 @@ const DecisionReportPage: React.FC = () => {
         </button>
 
         <button
+          onClick={exportPDF}
           style={{
             background: "#dc2626",
             color: "white",
