@@ -36,9 +36,9 @@ def list_files(
     decision_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    storage: StorageBackend = Depends(get_storage),
 ):
     """List all file attachments for a decision."""
-    storage = get_storage()
     service = FileService(db, storage)
     return service.get_files(decision_id)
 
