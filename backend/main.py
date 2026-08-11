@@ -1,3 +1,10 @@
+import os
+import time
+from collections import defaultdict
+from dotenv import load_dotenv
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
+
 from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,7 +47,63 @@ from auth import hash_password, verify_password, create_access_token, get_curren
 # Create all tables (safe to keep, won't duplicate existing ones)
 Base.metadata.create_all(bind=engine)
 
+load_dotenv()
+
+try:
+    RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "60"))
+except ValueError:
+    RATE_LIMIT_PER_MIN = 60
+
+class RateLimitingMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, limit: int, window: int = 60):
+        super().__init__(app)
+        self.limit = limit
+        self.window = window
+        self.requests = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next):
+        if self.limit <= 0:
+            return await call_next(request)
+
+        # Identify client by user ID (email from token sub) or fallback to IP
+        client_identifier = None
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            try:
+                from auth import SECRET_KEY, ALGORITHM
+                from jose import jwt
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                email = payload.get("sub")
+                if email:
+                    client_identifier = f"user:{email}"
+            except Exception:
+                pass
+
+        if not client_identifier:
+            client_ip = request.client.host if request.client else "unknown"
+            client_identifier = f"ip:{client_ip}"
+
+        current_time = time.time()
+        
+        # Clean up older timestamps
+        self.requests[client_identifier] = [
+            t for t in self.requests[client_identifier]
+            if current_time - t < self.window
+        ]
+        
+        if len(self.requests[client_identifier]) >= self.limit:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."}
+            )
+            
+        self.requests[client_identifier].append(current_time)
+        return await call_next(request)
+
+
 app = FastAPI()
+app.add_middleware(RateLimitingMiddleware, limit=RATE_LIMIT_PER_MIN)
 
 UPLOAD_ROOT = Path(__file__).resolve().parent / "uploads"
 DISCUSSION_UPLOAD_DIR = UPLOAD_ROOT / "discussion"
