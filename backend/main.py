@@ -29,14 +29,13 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 
 from database import engine, Base, get_db
-from models import User, UserRole, AuditLog
+from models import User, UserRole, AuditLog, ReviewerAssignment
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
 from notifications import router as notifications_router
 from notifications import notify_all_users
-
-from schemas import UserCreate, UserLogin, UserResponse, Token
+from schemas import UserCreate, UserLogin, UserResponse, Token, ReviewerAssignmentCreate, ReviewerAssignmentResponse
 
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 # Create all tables (safe to keep, won't duplicate existing ones)
@@ -164,7 +163,7 @@ def update_user_role(
 
 from schemas import (
     DecisionCreate, DecisionResponse, DecisionStatusUpdate, DecisionReportResponse, ApprovalReportResponse, AuditReportResponse, )
-from models import ( Decision, DecisionStatus, Approval, ApprovalAction, )
+from models import ( Decision, DecisionStatus, Approval, ApprovalAction, ReviewerAssignment, )
 from typing import List as ListType
 
 def _with_creator_name(decision: Decision) -> Decision:
@@ -272,6 +271,70 @@ def update_decision_status(
     db.refresh(decision)
     return decision
 
+@app.post("/reviewer-assignments", response_model=ReviewerAssignmentResponse, tags=["Approval Workflow"])
+def assign_reviewer_to_category(
+    assignment: ReviewerAssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.admin)),
+):
+    reviewer = db.execute(
+        select(User).where(User.id == assignment.reviewer_id)
+    ).scalar_one_or_none()
+
+    if not reviewer:
+        raise HTTPException(status_code=404, detail="Reviewer user not found")
+
+    if reviewer.role != UserRole.reviewer:
+        raise HTTPException(
+            status_code=400,
+            detail="Assigned user must have the Reviewer role"
+        )
+
+    existing = db.execute(
+        select(ReviewerAssignment).where(
+            func.lower(ReviewerAssignment.category) == assignment.category.lower()
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        existing.reviewer_id = assignment.reviewer_id
+        existing.assigned_by = current_user.id
+        db.commit()
+        db.refresh(existing)
+        existing.reviewer_name = reviewer.full_name
+        return existing
+
+    new_assignment = ReviewerAssignment(
+        category=assignment.category,
+        reviewer_id=assignment.reviewer_id,
+        assigned_by=current_user.id,
+    )
+
+    db.add(new_assignment)
+    db.commit()
+    db.refresh(new_assignment)
+    new_assignment.reviewer_name = reviewer.full_name
+    return new_assignment
+
+
+@app.get(
+    "/reviewer-assignments",
+    response_model=List[ReviewerAssignmentResponse],
+    tags=["Approval Workflow"],
+)
+def list_reviewer_assignments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    assignments = db.execute(
+        select(ReviewerAssignment)
+    ).scalars().all()
+
+    for a in assignments:
+        a.reviewer_name = a.reviewer.full_name if a.reviewer else None
+
+    return assignments
+
 from schemas import ApprovalCreate, ApprovalResponse
 from models import Approval, ApprovalAction
 
@@ -288,14 +351,50 @@ def approve_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-     # Find the highest approval stage reached so far for this decision
-    last_approval = db.execute(
+    # Check whether this decision was resubmitted after a rejection
+    last_resubmission = db.execute(
         select(Approval)
-        .where(Approval.decision_id == decision_id, Approval.action == ApprovalAction.approved)
-        .order_by(Approval.stage.desc())
+        .where(
+            Approval.decision_id == decision_id,
+            Approval.action == ApprovalAction.resubmitted )
+        .order_by(Approval.created_at.desc())
     ).scalars().first()
 
+# Find the latest approval before the most recent resubmission
+    if last_resubmission:
+        last_approval = db.execute(
+           select(Approval)
+           .where(
+               Approval.decision_id == decision_id,
+               Approval.action == ApprovalAction.approved,
+               Approval.created_at > last_resubmission.created_at
+            )
+            .order_by(Approval.stage.desc())
+        ).scalars().first()
+    else:
+        last_approval = db.execute(
+            select(Approval)
+            .where(
+                Approval.decision_id == decision_id,
+                Approval.action == ApprovalAction.approved
+            )
+            .order_by(Approval.stage.desc())
+        ).scalars().first()
+
     next_stage = 1 if not last_approval else last_approval.stage + 1
+    print("Decision ID:", decision_id)
+
+    if last_approval:
+       print("Approval ID:", last_approval.id)
+       print("Decision ID in Approval:", last_approval.decision_id)
+       print("Stage:", last_approval.stage)
+       print("Action:", last_approval.action)
+       print("Reviewer ID:", last_approval.reviewer_id)
+    else:
+       print("Last approval: None")
+
+       print("Decision Status:", decision.status)
+       print("Next stage:", next_stage)
 
     if next_stage == 1:
         # Stage 1: Reviewer, Manager, or Admin can approve
@@ -307,7 +406,31 @@ def approve_decision(
             raise HTTPException(status_code=403, detail="Only a Manager or Admin can give final approval")
     else:
         raise HTTPException(status_code=400, detail="This decision has already completed both approval stages")
-    
+
+    if current_user.role == UserRole.reviewer:
+       if not decision.category:
+           raise HTTPException(
+              status_code=400,
+              detail="Decision has no category assigned."
+        )
+
+       assignment = db.execute(
+            select(ReviewerAssignment).where(
+                func.lower(ReviewerAssignment.category) == decision.category.lower()
+        )
+        ).scalar_one_or_none()
+
+       if not assignment:
+            raise HTTPException(
+              status_code=400,
+              detail=f"No reviewer has been assigned for category '{decision.category}'."
+        )
+
+       if assignment.reviewer_id != current_user.id:
+            raise HTTPException(
+               status_code=403,
+               detail="This decision is assigned to another Reviewer for its category."
+        )
     new_approval = Approval(
         decision_id=decision_id,
         reviewer_id=current_user.id,
@@ -326,7 +449,6 @@ def approve_decision(
     new_approval.reviewer_name = current_user.full_name
     return new_approval
 
-
 @app.post("/decisions/{decision_id}/reject", response_model=ApprovalResponse, tags=["Approval Workflow"])
 def reject_decision(
     decision_id: int,
@@ -343,6 +465,30 @@ def reject_decision(
     if not approval.comment or not approval.comment.strip():
         raise HTTPException(status_code=400, detail="A comment is required when rejecting a decision")
 
+    if current_user.role == UserRole.reviewer:
+       if not decision.category:
+          raise HTTPException(
+            status_code=400,
+            detail="Decision has no category assigned."
+        )
+
+       assignment = db.execute(
+            select(ReviewerAssignment).where(
+                 func.lower(ReviewerAssignment.category) == decision.category.lower()
+            )
+        ).scalar_one_or_none()
+
+       if not assignment:
+          raise HTTPException(
+              status_code=400,
+              detail=f"No reviewer has been assigned for category '{decision.category}'."
+           )
+
+       if assignment.reviewer_id != current_user.id:
+          raise HTTPException(
+              status_code=403,
+              detail="This decision is assigned to another Reviewer for its category."
+          )
     last_approval = db.execute(
         select(Approval)
         .where(Approval.decision_id == decision_id, Approval.action == ApprovalAction.approved)
