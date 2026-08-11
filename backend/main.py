@@ -29,14 +29,13 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 
 from database import engine, Base, get_db
-from models import User, UserRole, AuditLog, ReviewerAssignment
+from models import User, UserRole, AuditLog, ReviewerAssignment, Team
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
 from notifications import router as notifications_router
 from notifications import notify_all_users
-from schemas import UserCreate, UserLogin, UserResponse, Token, ReviewerAssignmentCreate, ReviewerAssignmentResponse
-
+from schemas import UserCreate, UserLogin, UserResponse, Token, ReviewerAssignmentCreate, ReviewerAssignmentResponse, TeamCreate, TeamUpdate, TeamMemberAssign, TeamResponse, TeamDetailResponse
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 # Create all tables (safe to keep, won't duplicate existing ones)
 Base.metadata.create_all(bind=engine)
@@ -160,6 +159,280 @@ def update_user_role(
     db.refresh(target_user)
 
     return target_user
+
+@app.get("/teams", response_model=List[TeamResponse], tags=["Team Management"])
+def list_teams(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    teams = db.query(Team).all()
+
+    return [
+        TeamResponse(
+            id=team.id,
+            name=team.name,
+            description=team.description,
+            manager_id=team.manager_id,
+        )
+        for team in teams
+    ]
+
+@app.post(
+    "/teams",
+    response_model=TeamResponse,
+    status_code=201,
+    tags=["Team Management"],
+)
+def create_team(
+    team: TeamCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    # Prevent duplicate team names
+    existing_team = db.execute(
+        select(Team).where(Team.name == team.name)
+    ).scalar_one_or_none()
+
+    if existing_team:
+        raise HTTPException(
+            status_code=400,
+            detail="A team with this name already exists.",
+        )
+
+    # Validate manager if one is provided
+    if team.manager_id is not None:
+        manager = db.execute(
+            select(User).where(User.id == team.manager_id)
+        ).scalar_one_or_none()
+
+        if not manager:
+            raise HTTPException(
+                status_code=404,
+                detail="Manager user not found.",
+            )
+
+        if manager.role != UserRole.manager:
+            raise HTTPException(
+                status_code=400,
+                detail="Selected user must have the manager role.",
+            )
+
+    new_team = Team(
+        name=team.name,
+        description=team.description,
+        manager_id=team.manager_id,
+    )
+
+    db.add(new_team)
+    db.commit()
+    db.refresh(new_team)
+
+    return new_team
+
+@app.get(
+    "/teams/{team_id}",
+    response_model=TeamDetailResponse,
+    tags=["Team Management"],
+)
+def get_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    return TeamDetailResponse.from_team(team)
+
+@app.patch(
+    "/teams/{team_id}",
+    response_model=TeamResponse,
+    tags=["Team Management"],
+)
+def update_team(
+    team_id: int,
+    team_update: TeamUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    update_data = team_update.model_dump(exclude_unset=True)
+
+    # Validate the new manager, if supplied
+    if "manager_id" in update_data and update_data["manager_id"] is not None:
+        manager = db.execute(
+            select(User).where(User.id == update_data["manager_id"])
+        ).scalar_one_or_none()
+
+        if not manager:
+            raise HTTPException(
+                status_code=404,
+                detail="Manager user not found.",
+            )
+
+        if manager.role != UserRole.manager:
+            raise HTTPException(
+                status_code=400,
+                detail="Selected user must have the manager role.",
+            )
+
+    # Prevent duplicate names
+    if "name" in update_data:
+        existing_team = db.execute(
+            select(Team).where(
+                Team.name == update_data["name"],
+                Team.id != team_id,
+            )
+        ).scalar_one_or_none()
+
+        if existing_team:
+            raise HTTPException(
+                status_code=400,
+                detail="A team with this name already exists.",
+            )
+
+    for field, value in update_data.items():
+        setattr(team, field, value)
+
+    db.commit()
+    db.refresh(team)
+
+    return team
+
+@app.delete(
+    "/teams/{team_id}",
+    status_code=204,
+    tags=["Team Management"],
+)
+def delete_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.admin)
+    ),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    db.delete(team)
+    db.commit()
+
+    return None
+
+@app.delete(
+    "/teams/{team_id}/members/{user_id}",
+    response_model=TeamDetailResponse,
+    tags=["Team Management"],
+)
+def remove_team_member(
+    team_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
+    if user.team_id != team_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User is not a member of this team.",
+        )
+
+    user.team_id = None
+
+    db.commit()
+    db.refresh(team)
+
+    return TeamDetailResponse.from_team(team)
+
+@app.post(
+    "/teams/{team_id}/members",
+    response_model=TeamDetailResponse,
+    status_code=200,
+    tags=["Team Management"],
+)
+def add_team_member(
+    team_id: int,
+    assignment: TeamMemberAssign,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    user = db.execute(
+        select(User).where(User.id == assignment.user_id)
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
+    user.team_id = team_id
+
+    db.commit()
+    db.refresh(user)
+    db.refresh(team)
+
+    return TeamDetailResponse.from_team(team)
 
 from schemas import (
     DecisionCreate, DecisionResponse, DecisionStatusUpdate, DecisionReportResponse, ApprovalReportResponse, AuditReportResponse, )

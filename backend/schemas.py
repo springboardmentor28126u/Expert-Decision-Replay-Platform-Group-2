@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
     role: UserRole
     is_active: bool
     created_at: datetime
+    team_id: int | None
 
     class Config:
         from_attributes = True
@@ -244,10 +245,6 @@ class AdminDashboardResponse(BaseModel):
 
     recent_decisions: list[RecentDecisionResponse]
 
-# ============================================================
-# Milestone 3 - Reports
-# ============================================================
-
 class ReportStatusCount(BaseModel):
     status: str
     count: int
@@ -294,10 +291,6 @@ class ApprovalReportResponse(BaseModel):
     escalated: int
     average_completion_hours: float | None
     by_level: list[ApprovalLevelReport]
-
-# ============================================================
-# Audit Reports
-# ============================================================
 
 class AuditActionCount(BaseModel):
     action: str
@@ -350,6 +343,52 @@ class ReviewerAssignmentResponse(BaseModel):
     reviewer_name: str | None = None
     assigned_by: int
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class TeamCreate(BaseModel):
+    name: str
+    description: str | None = None
+    manager_id: int | None = None
+
+
+class TeamUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    manager_id: int | None = None
+
+
+class TeamMemberAssign(BaseModel):
+    user_id: int
+
+
+class TeamResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    manager_id: int | None
+
+    class Config:
+        from_attributes = True
+
+
+class TeamDetailResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    manager_id: int | None
+    member_count: int 
+
+    @classmethod
+    def from_team(cls, team):
+        return cls( 
+            id=team.id,
+            name=team.name,
+            description=team.description,
+            manager_id=team.manager_id,
+            member_count=len(team.members),
+        )
 
     class Config:
         from_attributes = True
