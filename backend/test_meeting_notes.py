@@ -3,7 +3,7 @@ import sys
 
 BASE_URL = "http://127.0.0.1:8000"
 
-def run_tests():
+def test_meeting_notes():
     print("Starting Meeting Notes Feature Tests...")
 
     # Step 1: Login
@@ -78,6 +78,3 @@ def run_tests():
     assert note_found, "Meeting note was not found in thread"
     print("SUCCESS: Verified thread contains both comment and meeting note with correct types!")
     print("ALL TESTS PASSED SUCCESSFULLY!")
-
-if __name__ == "__main__":
-    run_tests()
