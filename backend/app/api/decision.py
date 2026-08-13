@@ -9,7 +9,7 @@ from app.schemas.decision import (
     DecisionResponse,
     DecisionUpdate
 )
-
+from app.services.email_service import send_email
 from fastapi import UploadFile, File
 import os
 
@@ -40,6 +40,25 @@ def create_decision(
     db.add(new_decision)
     db.commit()
     db.refresh(new_decision)
+
+    # Send email to decision creator
+
+    send_email(
+        current_user.email,
+        "Decision Created Successfully",
+        f"""
+    Hello {current_user.full_name},
+
+    Your decision has been created successfully.
+
+    Title: {new_decision.title}
+    Category: {new_decision.category}
+
+    Status: Pending
+
+    Expert Decision Replay Platform
+    """
+    )
 
     # Audit Log
     log = AuditLog(

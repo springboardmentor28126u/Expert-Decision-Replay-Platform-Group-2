@@ -15,6 +15,7 @@ import DecisionHistory from "./pages/DecisionHistory";
 import Reports from "./pages/Reports";
 import AuditLogs from "./pages/AuditLogs";
 import ApprovalWorkflow from "./pages/ApprovalWorkflow";
+import Users from "./pages/Users";
 
 function App() {
   return (
@@ -53,6 +54,9 @@ function App() {
         {/* Profile */}
         <Route path="/profile" element={<Profile />} />
         <Route path="/audit" element={<AuditLogs />} />
+
+        {/* Users (Administrator only) */}
+        <Route path="/users" element={<Users />} />
 
       </Routes>
     </BrowserRouter>
