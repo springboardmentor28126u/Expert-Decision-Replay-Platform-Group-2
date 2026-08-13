@@ -18,6 +18,8 @@ import io
 from reportlab.lib import colors
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
+from ai_service import summarize_decision
+from discussion import DiscussionMessage
 
 from fastapi.responses import StreamingResponse
 from reportlab.lib.pagesizes import letter
@@ -37,12 +39,13 @@ from reportlab.lib import colors
 
 from database import engine, Base, get_db
 from models import User, UserRole, AuditLog, ReviewerAssignment, Team
+from audit_helper import log_activity, log_security, log_access
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
 from notifications import router as notifications_router
 from notifications import notify_all_users
-from schemas import UserCreate, UserLogin, UserResponse, Token, ReviewerAssignmentCreate, ReviewerAssignmentResponse, TeamCreate, TeamUpdate, TeamMemberAssign, TeamResponse, TeamDetailResponse
+from schemas import UserCreate, UserLogin, UserResponse, Token, ReviewerAssignmentCreate, ReviewerAssignmentResponse, TeamCreate, TeamUpdate, TeamMemberAssign, TeamResponse, TeamDetailResponse, TeamReportResponse, TeamReportItem
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 # Create all tables (safe to keep, won't duplicate existing ones)
 Base.metadata.create_all(bind=engine)
@@ -146,6 +149,14 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
+    log_security(
+        db=db,
+        action="register",
+        entity_type="user",
+        entity_id=new_user.id,
+        user_id=new_user.id,
+        details="User registered successfully",
+    )
     return new_user
 
 
@@ -160,6 +171,14 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": user.email, "role": user.role.value})
 
+    log_security(
+        db=db,
+        action="login",
+        entity_type="user",
+        entity_id=user.id,
+        user_id=user.id,
+        details="User logged in successfully",
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -522,6 +541,15 @@ def create_decision(
     db.add(new_decision)
     db.commit()
     db.refresh(new_decision)
+
+    log_activity(
+        db=db,
+        action="create",
+        entity_type="decision",
+        entity_id=new_decision.id,
+        user_id=current_user.id,
+        details="Decision created",
+    )
     new_decision.creator_name = new_decision.creator.full_name
     return new_decision
 
@@ -544,6 +572,15 @@ def list_decisions(
     decisions = db.execute(query).scalars().all()
     for d in decisions:
         d.creator_name = d.creator.full_name if d.creator else None
+
+    log_access(
+        db=db,
+        action="list",
+        entity_type="decision",
+        entity_id=None,
+        user_id=current_user.id,
+        details="Listed decisions",
+    )  
     return decisions
 
 from datetime import datetime, timedelta
@@ -582,6 +619,25 @@ def get_decision(
     decision.creator_name = decision.creator.full_name if decision.creator else None
     return decision
 
+@app.get("/decisions/{decision_id}/ai-summary", tags=["Decision Management"])
+def get_ai_summary(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    messages = db.execute(
+        select(DiscussionMessage).where(DiscussionMessage.decision_id == decision_id)
+    ).scalars().all()
+    discussion_text = "\n".join([m.message for m in messages]) if messages else ""
+
+    summary = summarize_decision(decision.problem_statement, discussion_text)
+    return {"decision_id": decision_id, "summary": summary}
 
 @app.put("/decisions/{decision_id}/status", response_model=DecisionResponse, tags=["Decision Management"])
 def update_decision_status(
@@ -1883,6 +1939,358 @@ def build_decision_report(db: Session):
         "recent_decisions": recent_data,
     }
 
+@app.get(
+    "/reports/team",
+    response_model=TeamReportResponse,
+    tags=["Reports"],
+)
+def get_team_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    teams = db.execute(
+        select(Team).order_by(Team.name)
+    ).scalars().all()
+
+    report_teams = []
+
+    for team in teams:
+        member_count = db.execute(
+            select(func.count(User.id)).where(
+                User.team_id == team.id
+            )
+        ).scalar_one()
+
+        decision_count = db.execute(
+            select(func.count(Decision.id)).where(
+                Decision.created_by.in_(
+                    select(User.id).where(User.team_id == team.id)
+                )
+            )
+        ).scalar_one()
+
+        approval_counts = db.execute(
+           select(
+               Approval.action,
+               func.count(Approval.id)
+           )
+           .join(Decision, Approval.decision_id == Decision.id)
+           .where(
+               Decision.created_by.in_(
+                   select(User.id).where(User.team_id == team.id)
+                )
+            )
+            .group_by(Approval.action)
+        ).all()
+
+        counts = {
+            str(action.value): count
+            for action, count in approval_counts
+        }
+
+        report_teams.append(
+            TeamReportItem(
+                team_id=team.id,
+                team_name=team.name,
+                member_count=member_count,
+                decision_count=decision_count,
+                pending_approvals=counts.get("pending", 0),
+                approved_approvals=counts.get("approved", 0),
+                rejected_approvals=counts.get("rejected", 0),
+                escalated_approvals=counts.get("escalated", 0),
+            )
+        )
+
+    return TeamReportResponse(
+        total_teams=len(report_teams),
+        teams=report_teams,
+    )
+
+@app.get(
+    "/reports/team/export/pdf",
+    tags=["Reports"],
+)
+def export_team_report_pdf(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in (UserRole.manager, UserRole.admin):
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers and admins can access reports."
+        )
+
+    report = get_team_report(db, current_user)
+
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter
+    )
+
+    styles = getSampleStyleSheet()
+    content = []
+
+    content.append(
+       Paragraph(
+           "<b>Expert Decision Replay Platform</b>",
+           styles["Title"],
+        )
+    )
+
+    content.append(
+       Paragraph(
+           "<font size=16 ><b>Team Analytics Report</b></font>",
+           styles["Heading2"],
+       )
+    )
+
+    content.append(
+       Paragraph(
+           f"Generated On: "
+           f"{datetime.now().strftime('%d %B %Y, %I:%M %p')}",
+           styles["Normal"],
+       )
+    )
+
+    content.append(
+       Paragraph(
+           f"Generated By: {current_user.full_name}",
+           styles["Normal"],
+       )
+    )
+
+    content.append(Spacer(1, 16))
+
+    content.append(
+        Paragraph(
+            "Team Summary",
+            styles["Heading3"]
+        )
+    )
+
+    summary_data = [
+        ["Metric", "Value"],
+        ["Total Teams", str(report.total_teams)],
+    ]
+
+    summary_table = Table(summary_data, colWidths=[250, 100], hAlign="LEFT")
+
+    summary_table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), "#1F4E79"),
+            ("TEXTCOLOR", (0, 0), (-1, 0), "white"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.5, "#CCCCCC"),
+            ("PADDING", (0, 0), (-1, -1), 6),
+        ])
+    )
+
+    content.append(summary_table)
+    content.append(Spacer(1, 18))
+
+    content.append(
+        Paragraph(
+            "Team Activity",
+            styles["Heading3"]
+        )
+    )
+
+    team_data = [
+        [
+            "Team",
+            "Members",
+            "Decisions",
+            "Pending",
+            "Approved",
+            "Rejected",
+            "Escalated",
+        ]
+    ]
+
+    for team in report.teams:
+        team_data.append([
+            team.team_name,
+            team.member_count,
+            team.decision_count,
+            team.pending_approvals,
+            team.approved_approvals,
+            team.rejected_approvals,
+            team.escalated_approvals,
+        ])
+
+    team_table = Table(team_data, repeatRows=1, hAlign="LEFT")
+
+    team_table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), "#1F4E79"),
+            ("TEXTCOLOR", (0, 0), (-1, 0), "white"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.5, "#CCCCCC"),
+            ("ALIGN", (1, 1), (-1, -1), "CENTER"),
+            ("PADDING", (0, 0), (-1, -1), 5),
+        ])
+    )
+
+    content.append(team_table)
+
+    doc.build(
+        content,
+        onFirstPage=partial(
+            add_header_footer,
+            report_title="Team Report"
+        ),
+        onLaterPages=partial(
+            add_header_footer,
+            report_title="Team Report"
+        ),
+    )
+
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition":
+                "attachment; filename=team_report.pdf"
+        },
+    )
+
+@app.get(
+    "/reports/team/export/excel",
+    tags=["Reports"],
+)
+def export_team_report_excel(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in (UserRole.manager, UserRole.admin):
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers and admins can access reports."
+        )
+
+    report = get_team_report(db, current_user)
+
+    workbook = Workbook()
+
+    # -------------------------
+    # Summary Sheet
+    # -------------------------
+
+    sheet = workbook.active
+    sheet.title = "Summary"
+
+    sheet.append(["Metric", "Value"])
+
+    sheet.append([
+        "Total Teams",
+        report.total_teams
+    ])
+
+    for cell in sheet[1]:
+        cell.font = Font(
+            bold=True,
+            color="FFFFFF"
+        )
+        cell.fill = PatternFill(
+            start_color="1F4E79",
+            end_color="1F4E79",
+            fill_type="solid"
+        )
+        cell.alignment = Alignment(
+            horizontal="center"
+        )
+
+    sheet.freeze_panes = "A2"
+
+    # -------------------------
+    # Team Activity Sheet
+    # -------------------------
+
+    team_sheet = workbook.create_sheet(
+        "Team Activity"
+    )
+
+    team_sheet.append([
+        "Team",
+        "Members",
+        "Decisions",
+        "Pending",
+        "Approved",
+        "Rejected",
+        "Escalated",
+    ])
+
+    for team in report.teams:
+        team_sheet.append([
+            team.team_name,
+            team.member_count,
+            team.decision_count,
+            team.pending_approvals,
+            team.approved_approvals,
+            team.rejected_approvals,
+            team.escalated_approvals,
+        ])
+
+    for cell in team_sheet[1]:
+        cell.font = Font(
+            bold=True,
+            color="FFFFFF"
+        )
+        cell.fill = PatternFill(
+            start_color="1F4E79",
+            end_color="1F4E79",
+            fill_type="solid"
+        )
+        cell.alignment = Alignment(
+            horizontal="center"
+        )
+
+    team_sheet.freeze_panes = "A2"
+    team_sheet.auto_filter.ref = team_sheet.dimensions
+
+    # -------------------------
+    # Column Widths
+    # -------------------------
+
+    widths = {
+        "A": 25,
+        "B": 12,
+        "C": 12,
+        "D": 12,
+        "E": 12,
+        "F": 12,
+        "G": 12,
+    }
+
+    for column, width in widths.items():
+        team_sheet.column_dimensions[column].width = width
+
+    # -------------------------
+    # Return Excel File
+    # -------------------------
+
+    output = io.BytesIO()
+
+    workbook.save(output)
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition":
+                "attachment; filename=team_report.xlsx"
+        },
+    )
 # Decision Reports
 
 @app.get(
@@ -2689,7 +3097,8 @@ def export_approval_report_pdf(
        headers={
           "Content-Disposition": "attachment; filename=approval_report.pdf"
        },
-    )# ============================================================
+    )
+# ============================================================
 # Export Approval Report Excel
 # ============================================================
 
@@ -3437,3 +3846,4 @@ def export_audit_report_excel(
             "attachment; filename=audit_report.xlsx"
         },
     )
+

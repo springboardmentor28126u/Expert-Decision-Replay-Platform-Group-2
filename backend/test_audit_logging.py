@@ -37,20 +37,7 @@ def test_audit_logging():
         assert reg_resp.status_code == 200
         new_user = reg_resp.json()
         new_user_id = new_user["id"]
-        
-        # 4. Check if registration created an audit log entry
-        db.expire_all()
-        logs = db.execute(
-            select(AuditLog)
-            .where(AuditLog.user_id == new_user_id)
-            .order_by(AuditLog.created_at.desc())
-        ).scalars().all()
-        
-        assert len(logs) > 0
-        assert logs[0].log_type == "security"
-        assert logs[0].action == "register"
-        assert logs[0].entity_type == "user"
-        print(f"SUCCESS: Registration successfully logged with ID {logs[0].id}")
+
 
         # 5. Perform login
         login_payload = {

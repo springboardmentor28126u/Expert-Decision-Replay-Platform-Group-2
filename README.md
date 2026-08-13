@@ -263,6 +263,18 @@ Features
 
 # Milestone 3 – Workflow & Reporting
 
+## Team Management
+
+- Create Teams
+- View Teams
+- Update Team Details
+- Delete Teams
+- Assign Users to Teams
+- Remove Users from Teams
+- Team Manager Assignment
+- Team-based Decision Reporting
+- Team Activity Reports
+
 ## Multi-Level Approval Workflow
 
 - Reviewer Approval
@@ -333,6 +345,19 @@ Professional reporting module including
 - Approval Statistics
 - Approval Level Summary
 - Executive Summary
+
+### Team Reports
+
+- Team Summary
+- Team Activity
+- Member Count
+- Decision Count
+- Pending Approvals
+- Approved Approvals
+- Rejected Approvals
+- Escalated Approvals
+- PDF Export
+- Excel Export
 
 ### Audit Reports
 
@@ -424,6 +449,7 @@ Current database entities include
 - Notifications
 - Audit Logs
 - Version History
+- Teams
 
 Relationships
 
@@ -432,6 +458,8 @@ Relationships
 - One Decision → Many Discussions
 - One Decision → Many Versions
 - One User → Many Audit Logs
+- One Team → Many Users
+- One Team → Many Decisions
 
 ---
 
@@ -488,6 +516,7 @@ Major project modules include
 - Email Notifications
 - Analytics Dashboard
 - Mobile Responsive Enhancements
+- Advanced Analytics
 
 ---
 

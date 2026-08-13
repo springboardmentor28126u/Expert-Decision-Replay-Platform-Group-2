@@ -6,6 +6,7 @@ import DecisionsList from "./DecisionsList";
 import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "./ChangePassword";
 import ReportsPage from "./ReportsPage";
+import MyTeam from "./MyTeam";
 import useNotifications from "./useNotifications";
 import {
   getEmployeeDashboard,
@@ -743,6 +744,9 @@ function Dashboard({ token, onLogout }) {
       )}
 
       {activeView === "reports" && <ReportsPage token={token} />}
+      {activeView === "my-team" && (
+         <MyTeam token={token} profile={profile} />
+      )}
 
       {activeView === "decision-details" && selectedDecision && (
         <DecisionDetails
@@ -794,7 +798,8 @@ function Dashboard({ token, onLogout }) {
                     <tr>
                       <th style={{ width: "25%" }}>Name</th>
                       <th style={{ width: "30%" }}>Email</th>
-                      <th style={{ width: "20%" }}>Role</th>
+                      <th style={{ width: "15%" }}>Role</th>
+                      <th style={{ width: "12%" }}>Team</th>
                       <th style={{ width: "12%" }}>Status</th>
                       <th style={{ width: "13%" }}>Actions</th>
                     </tr>
@@ -822,6 +827,11 @@ function Dashboard({ token, onLogout }) {
                               <option value="admin">Admin</option>
                             </select>
                           </td>
+
+                          <td>
+                            {u.team_id ? `Team ${u.team_id}` : "Not assigned"}
+                          </td>
+
                           <td>
                             <span
                               style={{
@@ -907,11 +917,43 @@ function Dashboard({ token, onLogout }) {
       })()}
 
       {activeView === "account" && (
-        <div className="panel">
-          <p className="panel-title">Account Settings</p>
-          <ChangePassword token={token} />
-        </div>
-      )}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="panel">
+            <p className="panel-title">Profile Information</p>
+
+            <div style={{ marginTop: "16px", display: "grid", gap: "12px" }}>
+              <div>
+                <strong>Full Name</strong>
+                <p>{profile.full_name}</p>
+              </div>
+
+              <div>
+                <strong>Email</strong>
+                <p>{profile.email}</p>
+              </div>
+
+              <div>
+                <strong>Role</strong>
+                <p style={{ textTransform: "capitalize" }}>{profile.role}</p>
+              </div>
+
+              <div>
+                <strong>Team</strong>
+                <p>
+                 {profile.team_id
+                   ? `Team ID: ${profile.team_id}`
+                   : "Not assigned to a team"}
+                </p>
+             </div>
+          </div>
+       </div>
+
+       <div className="panel">
+         <p className="panel-title">Account Settings</p>
+         <ChangePassword token={token} />
+       </div>
+      </div>
+    )}
 
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
