@@ -11,14 +11,42 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Instant Theme & Preference Initializer (Zero White Flash) -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('edrp_theme') || 'Light';
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (savedTheme === 'Dark' || (savedTheme === 'System Default' && prefersDark)) {
+                    document.documentElement.setAttribute('data-bs-theme', 'dark');
+                    document.documentElement.classList.add('theme-dark');
+                } else {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    document.documentElement.classList.remove('theme-dark');
+                }
+
+                if (localStorage.getItem('edrp_accessibility') === 'true') {
+                    document.documentElement.classList.add('high-contrast');
+                }
+            } catch (e) {}
+        })();
+    </script>
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; margin: 0; padding: 0; }
+        html, body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
         
         /* Sidebar Layout styling */
-        .app-wrapper { display: flex; height: 100vh; overflow: hidden; }
+        .app-wrapper { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
         
         /* ── Sidebar ─────────────────────────────────────────── */
         .sidebar {
@@ -130,20 +158,23 @@
         .user-role { font-size: 11px; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         
-        {% set current_role_css = (session.get('role_name') or 'Employee') | string | lower %}
-        {% if 'manager' in current_role_css or 'lead' in current_role_css %}
-        .logo-icon { background: linear-gradient(135deg, #14B8A6, #2DD4BF) !important; box-shadow: 0 4px 12px rgba(20,184,166,0.4) !important; }
-        .nav-item.active { background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%) !important; color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(20, 184, 166, 0.4) !important; }
-        .user-avatar { background: linear-gradient(135deg, #14B8A6, #2DD4BF) !important; }
-        {% elif 'admin' in current_role_css %}
-        .logo-icon { background: linear-gradient(135deg, #3B82F6, #60A5FA) !important; box-shadow: 0 4px 12px rgba(59,130,246,0.4) !important; }
-        .nav-item.active { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important; color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important; }
-        .user-avatar { background: linear-gradient(135deg, #3B82F6, #60A5FA) !important; }
-        {% else %}
-        .logo-icon { background: linear-gradient(135deg, #2563EB, #3B82F6) !important; box-shadow: 0 4px 12px rgba(37,99,235,0.4) !important; }
-        .nav-item.active { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important; color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(37,99,235,0.4) !important; }
-        .user-avatar { background: linear-gradient(135deg, #2563EB, #3B82F6) !important; }
-        {% endif %}
+        /* Role-Based Themes */
+        body[data-role-theme="manager"] .logo-icon { background: linear-gradient(135deg, #14B8A6, #2DD4BF) !important; box-shadow: 0 4px 12px rgba(20,184,166,0.4) !important; }
+        body[data-role-theme="manager"] .nav-item.active { background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%) !important; color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(20, 184, 166, 0.4) !important; }
+        body[data-role-theme="manager"] .user-avatar { background: linear-gradient(135deg, #14B8A6, #2DD4BF) !important; }
+
+        body[data-role-theme="admin"] .logo-icon { background: linear-gradient(135deg, #3B82F6, #60A5FA) !important; box-shadow: 0 4px 12px rgba(59,130,246,0.4) !important; }
+        body[data-role-theme="admin"] .nav-item.active { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important; color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important; }
+        body[data-role-theme="admin"] .user-avatar { background: linear-gradient(135deg, #3B82F6, #60A5FA) !important; }
+
+        body[data-role-theme="employee"] .logo-icon { background: linear-gradient(135deg, #2563EB, #3B82F6) !important; box-shadow: 0 4px 12px rgba(37,99,235,0.4) !important; }
+        body[data-role-theme="employee"] .nav-item.active { background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important; color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(37,99,235,0.4) !important; }
+        body[data-role-theme="employee"] .user-avatar { background: linear-gradient(135deg, #2563EB, #3B82F6) !important; }
+
+        body[data-role-theme="reviewer"] .logo-icon { background: linear-gradient(135deg, #7C3AED, #9333EA) !important; box-shadow: 0 4px 12px rgba(124,58,237,0.4) !important; }
+        body[data-role-theme="reviewer"] .nav-item.active { background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%) !important; color: #FFFFFF !important; box-shadow: 0 4px 14px rgba(124,58,237,0.4) !important; }
+        body[data-role-theme="reviewer"] .user-avatar { background: linear-gradient(135deg, #7C3AED, #9333EA) !important; }
+
 
         .main-content { 
             margin-left: 260px; 
@@ -173,10 +204,257 @@
             width: 100%;
         }
 
+        /* Global Error Color Styling (Light Red #FF5C5C) */
+        :root {
+            --error-color: #FF5C5C;
+            --bs-danger: #FF5C5C;
+            --bs-danger-rgb: 255, 92, 92;
+        }
+
+        .bg-danger, .text-bg-danger {
+            background-color: #FF5C5C !important;
+            color: #FFFFFF !important;
+        }
+        .alert-danger {
+            background-color: #FF5C5C !important;
+            border: 1px solid #FF4747 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 8px 22px rgba(255, 92, 92, 0.3) !important;
+        }
+        .alert-danger .btn-close {
+            filter: brightness(0) invert(1);
+        }
+        .alert-danger i, .alert-danger svg, .alert-danger p, .alert-danger span, .alert-danger div, .alert-danger strong, .alert-danger h1, .alert-danger h2, .alert-danger h3, .alert-danger h4, .alert-danger h5, .alert-danger h6 {
+            color: #FFFFFF !important;
+        }
+        .btn-danger {
+            background-color: #FF5C5C !important;
+            border-color: #FF5C5C !important;
+            color: #FFFFFF !important;
+        }
+        .btn-danger:hover, .btn-danger:focus, .btn-danger:active {
+            background-color: #FF4747 !important;
+            border-color: #FF4747 !important;
+            color: #FFFFFF !important;
+        }
+        .btn-outline-danger {
+            color: #FF5C5C !important;
+            border-color: #FF5C5C !important;
+        }
+        .btn-outline-danger:hover {
+            background-color: #FF5C5C !important;
+            color: #FFFFFF !important;
+        }
+
+        /* ── Theme & Dark Mode System ──────────────────────── */
+        [data-bs-theme="dark"], html.theme-dark, body.theme-dark {
+            --bg-primary: #0F172A;
+            --bg-secondary: #1E293B;
+            --bg-tertiary: #334155;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --border-color: #334155;
+            --card-bg: #1E293B;
+            --input-bg: #0F172A;
+            background-color: #0F172A !important;
+            color: #F8FAFC !important;
+        }
+
+        [data-bs-theme="dark"] body,
+        html.theme-dark body,
+        body.theme-dark {
+            background-color: #0F172A !important;
+            color: #F8FAFC !important;
+        }
+
+        [data-bs-theme="dark"] .main-content,
+        html.theme-dark .main-content {
+            background-color: #0B1120 !important;
+            color: #F8FAFC !important;
+        }
+
+        [data-bs-theme="dark"] .header-bar,
+        html.theme-dark .header-bar {
+            background-color: #0F172A !important;
+            border-bottom: 1px solid #1E293B !important;
+            color: #F8FAFC !important;
+        }
+
+        [data-bs-theme="dark"] .card,
+        [data-bs-theme="dark"] .card.shadow,
+        [data-bs-theme="dark"] .settings-section-card,
+        [data-bs-theme="dark"] .settings-nav,
+        [data-bs-theme="dark"] .modal-content,
+        html.theme-dark .card,
+        html.theme-dark .card.shadow,
+        html.theme-dark .settings-section-card,
+        html.theme-dark .settings-nav,
+        html.theme-dark .modal-content {
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F8FAFC !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        [data-bs-theme="dark"] .settings-row,
+        html.theme-dark .settings-row {
+            border-bottom-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .settings-section-title,
+        html.theme-dark .settings-section-title {
+            color: #F8FAFC !important;
+            border-bottom-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .settings-row-info h6,
+        [data-bs-theme="dark"] .text-dark,
+        [data-bs-theme="dark"] h1,
+        [data-bs-theme="dark"] h2,
+        [data-bs-theme="dark"] h3,
+        [data-bs-theme="dark"] h4,
+        [data-bs-theme="dark"] h5,
+        [data-bs-theme="dark"] h6,
+        html.theme-dark .settings-row-info h6,
+        html.theme-dark .text-dark,
+        html.theme-dark h1,
+        html.theme-dark h2,
+        html.theme-dark h3,
+        html.theme-dark h4,
+        html.theme-dark h5,
+        html.theme-dark h6 {
+            color: #F8FAFC !important;
+        }
+
+        [data-bs-theme="dark"] .settings-row-info p,
+        [data-bs-theme="dark"] .text-muted,
+        html.theme-dark .settings-row-info p,
+        html.theme-dark .text-muted {
+            color: #94A3B8 !important;
+        }
+
+        [data-bs-theme="dark"] .settings-nav-item,
+        html.theme-dark .settings-nav-item {
+            color: #94A3B8 !important;
+        }
+
+        [data-bs-theme="dark"] .settings-nav-item:hover,
+        html.theme-dark .settings-nav-item:hover {
+            background: #334155 !important;
+            color: #FFFFFF !important;
+        }
+
+        [data-bs-theme="dark"] .settings-nav-item.active,
+        html.theme-dark .settings-nav-item.active {
+            background: #1E3A8A !important;
+            color: #60A5FA !important;
+        }
+
+        [data-bs-theme="dark"] .form-control,
+        [data-bs-theme="dark"] .form-select,
+        html.theme-dark .form-control,
+        html.theme-dark .form-select {
+            background-color: #0F172A !important;
+            border-color: #334155 !important;
+            color: #F8FAFC !important;
+        }
+
+        [data-bs-theme="dark"] .form-control:focus,
+        [data-bs-theme="dark"] .form-select:focus,
+        html.theme-dark .form-control:focus,
+        html.theme-dark .form-select:focus {
+            background-color: #0F172A !important;
+            border-color: #6366F1 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important;
+        }
+
+        [data-bs-theme="dark"] .sticky-save-bar,
+        html.theme-dark .sticky-save-bar {
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F8FAFC !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        [data-bs-theme="dark"] .table,
+        html.theme-dark .table {
+            color: #F8FAFC !important;
+            border-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .table th,
+        html.theme-dark .table th {
+            background-color: #0F172A !important;
+            color: #94A3B8 !important;
+            border-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .table td,
+        html.theme-dark .table td {
+            background-color: #1E293B !important;
+            color: #F8FAFC !important;
+            border-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .table-hover tbody tr:hover td,
+        html.theme-dark .table-hover tbody tr:hover td {
+            background-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .btn-light,
+        html.theme-dark .btn-light {
+            background-color: #334155 !important;
+            border-color: #475569 !important;
+            color: #F8FAFC !important;
+        }
+
+        [data-bs-theme="dark"] .btn-light:hover,
+        html.theme-dark .btn-light:hover {
+            background-color: #475569 !important;
+            color: #FFFFFF !important;
+        }
+
+        [data-bs-theme="dark"] .danger-zone-card,
+        html.theme-dark .danger-zone-card {
+            background-color: #1E293B !important;
+            border-color: #991B1B !important;
+        }
+
+        [data-bs-theme="dark"] .bg-light,
+        [data-bs-theme="dark"] .bg-white,
+        html.theme-dark .bg-light,
+        html.theme-dark .bg-white {
+            background-color: #1E293B !important;
+            color: #F8FAFC !important;
+        }
+
+        /* ── Accessibility / High Contrast Mode ────────────── */
+        .high-contrast, html.high-contrast body {
+            filter: contrast(1.2);
+        }
+        .high-contrast .card,
+        .high-contrast .settings-section-card,
+        .high-contrast .form-control,
+        .high-contrast .form-select,
+        .high-contrast .btn {
+            border-width: 2px !important;
+            border-color: #0F172A !important;
+        }
+        [data-bs-theme="dark"].high-contrast .card,
+        [data-bs-theme="dark"].high-contrast .settings-section-card,
+        [data-bs-theme="dark"].high-contrast .form-control,
+        [data-bs-theme="dark"].high-contrast .form-select,
+        [data-bs-theme="dark"].high-contrast .btn,
+        html.theme-dark.high-contrast .card,
+        html.theme-dark.high-contrast .settings-section-card {
+            border-color: #FFFFFF !important;
+        }
     </style>
     {% block css %}{% endblock %}
 </head>
-<body>
+{% set current_role_css = (session.get('role_name') or 'Employee') | string | lower %}
+<body data-role-theme="{% if 'manager' in current_role_css or 'lead' in current_role_css %}manager{% elif 'admin' in current_role_css %}admin{% elif 'reviewer' in current_role_css %}reviewer{% else %}employee{% endif %}">
 
     <div class="app-wrapper">
         
@@ -184,7 +462,7 @@
     <aside class="sidebar">
         <a href="{{ url_for('dashboard') }}" class="sidebar-logo">
             <div class="logo-icon">
-                <i data-lucide="zap" style="color: white; width: 18px; height: 18px;"></i>
+                <i data-lucide="zap" style="color: white; width: 20px; height: 20px;"></i>
             </div>
             <div>
                 <div class="logo-text-top">EDRP</div>
@@ -197,54 +475,72 @@
             {% if 'admin' in current_role %}
                 <!-- Administrator Sidebar -->
                 <li class="nav-section-label">Overview</li>
-                <li><a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.path == url_for('dashboard') }}"><i data-lucide="layout-dashboard" style="width: 17px; height: 17px;"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.path == url_for('dashboard') or request.path == '/' }}"><i data-lucide="grid" style="width: 18px; height: 18px;"></i> Dashboard</a></li>
 
                 <li class="nav-section-label">Management</li>
-                <li><a href="{{ url_for('users') }}" class="nav-item {{ 'active' if request.path == url_for('users') }}"><i data-lucide="users" style="width: 17px; height: 17px;"></i> User Management</a></li>
-                <li><a href="{{ url_for('roles') }}" class="nav-item {{ 'active' if request.path == url_for('roles') }}"><i data-lucide="shield" style="width: 17px; height: 17px;"></i> Role Management</a></li>
-                <li><a href="{{ url_for('teams') }}" class="nav-item {{ 'active' if request.path == url_for('teams') }}"><i data-lucide="git-branch" style="width: 17px; height: 17px;"></i> Team Management</a></li>
-                <li><a href="{{ url_for('decisions') }}" class="nav-item {{ 'active' if request.path == url_for('decisions') or '/decision/' in request.path }}"><i data-lucide="file-text" style="width: 17px; height: 17px;"></i> Decision Management</a></li>
+                <li><a href="{{ url_for('users') }}" class="nav-item {{ 'active' if request.path == url_for('users') }}"><i data-lucide="users" style="width: 18px; height: 18px;"></i> User Management</a></li>
+                <li><a href="{{ url_for('roles') }}" class="nav-item {{ 'active' if request.path == url_for('roles') }}"><i data-lucide="shield" style="width: 18px; height: 18px;"></i> Role Management</a></li>
+                <li><a href="{{ url_for('teams') }}" class="nav-item {{ 'active' if request.path == url_for('teams') }}"><i data-lucide="git-branch" style="width: 18px; height: 18px;"></i> Team Management</a></li>
+                <li><a href="{{ url_for('decisions') }}" class="nav-item {{ 'active' if request.path == url_for('decisions') or '/decision/' in request.path }}"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i> Decision Management</a></li>
 
-                <li class="nav-section-label">Analytics</li>
-                <li><a href="{{ url_for('repository') }}" class="nav-item {{ 'active' if request.path == url_for('repository') }}"><i data-lucide="database" style="width: 17px; height: 17px;"></i> Knowledge Repository</a></li>
-                <li><a href="{{ url_for('reports') }}" class="nav-item {{ 'active' if request.path == url_for('reports') }}"><i data-lucide="bar-chart-2" style="width: 17px; height: 17px;"></i> Reports &amp; Analytics</a></li>
-                <li><a href="{{ url_for('audit') }}" class="nav-item {{ 'active' if request.path == url_for('audit') }}"><i data-lucide="clipboard-list" style="width: 17px; height: 17px;"></i> Audit Logs</a></li>
+                <li class="nav-section-label">Analytics &amp; Modules</li>
+                <li><a href="{{ url_for('discussion') }}" class="nav-item {{ 'active' if request.path == url_for('discussion') }}"><i data-lucide="message-square" style="width: 18px; height: 18px;"></i> Discussions</a></li>
+                <li><a href="{{ url_for('repository') }}" class="nav-item {{ 'active' if request.path == url_for('repository') }}"><i data-lucide="database" style="width: 18px; height: 18px;"></i> Knowledge Repository</a></li>
+                <li><a href="{{ url_for('reports') }}" class="nav-item {{ 'active' if request.path == url_for('reports') }}"><i data-lucide="bar-chart-2" style="width: 18px; height: 18px;"></i> Reports &amp; Analytics</a></li>
+                <li><a href="{{ url_for('audit') }}" class="nav-item {{ 'active' if request.path == url_for('audit') }}"><i data-lucide="clipboard-list" style="width: 18px; height: 18px;"></i> Audit Logs</a></li>
 
-                <li class="nav-section-label">Settings</li>
-                <li><a href="#" class="nav-item"><i data-lucide="settings" style="width: 17px; height: 17px;"></i> System Config</a></li>
-                <li><a href="{{ url_for('notifications_page') }}" class="nav-item {{ 'active' if request.path == url_for('notifications_page') }}"><i data-lucide="bell" style="width: 17px; height: 17px;"></i> Notifications <span class="nav-badge ms-auto sidebar-notif-count" style="display: none;">0</span></a></li>
-                <li><a href="{{ url_for('profile') }}" class="nav-item {{ 'active' if request.path == url_for('profile') }}"><i data-lucide="user" style="width: 17px; height: 17px;"></i> Profile</a></li>
+                <li class="nav-section-label">Services &amp; Settings</li>
+                <li><a href="{{ url_for('notifications_page') }}" class="nav-item {{ 'active' if request.path == url_for('notifications_page') }}"><i data-lucide="bell" style="width: 18px; height: 18px;"></i> Notifications <span class="nav-badge ms-auto sidebar-notif-count" style="display: none;">0</span></a></li>
+                <li><a href="{{ url_for('email_service') }}" class="nav-item {{ 'active' if request.path == url_for('email_service') }}"><i data-lucide="mail" style="width: 18px; height: 18px;"></i> Email Service</a></li>
+                <li><a href="{{ url_for('support') }}" class="nav-item {{ 'active' if request.path == url_for('support') and request.path != url_for('email_service') }}"><i data-lucide="help-circle" style="width: 18px; height: 18px;"></i> Support Center</a></li>
+                <li><a href="{{ url_for('profile') }}" class="nav-item {{ 'active' if request.path == url_for('profile') }}"><i data-lucide="user" style="width: 18px; height: 18px;"></i> Profile</a></li>
+                <li><a href="{{ url_for('admin_backup') }}" class="nav-item {{ 'active' if request.path == url_for('admin_backup') }}"><i data-lucide="archive" style="width: 18px; height: 18px;"></i> Backup Management</a></li>
+                <li><a href="{{ url_for('settings') }}" class="nav-item {{ 'active' if request.path == url_for('settings') }}"><i data-lucide="settings" style="width: 18px; height: 18px;"></i> System Config</a></li>
             {% elif 'manager' in current_role or 'lead' in current_role %}
                 <!-- Manager / Team Lead Sidebar -->
-                <li><a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.path == url_for('dashboard') }}"><i data-lucide="layout-dashboard" style="width: 18px; height: 18px;"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.path == url_for('dashboard') or request.path == '/' }}"><i data-lucide="grid" style="width: 18px; height: 18px;"></i> Dashboard</a></li>
                 <li><a href="{{ url_for('decisions') }}" class="nav-item {{ 'active' if request.path == url_for('decisions') or '/decision/' in request.path }}"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i> Team Decisions</a></li>
-                <li><a href="{{ url_for('reviews') }}" class="nav-item {{ 'active' if request.path == url_for('reviews') }}"><i data-lucide="check-square" style="width: 18px; height: 18px;"></i> Pending Approvals {% if pending_reviews and pending_reviews > 0 %}<span class="nav-badge">{{ pending_reviews }}</span>{% endif %}</a></li>
-                <li><a href="{{ url_for('discussion') }}" class="nav-item {{ 'active' if request.path == url_for('discussion') }}"><i data-lucide="message-square" style="width: 18px; height: 18px;"></i> Discussions Module</a></li>
-                <li><a href="{{ url_for('repository') }}" class="nav-item {{ 'active' if request.path == url_for('repository') }}"><i data-lucide="database" style="width: 18px; height: 18px;"></i> Knowledge Repository</a></li>
-                <li><a href="{{ url_for('reports') }}" class="nav-item {{ 'active' if request.path == url_for('reports') }}"><i data-lucide="bar-chart-2" style="width: 18px; height: 18px;"></i> Reports</a></li>
-                <li><a href="{{ url_for('notifications_page') }}" class="nav-item {{ 'active' if request.path == url_for('notifications_page') }}"><i data-lucide="bell" style="width: 18px; height: 18px;"></i> Notifications <span class="nav-badge ms-auto sidebar-notif-count" style="display: none;">0</span></a></li>
-                <li><a href="{{ url_for('profile') }}" class="nav-item {{ 'active' if request.path == url_for('profile') }}"><i data-lucide="user" style="width: 18px; height: 18px;"></i> Profile</a></li>
-                <li><a href="#" class="nav-item"><i data-lucide="settings" style="width: 18px; height: 18px;"></i> Settings</a></li>
-            {% else %}
-                <!-- Employee / Reviewer Sidebar -->
-                <li><a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.path == url_for('dashboard') }}"><i data-lucide="layout-dashboard" style="width: 18px; height: 18px;"></i> Dashboard</a></li>
-                <li><a href="{{ url_for('decisions') }}" class="nav-item {{ 'active' if request.path == url_for('decisions') or '/decision/' in request.path }}"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i> My Decisions</a></li>
-                <li><a href="{{ url_for('create_decision') }}" class="nav-item {{ 'active' if request.path == url_for('create_decision') }}"><i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Create Decision</a></li>
-                <li><a href="{{ url_for('reviews') }}" class="nav-item {{ 'active' if request.path == url_for('reviews') }}"><i data-lucide="check-square" style="width: 18px; height: 18px;"></i> Pending Reviews {% if pending_reviews and pending_reviews > 0 %}<span class="nav-badge">{{ pending_reviews }}</span>{% endif %}</a></li>
+                <li><a href="{{ url_for('reviews') }}" class="nav-item {{ 'active' if request.path == url_for('reviews') }}"><i data-lucide="check-square" style="width: 18px; height: 18px;"></i> Pending Approvals {% if pending_reviews and pending_reviews > 0 %}<span class="nav-badge ms-auto">{{ pending_reviews }}</span>{% endif %}</a></li>
                 <div class="nav-divider"></div>
                 <li><a href="{{ url_for('discussion') }}" class="nav-item {{ 'active' if request.path == url_for('discussion') }}"><i data-lucide="message-square" style="width: 18px; height: 18px;"></i> Discussions</a></li>
                 <li><a href="{{ url_for('repository') }}" class="nav-item {{ 'active' if request.path == url_for('repository') }}"><i data-lucide="database" style="width: 18px; height: 18px;"></i> Knowledge Repository</a></li>
                 <li><a href="{{ url_for('notifications_page') }}" class="nav-item {{ 'active' if request.path == url_for('notifications_page') }}"><i data-lucide="bell" style="width: 18px; height: 18px;"></i> Notifications <span class="nav-badge ms-auto sidebar-notif-count" style="display: none;">0</span></a></li>
+                <li><a href="{{ url_for('email_service') }}" class="nav-item {{ 'active' if request.path == url_for('email_service') }}"><i data-lucide="mail" style="width: 18px; height: 18px;"></i> Email Service</a></li>
+                <li><a href="{{ url_for('support') }}" class="nav-item {{ 'active' if request.path == url_for('support') and request.path != url_for('email_service') }}"><i data-lucide="help-circle" style="width: 18px; height: 18px;"></i> Support Center</a></li>
+                <li><a href="{{ url_for('profile') }}" class="nav-item {{ 'active' if request.path == url_for('profile') }}"><i data-lucide="user" style="width: 18px; height: 18px;"></i> Profile</a></li>
+                <li><a href="{{ url_for('settings') }}" class="nav-item {{ 'active' if request.path == url_for('settings') }}"><i data-lucide="settings" style="width: 18px; height: 18px;"></i> Settings</a></li>
+            {% elif 'reviewer' in current_role %}
+                <!-- Reviewer Sidebar -->
+                <li><a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.path == url_for('dashboard') or request.path == '/' }}"><i data-lucide="grid" style="width: 18px; height: 18px;"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('reviews') }}" class="nav-item {{ 'active' if request.path == url_for('reviews') }}"><i data-lucide="check-square" style="width: 18px; height: 18px;"></i> Pending Reviews {% if pending_reviews and pending_reviews > 0 %}<span class="nav-badge ms-auto">{{ pending_reviews }}</span>{% endif %}</a></li>
                 <div class="nav-divider"></div>
-                <li><a href="#" class="nav-item"><i data-lucide="monitor" style="width: 18px; height: 18px;"></i> Local Device</a></li>
-                <li><a href="#" class="nav-item"><i data-lucide="help-circle" style="width: 18px; height: 18px;"></i> Support Center</a></li>
+                <li><a href="{{ url_for('discussion') }}" class="nav-item {{ 'active' if request.path == url_for('discussion') }}"><i data-lucide="message-square" style="width: 18px; height: 18px;"></i> Discussions</a></li>
+                <li><a href="{{ url_for('repository') }}" class="nav-item {{ 'active' if request.path == url_for('repository') }}"><i data-lucide="database" style="width: 18px; height: 18px;"></i> Knowledge Repository</a></li>
+                <li><a href="{{ url_for('notifications_page') }}" class="nav-item {{ 'active' if request.path == url_for('notifications_page') }}"><i data-lucide="bell" style="width: 18px; height: 18px;"></i> Notifications <span class="nav-badge ms-auto sidebar-notif-count" style="display: none;">0</span></a></li>
+                <li><a href="{{ url_for('email_service') }}" class="nav-item {{ 'active' if request.path == url_for('email_service') }}"><i data-lucide="mail" style="width: 18px; height: 18px;"></i> Email Service</a></li>
+                <li><a href="{{ url_for('support') }}" class="nav-item {{ 'active' if request.path == url_for('support') and request.path != url_for('email_service') }}"><i data-lucide="help-circle" style="width: 18px; height: 18px;"></i> Support Center</a></li>
+                <li><a href="{{ url_for('profile') }}" class="nav-item {{ 'active' if request.path == url_for('profile') }}"><i data-lucide="user" style="width: 18px; height: 18px;"></i> Profile</a></li>
+                <li><a href="{{ url_for('settings') }}" class="nav-item {{ 'active' if request.path == url_for('settings') }}"><i data-lucide="settings" style="width: 18px; height: 18px;"></i> Settings</a></li>
+            {% else %}
+                <!-- Employee Sidebar -->
+                <li><a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.path == url_for('dashboard') or request.path == '/' }}"><i data-lucide="grid" style="width: 18px; height: 18px;"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('decisions') }}" class="nav-item {{ 'active' if request.path == url_for('decisions') or '/decision/' in request.path }}"><i data-lucide="file-text" style="width: 18px; height: 18px;"></i> My Decisions</a></li>
+                <li><a href="{{ url_for('create_decision') }}" class="nav-item {{ 'active' if request.path == url_for('create_decision') }}"><i data-lucide="plus-circle" style="width: 18px; height: 18px;"></i> Create Decision</a></li>
+                <div class="nav-divider"></div>
+                <li><a href="{{ url_for('discussion') }}" class="nav-item {{ 'active' if request.path == url_for('discussion') }}"><i data-lucide="message-square" style="width: 18px; height: 18px;"></i> Discussions</a></li>
+                <li><a href="{{ url_for('repository') }}" class="nav-item {{ 'active' if request.path == url_for('repository') }}"><i data-lucide="database" style="width: 18px; height: 18px;"></i> Knowledge Repository</a></li>
+                <li><a href="{{ url_for('notifications_page') }}" class="nav-item {{ 'active' if request.path == url_for('notifications_page') }}"><i data-lucide="bell" style="width: 18px; height: 18px;"></i> Notifications <span class="nav-badge ms-auto sidebar-notif-count" style="display: none;">0</span></a></li>
+                <li><a href="{{ url_for('email_service') }}" class="nav-item {{ 'active' if request.path == url_for('email_service') }}"><i data-lucide="mail" style="width: 18px; height: 18px;"></i> Email Service</a></li>
+                <li><a href="{{ url_for('support') }}" class="nav-item {{ 'active' if request.path == url_for('support') and request.path != url_for('email_service') }}"><i data-lucide="help-circle" style="width: 18px; height: 18px;"></i> Support Center</a></li>
+                <li><a href="{{ url_for('profile') }}" class="nav-item {{ 'active' if request.path == url_for('profile') }}"><i data-lucide="user" style="width: 18px; height: 18px;"></i> Profile</a></li>
+                <li><a href="{{ url_for('settings') }}" class="nav-item {{ 'active' if request.path == url_for('settings') }}"><i data-lucide="settings" style="width: 18px; height: 18px;"></i> Settings</a></li>
             {% endif %}
         </ul>
 
         <a href="{{ url_for('profile') }}" class="user-profile-bottom">
-            <div class="user-avatar">{{ session.get('initials', 'U') }}</div>
+            <div class="user-avatar">{{ session.get('initials', 'KN') }}</div>
             <div class="user-info">
-                <div class="user-name">{{ session.get('full_name', 'User') }}</div>
+                <div class="user-name">{{ session.get('full_name', 'Koppala Naveen') }}</div>
                 <div class="user-role">{{ session.get('role_name', 'Employee') }}</div>
             </div>
             <i data-lucide="log-out" style="width: 15px; height: 15px; color: #64748B; margin-left: auto; cursor: pointer;"
@@ -275,12 +571,12 @@
                             <a class="dropdown-item text-center text-primary fw-bold py-2 border-top bg-light rounded-bottom-3" href="{{ url_for('notifications_page') }}" style="font-size: 12.5px;">View All Notifications</a>
                         </ul>
                     </div>
-                    <div class="d-flex align-items-center" style="gap: 0.5rem; cursor: pointer;" onclick="window.location.href='{{ url_for('profile') }}'">
+                    <a href="{{ url_for('profile') }}" class="d-flex align-items-center text-decoration-none" style="gap: 0.5rem; cursor: pointer;">
                         <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #EFF6FF; border: 1px solid #BFDBFE; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #2563EB;">
                             {{ session.get('initials', 'U') }}
                         </div>
                         <div style="font-size: 0.875rem; font-weight: 600; color: #1e293b;">{{ session.get('full_name', 'User') }}</div>
-                    </div>
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -355,6 +651,7 @@
                         list.innerHTML = `<div class="p-4 text-center text-muted" style="font-size: 12.5px;">No notifications yet</div>`;
                     } else {
                         let html = '';
+                        notifs.forEach(n => {
                             const decMatch = n.message.match(/DEC-(\d+)/i);
                             const isUserApproval = n.notification_type.includes('Approval') || n.message.includes('approval');
                             const targetUrl = isUserApproval ? '{{ url_for("pending_approvals") }}' : (decMatch ? `/decision/${decMatch[1]}` : '{{ url_for("notifications_page") }}');
@@ -390,42 +687,145 @@
             }
         }
 
+        let globalErrorHideTimer = null;
+
+        function showGlobalErrorNotification(message, durationMs = 6000, title = null) {
+            const overlayEl = document.getElementById("globalErrorOverlay");
+            const errorEl = document.getElementById("globalErrorNotification");
+            const textEl = document.getElementById("globalErrorNotificationText");
+            const titleEl = document.getElementById("globalErrorNotificationTitle");
+
+            const msgStr = (message != null && message !== "") ? String(message).trim() : "Unexpected error occurred.";
+            
+            console.error("[GlobalErrorNotification]", msgStr);
+
+            if (textEl) {
+                textEl.innerText = msgStr;
+            }
+            if (titleEl) {
+                titleEl.innerText = title || "Error";
+            }
+
+            if (errorEl) {
+                if (globalErrorHideTimer) {
+                    clearTimeout(globalErrorHideTimer);
+                    globalErrorHideTimer = null;
+                }
+                if (overlayEl) overlayEl.style.display = "block";
+                errorEl.style.animation = "globalErrorFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards";
+                errorEl.style.display = "flex";
+
+                globalErrorHideTimer = setTimeout(() => {
+                    hideGlobalErrorNotification();
+                }, durationMs);
+            }
+        }
+
+        function hideGlobalErrorNotification() {
+            const overlayEl = document.getElementById("globalErrorOverlay");
+            const errorEl = document.getElementById("globalErrorNotification");
+            if (errorEl && errorEl.style.display !== "none") {
+                errorEl.style.animation = "globalErrorFadeOut 0.2s ease-in forwards";
+                setTimeout(() => {
+                    errorEl.style.display = "none";
+                    if (overlayEl) overlayEl.style.display = "none";
+                }, 200);
+            } else {
+                if (overlayEl) overlayEl.style.display = "none";
+            }
+            if (globalErrorHideTimer) {
+                clearTimeout(globalErrorHideTimer);
+                globalErrorHideTimer = null;
+            }
+        }
+
+        // Replace native browser alert() popups with reusable centered red error component
+        window.alert = function(message) {
+            if (!message) return;
+            showGlobalErrorNotification(String(message));
+        };
+
+        // Catch uncaught JS errors and unhandled promise rejections globally
+        window.addEventListener("error", function(event) {
+            console.error("Uncaught JS Exception:", event.error || event.message);
+            const msg = (event.error && event.error.message) ? event.error.message : (event.message || "Unexpected error occurred.");
+            showGlobalErrorNotification(msg);
+        });
+
+        window.addEventListener("unhandledrejection", function(event) {
+            console.error("Unhandled Promise Rejection:", event.reason);
+            const msg = (event.reason && event.reason.message) ? event.reason.message : (event.reason ? String(event.reason) : "Unexpected error occurred.");
+            showGlobalErrorNotification(msg);
+        });
+
         function showCenterNotification(message, type = 'error', title = null) {
+            if (type === 'error' || type === 'danger') {
+                showGlobalErrorNotification(message);
+                return;
+            }
+
             const modal = document.getElementById('centerNotificationModal');
+            const cardContainer = document.getElementById('centerNotifCard');
             const iconContainer = document.getElementById('centerNotifIcon');
             const lucideIcon = document.getElementById('centerNotifLucide');
             const titleEl = document.getElementById('centerNotifTitle');
             const msgEl = document.getElementById('centerNotifMessage');
+            const btnEl = document.getElementById('centerNotifBtn');
 
             if (!modal) {
-                alert(message);
+                showGlobalErrorNotification(message);
                 return;
             }
 
-            if (type === 'error' || type === 'danger') {
+            if (type === 'delete' || type === 'deleted') {
+                if (cardContainer) {
+                    cardContainer.style.background = '#FEF2F2';
+                    cardContainer.style.border = '1px solid #FECACA';
+                    cardContainer.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.08)';
+                }
                 iconContainer.style.background = '#FEF2F2';
-                lucideIcon.setAttribute('data-lucide', 'alert-triangle');
-                lucideIcon.style.color = '#EF4444';
-                titleEl.innerText = title || 'Error';
+                lucideIcon.setAttribute('data-lucide', 'trash-2');
+                lucideIcon.style.color = '#DC2626';
+                titleEl.innerText = title || 'Account Deleted';
                 titleEl.style.color = '#991B1B';
-            } else if (type === 'success') {
-                iconContainer.style.background = '#ECFDF5';
-                lucideIcon.setAttribute('data-lucide', 'check-circle');
-                lucideIcon.style.color = '#10B981';
-                titleEl.innerText = title || 'Success';
-                titleEl.style.color = '#065F46';
-            } else if (type === 'warning') {
-                iconContainer.style.background = '#FFFBEB';
-                lucideIcon.setAttribute('data-lucide', 'alert-circle');
-                lucideIcon.style.color = '#F59E0B';
-                titleEl.innerText = title || 'Warning';
-                titleEl.style.color = '#92400E';
+                msgEl.style.color = '#7F1D1D';
+                if (btnEl) {
+                    btnEl.style.background = '#DC2626';
+                    btnEl.style.borderColor = '#DC2626';
+                    btnEl.style.color = '#FFFFFF';
+                }
             } else {
-                iconContainer.style.background = '#EFF6FF';
-                lucideIcon.setAttribute('data-lucide', 'info');
-                lucideIcon.style.color = '#2563EB';
-                titleEl.innerText = title || 'Information';
-                titleEl.style.color = '#1E40AF';
+                if (cardContainer) {
+                    cardContainer.style.background = '#FFFFFF';
+                    cardContainer.style.border = '1px solid #E2E8F0';
+                    cardContainer.style.boxShadow = '0 25px 60px -15px rgba(0,0,0,0.3)';
+                }
+                msgEl.style.color = '#475569';
+                if (btnEl) {
+                    btnEl.style.background = '#2563EB';
+                    btnEl.style.borderColor = '#2563EB';
+                    btnEl.style.color = '#FFFFFF';
+                }
+
+                if (type === 'success') {
+                    iconContainer.style.background = '#ECFDF5';
+                    lucideIcon.setAttribute('data-lucide', 'check-circle');
+                    lucideIcon.style.color = '#10B981';
+                    titleEl.innerText = title || 'Success';
+                    titleEl.style.color = '#065F46';
+                } else if (type === 'warning') {
+                    iconContainer.style.background = '#FFFBEB';
+                    lucideIcon.setAttribute('data-lucide', 'alert-circle');
+                    lucideIcon.style.color = '#F59E0B';
+                    titleEl.innerText = title || 'Warning';
+                    titleEl.style.color = '#92400E';
+                } else {
+                    iconContainer.style.background = '#EFF6FF';
+                    lucideIcon.setAttribute('data-lucide', 'info');
+                    lucideIcon.style.color = '#2563EB';
+                    titleEl.innerText = title || 'Information';
+                    titleEl.style.color = '#1E40AF';
+                }
             }
 
             msgEl.innerText = message;
@@ -438,7 +838,36 @@
             if (modal) modal.style.display = 'none';
         }
 
+        async function applyGlobalSystemSettings() {
+            try {
+                const res = await fetch(`${BACKEND_API}/settings/`);
+                if (!res.ok) return;
+                const cfg = await res.json();
+                
+                // 1. Theme application
+                if (cfg.theme === 'Dark') {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
+
+                // 2. Keyboard shortcuts
+                if (cfg.enable_keyboard_shortcuts) {
+                    document.addEventListener('keydown', (e) => {
+                        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                            e.preventDefault();
+                            const searchInput = document.querySelector('.search-bar input, input[type="search"]');
+                            if (searchInput) searchInput.focus();
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Global settings load error:", e);
+            }
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
+            applyGlobalSystemSettings();
             fetchGlobalHeaderNotifications();
             setInterval(fetchGlobalHeaderNotifications, 10000);
 
@@ -452,18 +881,47 @@
         });
     </script>
 
+    <!-- Global Error Overlay -->
+    <div id="globalErrorOverlay" onclick="hideGlobalErrorNotification()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(4px); z-index: 999998; display: none;"></div>
+
+    <!-- Reusable In-Page Centered Global Error Notification Component (Light Red #FF5C5C with larger container and text) -->
+    <div id="globalErrorNotification" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999999; display: none; background: #FF5C5C; color: #FFFFFF; border-radius: 20px; padding: 28px 34px; box-shadow: 0 25px 60px -10px rgba(255, 92, 92, 0.5), 0 10px 25px -5px rgba(0, 0, 0, 0.35); min-width: 440px; max-width: 650px; width: 92%; align-items: flex-start; justify-content: space-between; gap: 20px; border: 1px solid rgba(255,255,255,0.4);">
+        <div style="display: flex; align-items: flex-start; gap: 16px; flex: 1; text-align: left; min-width: 0;">
+            <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255, 255, 255, 0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 22px; line-height: 1; color: white;">
+                ✖
+            </div>
+            <div style="flex: 1; min-width: 0;">
+                <div id="globalErrorNotificationTitle" style="font-size: 20px; font-weight: 800; color: #FFFFFF; margin-bottom: 8px; letter-spacing: -0.2px;">Error</div>
+                <div id="globalErrorNotificationText" style="font-size: 16px; font-weight: 600; line-height: 1.6; color: #FFFFFF; word-break: break-word; max-height: 320px; overflow-y: auto; padding-right: 4px;">
+                    Unexpected error occurred.
+                </div>
+            </div>
+        </div>
+        <button type="button" onclick="hideGlobalErrorNotification()" style="background: rgba(255,255,255,0.25); border: none; color: #FFFFFF; font-size: 18px; font-weight: 700; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; opacity: 0.95; transition: all 0.15s; flex-shrink: 0;" onmouseover="this.style.opacity='1'; this.style.background='rgba(255,255,255,0.4)'" onmouseout="this.style.opacity='0.95'; this.style.background='rgba(255,255,255,0.25)'" title="Close">
+            ✕
+        </button>
+    </div>
+
     <!-- Center Screen Alert Notification Modal -->
     <div id="centerNotificationModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.45);backdrop-filter:blur(5px);z-index:99999;display:none;align-items:center;justify-content:center;">
-        <div style="width:90%;max-width:440px;background:white;border-radius:18px;padding:26px 28px;box-shadow:0 25px 60px -15px rgba(0,0,0,0.3);border:1px solid #E2E8F0;text-align:center;animation:centerPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <div id="centerNotifCard" style="width:90%;max-width:440px;background:white;border-radius:18px;padding:26px 28px;box-shadow:0 25px 60px -15px rgba(0,0,0,0.3);border:1px solid #E2E8F0;text-align:center;animation:centerPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
             <div id="centerNotifIcon" style="width:52px;height:52px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;">
                 <i id="centerNotifLucide" data-lucide="info" style="width:26px;height:26px;"></i>
             </div>
             <h5 id="centerNotifTitle" style="font-size:17px;font-weight:800;color:#0F172A;margin-bottom:8px;">Notification</h5>
             <p id="centerNotifMessage" style="font-size:13.5px;color:#475569;margin-bottom:22px;line-height:1.55;word-break:break-word;"></p>
-            <button type="button" class="btn btn-primary px-4 py-2 fw-bold" style="border-radius:10px;font-size:13px;" onclick="hideCenterNotification()">OK</button>
+            <button type="button" id="centerNotifBtn" class="btn btn-primary px-4 py-2 fw-bold" style="border-radius:10px;font-size:13px;" onclick="hideCenterNotification()">OK</button>
         </div>
     </div>
     <style>
+        @keyframes globalErrorFadeIn {
+            from { opacity: 0; transform: translate(-50%, -42%) scale(0.92); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes globalErrorFadeOut {
+            from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            to { opacity: 0; transform: translate(-50%, -45%) scale(0.95); }
+        }
         @keyframes centerPop {
             from { opacity: 0; transform: scale(0.85); }
             to { opacity: 1; transform: scale(1); }
@@ -481,6 +939,893 @@
             </div>
         </div>
     </div>
+
+    <!-- Global Decision Approval Workflow Modal -->
+    <div class="modal fade" id="approvalWorkflowModal" tabindex="-1" aria-labelledby="approvalWorkflowModalLabel" aria-hidden="true" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div id="approvalModalHeader" class="modal-header py-3 px-4 text-white border-0 bg-success">
+                    <div class="d-flex align-items-center gap-3">
+                        <div id="approvalHeaderIconWrap" style="width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.2);">
+                            <i id="approvalHeaderIcon" data-lucide="check-circle" style="width:24px;height:24px;color:white;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="approvalWorkflowModalLabel">Decision Approval Workflow</h5>
+                            <div id="approvalHeaderSub" class="small opacity-90">Accept or Reject Decision Request</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" style="background:#F8FAFC;">
+                    <!-- Decision Summary Card -->
+                    <div class="card border-0 shadow-sm rounded-3 p-3 mb-3 bg-white">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 mb-1" id="approvalModalDecisionId">DEC-00</span>
+                                <h6 class="fw-bold text-dark mb-1" id="approvalModalDecisionTitle">Decision Title</h6>
+                            </div>
+                            <span id="approvalModalCurrentStatus" class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1">In Review</span>
+                        </div>
+                        <div class="d-flex gap-3 text-muted small mt-2">
+                            <div><i data-lucide="user" style="width:13px;height:13px;" class="me-1"></i><span id="approvalModalCreator">Creator</span></div>
+                            <div><i data-lucide="tag" style="width:13px;height:13px;" class="me-1"></i><span id="approvalModalCategory">Category</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Remarks & Feedback -->
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white mb-3">
+                        <label class="form-label fw-semibold text-dark d-flex align-items-center gap-2 mb-2" id="approvalCommentsLabel">
+                            <i data-lucide="message-square" style="width:16px;height:16px;color:#2563EB;"></i>
+                            <span>Reviewer Remarks & Feedback</span>
+                        </label>
+                        <textarea id="approvalModalComments" class="form-control border-light-subtle" rows="3" placeholder="Provide clear remarks, justification, or recommendations for this decision outcome..." style="border-radius:10px;font-size:13.5px;"></textarea>
+                        
+                        <!-- Verification Checklist -->
+                        <div class="mt-3 pt-3 border-top">
+                            <label class="form-label fw-semibold text-dark text-xs mb-2">Review Verification Checklist</label>
+                            <div class="d-flex flex-column gap-2" id="approvalChecklistContainer">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top py-3 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-light border px-4 fw-medium" data-bs-dismiss="modal" style="border-radius:10px;">Cancel</button>
+                    <button type="button" id="approvalModalSubmitBtn" class="btn btn-success px-4 py-2 fw-bold d-flex align-items-center gap-2" style="border-radius:10px;" onclick="executeApprovalWorkflowSubmit()">
+                        <i data-lucide="check" style="width:16px;height:16px;"></i>
+                        <span id="approvalModalBtnText">Confirm & Approve Decision</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentApprovalState = {
+            decisionId: null,
+            reviewerId: null,
+            actionType: "Approved"
+        };
+
+        function openApprovalWorkflowModal(decisionId, decisionTitle, reviewerId, actionType, creatorName = "Author", categoryName = "General") {
+            currentApprovalState = { decisionId, reviewerId, actionType };
+            
+            const header = document.getElementById("approvalModalHeader");
+            const icon = document.getElementById("approvalHeaderIcon");
+            const title = document.getElementById("approvalWorkflowModalLabel");
+            const sub = document.getElementById("approvalHeaderSub");
+            const commentsLabel = document.getElementById("approvalCommentsLabel");
+            const commentsInput = document.getElementById("approvalModalComments");
+            const submitBtn = document.getElementById("approvalModalSubmitBtn");
+            const btnText = document.getElementById("approvalModalBtnText");
+            const checklist = document.getElementById("approvalChecklistContainer");
+
+            document.getElementById("approvalModalDecisionId").innerText = `DEC-${decisionId}`;
+            document.getElementById("approvalModalDecisionTitle").innerText = decisionTitle || `Decision #${decisionId}`;
+            document.getElementById("approvalModalCreator").innerText = creatorName;
+            document.getElementById("approvalModalCategory").innerText = categoryName;
+            commentsInput.value = "";
+
+            if (actionType === "Approved" || actionType === "Accept") {
+                header.className = "modal-header py-3 px-4 text-white border-0 bg-success";
+                icon.setAttribute("data-lucide", "check-circle");
+                title.innerText = "Accept & Approve Decision";
+                sub.innerText = "Confirm proposal approval and advance decision status to Approved.";
+                commentsLabel.innerHTML = `<i data-lucide="check-circle" style="width:16px;height:16px;color:#059669;"></i> Approval Rationale & Feedback (Optional)`;
+                submitBtn.className = "btn btn-success px-4 py-2 fw-bold d-flex align-items-center gap-2";
+                btnText.innerText = "Confirm & Approve Decision";
+                
+                checklist.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chk1" checked>
+                        <label class="form-check-label small text-secondary" for="chk1">Evaluated alternatives & financial impacts meet organizational guidelines</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chk2" checked>
+                        <label class="form-check-label small text-secondary" for="chk2">Risk levels are acceptable and mitigation strategies are adequate</label>
+                    </div>
+                `;
+            } else {
+                header.className = "modal-header py-3 px-4 text-white border-0 bg-danger";
+                icon.setAttribute("data-lucide", "alert-octagon");
+                title.innerText = "Reject Decision Proposal";
+                sub.innerText = "Decline this decision proposal and return feedback to the author.";
+                commentsLabel.innerHTML = `<i data-lucide="alert-triangle" style="width:16px;height:16px;color:#DC2626;"></i> Rejection Reason & Improvement Feedback (Required)`;
+                submitBtn.className = "btn btn-danger px-4 py-2 fw-bold d-flex align-items-center gap-2";
+                btnText.innerText = "Confirm & Reject Decision";
+                
+                checklist.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chk1" checked>
+                        <label class="form-check-label small text-secondary" for="chk1">Proposal rationale requires further revision or clarification</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chk2" checked>
+                        <label class="form-check-label small text-secondary" for="chk2">Alternative solutions need to be evaluated before approval</label>
+                    </div>
+                `;
+            }
+
+            if (window.lucide) lucide.createIcons();
+            const modalEl = document.getElementById("approvalWorkflowModal");
+            const bsModal = new bootstrap.Modal(modalEl);
+            bsModal.show();
+        }
+
+        async function executeApprovalWorkflowSubmit() {
+            const decisionId = currentApprovalState.decisionId;
+            const reviewerId = currentApprovalState.reviewerId || 1;
+            const actionType = (currentApprovalState.actionType === "Reject" || currentApprovalState.actionType === "Rejected") ? "Rejected" : "Approved";
+            const comments = document.getElementById("approvalModalComments").value.trim();
+
+            if (actionType === "Rejected" && !comments) {
+                alert("Please provide a brief reason or feedback when rejecting a decision proposal.");
+                return;
+            }
+
+            const submitBtn = document.getElementById("approvalModalSubmitBtn");
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>Processing...`;
+
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/reviews/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        decision_id: parseInt(decisionId),
+                        reviewer_id: parseInt(reviewerId),
+                        status: actionType,
+                        comments: comments
+                    })
+                });
+
+                if (res.ok) {
+                    const modalEl = document.getElementById("approvalWorkflowModal");
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+
+                    if (typeof showCenterNotification === "function") {
+                        showCenterNotification(
+                            actionType === "Approved" ? "Decision Approved Successfully" : "Decision Proposal Rejected",
+                            actionType === "Approved" 
+                                ? `Decision DEC-${decisionId} has been officially approved and logged in audit history.` 
+                                : `Decision DEC-${decisionId} has been rejected with feedback sent to the author.`,
+                            actionType === "Approved" ? "success" : "danger"
+                        );
+                    } else {
+                        alert(`Decision DEC-${decisionId} marked as ${actionType}!`);
+                    }
+
+                    if (typeof fetchReviews === "function") fetchReviews();
+                    if (typeof loadDecisionDetails === "function") loadDecisionDetails();
+                } else {
+                    const err = await res.json();
+                    alert(`Failed: ${err.detail || 'Could not update approval status.'}`);
+                }
+            } catch (e) {
+                console.error("Error submitting approval:", e);
+                alert("Network error occurred while submitting review.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+    </script>
+
+    <!-- GLOBAL APPLICATION-WIDE CONNECTIVITY NOTIFICATIONS -->
+    <!-- 1. Centered Red Offline Notification Card -->
+    <div id="globalOfflineNotification" class="position-fixed top-50 start-50 translate-middle d-none shadow-lg rounded-4 p-4 text-center border" style="z-index: 99999; min-width: 320px; max-width: 480px; background-color: #fef2f2; border-color: #fca5a5 !important;">
+        <div class="d-flex flex-column align-items-center justify-content-center">
+            <div class="rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 54px; height: 54px; background-color: #fee2e2; color: #ef4444; font-size: 24px;">
+                ❌
+            </div>
+            <h5 class="fw-bold mb-1" style="color: #991b1b; font-size: 16px;">No Internet Connection</h5>
+            <p class="text-secondary mb-0" style="font-size: 13px;">Please check your internet connection and try again.</p>
+        </div>
+    </div>
+
+    <!-- 2. Centered Green Online Reconnection Banner -->
+    <div id="globalOnlineNotification" class="position-fixed top-50 start-50 translate-middle d-none shadow-lg rounded-4 p-3 text-center border" style="z-index: 99999; min-width: 320px; max-width: 450px; background-color: #f0fdf4; border-color: #86efac !important;">
+        <div class="d-flex align-items-center justify-content-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; background-color: #dcfce7; color: #16a34a; font-size: 20px; flex-shrink: 0;">
+                ✅
+            </div>
+            <div class="text-start">
+                <h6 class="fw-bold mb-0" style="color: #166534; font-size: 14px;">You are back online</h6>
+                <small style="color: #15803d; font-size: 12px;">Reloading latest data...</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            let isGlobalOnline = navigator.onLine;
+            let globalVerificationTimer = null;
+            let globalOnlineBannerTimer = null;
+
+            async function verifyGlobalServerConnectivity() {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 2500);
+                    const res = await fetch("http://127.0.0.1:8000/decisions/", { method: "GET", signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    return res.ok || res.status < 500;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function handleGlobalOffline() {
+                if (!isGlobalOnline) return; // Prevent duplicate event triggers
+                isGlobalOnline = false;
+
+                const onlineBanner = document.getElementById("globalOnlineNotification");
+                if (onlineBanner) onlineBanner.classList.add("d-none");
+
+                const offlineCard = document.getElementById("globalOfflineNotification");
+                if (offlineCard) offlineCard.classList.remove("d-none");
+
+                if (globalVerificationTimer) {
+                    clearInterval(globalVerificationTimer);
+                    globalVerificationTimer = null;
+                }
+            }
+
+            async function handleGlobalOnline() {
+                if (isGlobalOnline) return; // Prevent duplicate event triggers
+
+                const isReachable = await verifyGlobalServerConnectivity();
+                if (!isReachable) {
+                    if (!globalVerificationTimer) {
+                        globalVerificationTimer = setInterval(async () => {
+                            if (await verifyGlobalServerConnectivity()) {
+                                clearInterval(globalVerificationTimer);
+                                globalVerificationTimer = null;
+                                triggerGlobalOnlineReconnection();
+                            }
+                        }, 3000);
+                    }
+                    return;
+                }
+
+                triggerGlobalOnlineReconnection();
+            }
+
+            function triggerGlobalOnlineReconnection() {
+                isGlobalOnline = true;
+
+                const offlineCard = document.getElementById("globalOfflineNotification");
+                if (offlineCard) offlineCard.classList.add("d-none");
+
+                const onlineBanner = document.getElementById("globalOnlineNotification");
+                if (onlineBanner) onlineBanner.classList.remove("d-none");
+
+                if (globalOnlineBannerTimer) clearTimeout(globalOnlineBannerTimer);
+
+                globalOnlineBannerTimer = setTimeout(() => {
+                    // Refresh page-level data silently without window.location.reload()
+                    if (typeof fetchDashboardLiveData === "function") fetchDashboardLiveData();
+                    if (typeof fetchLiveManagerDashboard === "function") fetchLiveManagerDashboard();
+                    if (typeof loadDashboardData === "function") loadDashboardData();
+                    if (typeof fetchDecisions === "function") fetchDecisions();
+                    if (typeof fetchReviews === "function") fetchReviews();
+                    if (typeof smartDataRefresh === "function") smartDataRefresh();
+                    else {
+                        if (typeof loadThreadsForDecision === "function" && typeof currentDecisionId !== "undefined" && currentDecisionId) {
+                            loadThreadsForDecision(currentDecisionId);
+                        }
+                        if (typeof loadMeetingNotes === "function" && typeof currentDecisionId !== "undefined" && currentDecisionId) {
+                            loadMeetingNotes(currentDecisionId);
+                        }
+                        if (typeof loadSupportingFiles === "function" && typeof currentDecisionId !== "undefined" && currentDecisionId) {
+                            loadSupportingFiles(currentDecisionId);
+                        }
+                        if (typeof loadDecisionTimeline === "function") loadDecisionTimeline();
+                    }
+                    if (typeof loadUserNotifications === "function") loadUserNotifications();
+                    if (typeof loadNotifications === "function") loadNotifications();
+                    if (typeof loadRepositoryData === "function") loadRepositoryData();
+                    if (typeof loadAuditLogs === "function") loadAuditLogs();
+                    if (typeof loadTeamData === "function") loadTeamData();
+                    if (typeof initWebSocket === "function" && typeof currentDecisionId !== "undefined" && currentDecisionId) {
+                        initWebSocket(currentDecisionId);
+                    }
+
+                    if (onlineBanner) onlineBanner.classList.add("d-none");
+                }, 2500);
+            }
+
+            window.addEventListener("offline", handleGlobalOffline);
+            window.addEventListener("online", handleGlobalOnline);
+
+            document.addEventListener("DOMContentLoaded", () => {
+                if (!navigator.onLine) {
+                    isGlobalOnline = false;
+                    const offlineCard = document.getElementById("globalOfflineNotification");
+                    if (offlineCard) offlineCard.classList.remove("d-none");
+                }
+            });
+        })();
+    </script>
+
+    <!-- Global Platform Preferences Controller -->
+    <script>
+        (function() {
+            // 1. Global Theme Switcher Function
+            window.applyThemeGlobal = function(themeName) {
+                localStorage.setItem('edrp_theme', themeName);
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (themeName === 'Dark' || (themeName === 'System Default' && prefersDark)) {
+                    document.documentElement.setAttribute('data-bs-theme', 'dark');
+                    document.documentElement.classList.add('theme-dark');
+                } else {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    document.documentElement.classList.remove('theme-dark');
+                }
+            };
+
+            // 2. Global Accessibility Switcher
+            window.applyAccessibilityGlobal = function(enabled) {
+                localStorage.setItem('edrp_accessibility', enabled ? 'true' : 'false');
+                if (enabled) {
+                    document.documentElement.classList.add('high-contrast');
+                } else {
+                    document.documentElement.classList.remove('high-contrast');
+                }
+            };
+
+            // 3. Global Date Formatter Helper
+            window.formatDatePlatform = function(dateInput) {
+                if (!dateInput) return "—";
+                const d = new Date(dateInput);
+                if (isNaN(d.getTime())) return dateInput;
+
+                const fmt = localStorage.getItem('edrp_date_format') || 'DD / MM / YYYY';
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const monthShort = monthNames[d.getMonth()];
+
+                if (fmt.includes('MM / DD / YYYY')) return `${month} / ${day} / ${year}`;
+                if (fmt.includes('YYYY - MM - DD')) return `${year}-${month}-${day}`;
+                if (fmt.includes('DD MMM YYYY')) return `${day} ${monthShort} ${year}`;
+                return `${day} / ${month} / ${year}`;
+            };
+
+            // 4. Global Inactivity Auto Logout Timer
+            let autoLogoutTimer = null;
+            function resetInactivityTimer() {
+                if (autoLogoutTimer) clearTimeout(autoLogoutTimer);
+                const minutes = parseInt(localStorage.getItem('edrp_auto_logout') || '30', 10);
+                if (minutes > 0 && "{{ session.get('logged_in') }}" === "True") {
+                    autoLogoutTimer = setTimeout(() => {
+                        alert("You have been automatically logged out due to inactivity (" + minutes + " minutes).");
+                        window.location.href = "{{ url_for('logout') }}";
+                    }, minutes * 60 * 1000);
+                }
+            }
+
+            ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
+                window.addEventListener(evt, resetInactivityTimer, { passive: true });
+            });
+            resetInactivityTimer();
+
+            // 5. Global Keyboard Shortcuts
+            window.addEventListener('keydown', function(e) {
+                const shortcutsEnabled = localStorage.getItem('edrp_shortcuts') !== 'false';
+                if (!shortcutsEnabled) return;
+
+                // Ctrl+D / Cmd+D: Navigate to Dashboard
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && !e.shiftKey) {
+                    e.preventDefault();
+                    window.location.href = "{{ url_for('dashboard') }}";
+                }
+
+                // Escape: Close modals
+                if (e.key === 'Escape') {
+                    const openModals = document.querySelectorAll('.modal.show');
+                    openModals.forEach(m => {
+                        const bsModal = bootstrap.Modal.getInstance(m);
+                        if (bsModal) bsModal.hide();
+                    });
+                }
+            });
+
+            // 6. Online status indicator visibility
+            document.addEventListener('DOMContentLoaded', () => {
+                const showOnline = localStorage.getItem('edrp_show_online') !== 'false';
+                const dots = document.querySelectorAll('.user-status-dot, .online-status-dot');
+                dots.forEach(dot => {
+                    dot.style.display = showOnline ? '' : 'none';
+                });
+
+                // Apply saved language on page load
+                const savedLang = localStorage.getItem('edrp_language') || 'English (US)';
+                if (savedLang && window.applyLanguageGlobal) {
+                    window.applyLanguageGlobal(savedLang);
+                }
+            });
+
+            // 7. Multi-Language (i18n) Translation Engine
+            const EDRP_TRANSLATIONS = {
+                "Spanish": {
+                    "Dashboard": "Panel de Control",
+                    "My Decisions": "Mis Decisiones",
+                    "Create Decision": "Crear Decisión",
+                    "Discussions": "Discusiones",
+                    "Knowledge Repository": "Repositorio de Conocimiento",
+                    "Notifications": "Notificaciones",
+                    "Email Service": "Servicio de Correo",
+                    "Support Center": "Centro de Soporte",
+                    "Support": "Soporte",
+                    "Profile": "Perfil",
+                    "Settings": "Configuración",
+                    "General": "General",
+                    "Security": "Seguridad",
+                    "Privacy": "Privacidad",
+                    "Decision Preferences": "Preferencias de Decisión",
+                    "System Preferences": "Preferencias del Sistema",
+                    "Danger Zone": "Zona de Peligro",
+                    "Language": "Idioma",
+                    "Select your preferred interface language": "Seleccione su idioma preferido de interfaz",
+                    "Time Zone": "Zona Horaria",
+                    "All dates and times will display in this zone": "Todas las fechas y horas se mostrarán en esta zona",
+                    "Date Format": "Formato de Fecha",
+                    "Choose how dates are displayed throughout the app": "Elija cómo se muestran las fechas en la aplicación",
+                    "Theme": "Tema",
+                    "Choose your preferred color theme": "Elija su tema de color preferido",
+                    "Light": "Claro",
+                    "Dark": "Oscuro",
+                    "System Default": "Predeterminado del Sistema",
+                    "Default Dashboard": "Panel Predeterminado",
+                    "The view you see when you first sign in": "La vista que ve al iniciar sesión por primera vez",
+                    "Change Password": "Cambiar Contraseña",
+                    "Current Password": "Contraseña Actual",
+                    "New Password": "Nueva Contraseña",
+                    "Confirm Password": "Confirmar Contraseña",
+                    "Update Password": "Actualizar Contraseña",
+                    "Two-Factor Authentication": "Autenticación de Dos Factores",
+                    "Add an extra layer of security to your account": "Añada una capa adicional de seguridad a su cuenta",
+                    "Active Sessions": "Sesiones Activas",
+                    "This device": "Este dispositivo",
+                    "Logout All Other Devices": "Cerrar Sesión en Otros Dispositivos",
+                    "Email Notifications": "Notificaciones por Correo",
+                    "Receive updates via your registered email": "Reciba actualizaciones en su correo registrado",
+                    "In-App Notifications": "Notificaciones en la Aplicación",
+                    "Show alerts inside the platform": "Mostrar alertas dentro de la plataforma",
+                    "Decision Updates": "Actualizaciones de Decisiones",
+                    "Notify when a decision you own is updated": "Notificar cuando se actualice una decisión suya",
+                    "Approval Requests": "Solicitudes de Aprobación",
+                    "Alert when a decision requires your approval": "Alertar cuando una decisión requiera su aprobación",
+                    "Discussion Replies": "Respuestas en Discusiones",
+                    "Notify when someone replies in a thread you follow": "Notificar cuando alguien responda en un hilo que sigue",
+                    "Knowledge Repository Updates": "Actualizaciones del Repositorio",
+                    "Alert when new documents are added": "Alertar cuando se agreguen nuevos documentos",
+                    "Weekly Summary Emails": "Resúmenes Semanales por Correo",
+                    "Receive a weekly digest every Monday morning": "Reciba un resumen semanal todos los lunes por la mañana",
+                    "Show Online Status": "Mostrar Estado en Línea",
+                    "Let others see when you are active": "Permitir que otros vean cuándo está activo",
+                    "Profile Visibility": "Visibilidad del Perfil",
+                    "Allow other users to view your profile": "Permitir que otros usuarios vean su perfil",
+                    "Activity Visibility": "Visibilidad de Actividad",
+                    "Show your recent decisions and actions to your team": "Mostrar sus decisiones y acciones recientes a su equipo",
+                    "Default Decision Category": "Categoría de Decisión Predeterminada",
+                    "Pre-select this category when creating a new decision": "Preseleccionar esta categoría al crear una nueva decisión",
+                    "Default Reviewer": "Revisor Predeterminado",
+                    "Automatically assign the reviewer to new decisions": "Asignar automáticamente el revisor a nuevas decisiones",
+                    "Auto Save Draft": "Guardar Borrador Automáticamente",
+                    "Automatically save your decision as a draft while editing": "Guardar automáticamente su decisión como borrador mientras edita",
+                    "Default Document Format": "Formato de Documento Predeterminado",
+                    "Default format for exported decision documents": "Formato predeterminado para documentos exportados",
+                    "Accessibility": "Accesibilidad",
+                    "Enable high-contrast mode and screen reader support": "Habilitar modo de alto contraste y compatibilidad con lectores de pantalla",
+                    "Keyboard Shortcuts": "Atajos de Teclado",
+                    "Enable keyboard shortcuts across the platform": "Habilitar atajos de teclado en la plataforma",
+                    "Auto Logout Time": "Tiempo de Cierre de Sesión Automático",
+                    "Automatically sign out after a period of inactivity": "Cerrar sesión automáticamente después de un período de inactividad",
+                    "Browser Session Timeout": "Tiempo de Espera de Sesión del Navegador",
+                    "Maximum length of a single browser session": "Duración máxima de una sesión de navegador",
+                    "Export My Data": "Exportar Mis Datos",
+                    "Download a copy of all your decisions, comments and profile data.": "Descargue una copia de todas sus decisiones, comentarios y datos de perfil.",
+                    "Export Data": "Exportar Datos",
+                    "Reset Settings": "Restablecer Configuración",
+                    "Restore all settings to their factory defaults. This cannot be undone.": "Restaurar todos los ajustes a los valores de fábrica. Esto no se puede deshacer.",
+                    "Delete Account": "Eliminar Cuenta",
+                    "Permanently delete your account and all associated data. This action is irreversible.": "Eliminar permanentemente su cuenta y todos los datos asociados. Esta acción es irreversible.",
+                    "Unsaved changes will be lost if you navigate away.": "Los cambios no guardados se perderán si sale de la página.",
+                    "Cancel": "Cancelar",
+                    "Save Changes": "Guardar Cambios",
+                    "Manage your account preferences, security and application settings.": "Administre las preferencias de su cuenta, seguridad y configuración de la aplicación.",
+                    "Home": "Inicio",
+                    "Decision Platform": "Plataforma de Decisiones",
+                    "Pending Approvals": "Aprobaciones Pendientes",
+                    "Admin Backup": "Copia de Seguridad Admin",
+                    "User Management": "Gestión de Usuarios",
+                    "Role Management": "Gestión de Roles",
+                    "Team Management": "Gestión de Equipos",
+                    "Audit Trail": "Registro de Auditoría",
+                    "Reports & Analytics": "Informes y Análisis",
+                    "Replays": "Repeticiones",
+                    "Review Tasks": "Tareas de Revisión",
+                    "Alternatives": "Alternativas",
+                    "Reset": "Restablecer",
+                    "Decision Management": "Gestión de Decisiones",
+                    "Executive Overview": "Resumen Ejecutivo",
+                    "Personal Workspace": "Espacio Personal",
+                    "Technology": "Tecnología",
+                    "Finance": "Finanzas",
+                    "Operations": "Operaciones",
+                    "HR Policy": "Política de RRHH",
+                    "Legal & Compliance": "Legal y Cumplimiento",
+                    "Product Engineering": "Ingeniería de Producto"
+                },
+                "French": {
+                    "Dashboard": "Tableau de Bord",
+                    "My Decisions": "Mes Décisions",
+                    "Create Decision": "Créer une Décision",
+                    "Discussions": "Discussions",
+                    "Knowledge Repository": "Base de Connaissances",
+                    "Notifications": "Notifications",
+                    "Email Service": "Service de Messagerie",
+                    "Support Center": "Centre d'Assistance",
+                    "Support": "Assistance",
+                    "Profile": "Profil",
+                    "Settings": "Paramètres",
+                    "General": "Général",
+                    "Security": "Sécurité",
+                    "Privacy": "Confidentialité",
+                    "Decision Preferences": "Préférences de Décision",
+                    "System Preferences": "Préférences Système",
+                    "Danger Zone": "Zone de Danger",
+                    "Language": "Langue",
+                    "Select your preferred interface language": "Sélectionnez votre langue d'interface préférée",
+                    "Time Zone": "Fuseau Horaire",
+                    "All dates and times will display in this zone": "Toutes les dates et heures s'afficheront dans ce fuseau",
+                    "Date Format": "Format de Date",
+                    "Choose how dates are displayed throughout the app": "Choisissez comment les dates s'affichent dans l'application",
+                    "Theme": "Thème",
+                    "Choose your preferred color theme": "Choisissez votre thème de couleur préféré",
+                    "Light": "Clair",
+                    "Dark": "Sombre",
+                    "System Default": "Par Défaut du Système",
+                    "Default Dashboard": "Tableau de Bord par Défaut",
+                    "The view you see when you first sign in": "La vue affichée lors de votre première connexion",
+                    "Change Password": "Changer le Mot de Passe",
+                    "Current Password": "Mot de Passe Actuel",
+                    "New Password": "Nouveau Mot de Passe",
+                    "Confirm Password": "Confirmer le Mot de Passe",
+                    "Update Password": "Mettre à Jour le Mot de Passe",
+                    "Two-Factor Authentication": "Authentification à Deux Facteurs",
+                    "Add an extra layer of security to your account": "Ajoutez une couche de sécurité supplémentaire à votre compte",
+                    "Active Sessions": "Sessions Actives",
+                    "This device": "Cet appareil",
+                    "Logout All Other Devices": "Déconnecter Tous les Autres Appareils",
+                    "Email Notifications": "Notifications par E-mail",
+                    "Receive updates via your registered email": "Recevez des mises à jour sur votre e-mail enregistré",
+                    "In-App Notifications": "Notifications dans l'Application",
+                    "Show alerts inside the platform": "Afficher des alertes dans la plateforme",
+                    "Decision Updates": "Mises à Jour des Décisions",
+                    "Notify when a decision you own is updated": "Notifier lorsqu'une de vos décisions est mise à jour",
+                    "Approval Requests": "Demandes d'Approbation",
+                    "Alert when a decision requires your approval": "Alerter lorsqu'une décision nécessite votre approbation",
+                    "Discussion Replies": "Réponses aux Discussions",
+                    "Notify when someone replies in a thread you follow": "Notifier quand quelqu'un répond à un fil que vous suivez",
+                    "Knowledge Repository Updates": "Mises à Jour du Répertoire",
+                    "Alert when new documents are added": "Alerter lorsque de nouveaux documents sont ajoutés",
+                    "Weekly Summary Emails": "E-mails Récapitulatifs Hebdomadaires",
+                    "Receive a weekly digest every Monday morning": "Recevez un récapitulatif hebdomadaire chaque lundi matin",
+                    "Show Online Status": "Afficher le Statut en Ligne",
+                    "Let others see when you are active": "Permettre aux autres de voir quand vous êtes actif",
+                    "Profile Visibility": "Visibilité du Profil",
+                    "Allow other users to view your profile": "Permettre aux autres utilisateurs de voir votre profil",
+                    "Activity Visibility": "Visibilité de l'Activité",
+                    "Show your recent decisions and actions to your team": "Montrer vos décisions et actions récentes à votre équipe",
+                    "Default Decision Category": "Catégorie de Décision par Défaut",
+                    "Pre-select this category when creating a new decision": "Présélectionner cette catégorie lors de la création",
+                    "Default Reviewer": "Réviseur par Défaut",
+                    "Automatically assign the reviewer to new decisions": "Attribuer automatiquement le réviseur aux nouvelles décisions",
+                    "Auto Save Draft": "Enregistrement Automatique",
+                    "Automatically save your decision as a draft while editing": "Enregistrer automatiquement votre brouillon pendant l'édition",
+                    "Default Document Format": "Format de Document par Défaut",
+                    "Default format for exported decision documents": "Format par défaut pour les documents exportés",
+                    "Accessibility": "Accessibilité",
+                    "Enable high-contrast mode and screen reader support": "Activer le contraste élevé et la compatibilité lecteur d'écran",
+                    "Keyboard Shortcuts": "Raccourcis Clavier",
+                    "Enable keyboard shortcuts across the platform": "Activer les raccourcis clavier sur la plateforme",
+                    "Auto Logout Time": "Délai de Déconnexion Automatique",
+                    "Automatically sign out after a period of inactivity": "Déconnecter automatiquement après une période d'inactivité",
+                    "Browser Session Timeout": "Expiration de la Session du Navigateur",
+                    "Maximum length of a single browser session": "Durée maximale d'une session de navigateur",
+                    "Export My Data": "Exporter Mes Données",
+                    "Download a copy of all your decisions, comments and profile data.": "Téléchargez une copie de vos décisions, commentaires et profil.",
+                    "Export Data": "Exporter les Données",
+                    "Reset Settings": "Réinitialiser les Paramètres",
+                    "Restore all settings to their factory defaults. This cannot be undone.": "Restaurer tous les paramètres d'usine. Cette action est irréversible.",
+                    "Delete Account": "Supprimer le Compte",
+                    "Permanently delete your account and all associated data. This action is irreversible.": "Supprimer définitivement votre compte et toutes les données associées.",
+                    "Unsaved changes will be lost if you navigate away.": "Les modifications non enregistrées seront perdues si vous quittez la page.",
+                    "Cancel": "Annuler",
+                    "Save Changes": "Enregistrer les Modifications",
+                    "Manage your account preferences, security and application settings.": "Gérez vos préférences de compte, sécurité et paramètres d'application.",
+                    "Home": "Accueil",
+                    "Decision Platform": "Plateforme de Décision",
+                    "Technology": "Technologie",
+                    "Finance": "Finance",
+                    "Operations": "Opérations",
+                    "HR Policy": "Politique RH"
+                },
+                "German": {
+                    "Dashboard": "Übersicht",
+                    "My Decisions": "Meine Entscheidungen",
+                    "Create Decision": "Entscheidung Erstellen",
+                    "Discussions": "Diskussionen",
+                    "Knowledge Repository": "Wissensdatenbank",
+                    "Notifications": "Benachrichtigungen",
+                    "Email Service": "E-Mail-Dienst",
+                    "Support Center": "Hilfezentrum",
+                    "Support": "Hilfe",
+                    "Profile": "Profil",
+                    "Settings": "Einstellungen",
+                    "General": "Allgemein",
+                    "Security": "Sicherheit",
+                    "Privacy": "Datenschutz",
+                    "Decision Preferences": "Entscheidungspräferenzen",
+                    "System Preferences": "Systemeinstellungen",
+                    "Danger Zone": "Gefahrenbereich",
+                    "Language": "Sprache",
+                    "Select your preferred interface language": "Wählen Sie Ihre bevorzugte Sprache",
+                    "Time Zone": "Zeitzone",
+                    "All dates and times will display in this zone": "Alle Daten und Uhrzeiten werden in dieser Zone angezeigt",
+                    "Date Format": "Datumsformat",
+                    "Choose how dates are displayed throughout the app": "Wählen Sie, wie Daten in der App angezeigt werden",
+                    "Theme": "Design",
+                    "Choose your preferred color theme": "Wählen Sie Ihr bevorzugtes Farbdesign",
+                    "Light": "Hell",
+                    "Dark": "Dunkel",
+                    "System Default": "Systemstandard",
+                    "Default Dashboard": "Standard-Dashboard",
+                    "The view you see when you first sign in": "Die Ansicht bei Ihrer ersten Anmeldung",
+                    "Change Password": "Passwort Ändern",
+                    "Current Password": "Aktuelles Passwort",
+                    "New Password": "Neues Passwort",
+                    "Confirm Password": "Passwort Bestätigen",
+                    "Update Password": "Passwort Aktualisieren",
+                    "Two-Factor Authentication": "Zwei-Faktor-Authentifizierung",
+                    "Add an extra layer of security to your account": "Erhöhen Sie die Sicherheit Ihres Kontos",
+                    "Active Sessions": "Aktive Sitzungen",
+                    "This device": "Dieses Gerät",
+                    "Logout All Other Devices": "Alle Anderen Geräte Abmelden",
+                    "Email Notifications": "E-Mail-Benachrichtigungen",
+                    "Receive updates via your registered email": "Erhalten Sie Aktualisierungen per E-Mail",
+                    "In-App Notifications": "In-App-Benachrichtigungen",
+                    "Show alerts inside the platform": "Benachrichtigungen auf der Plattform anzeigen",
+                    "Decision Updates": "Entscheidungsaktualisierungen",
+                    "Notify when a decision you own is updated": "Benachrichtigen, wenn eine eigene Entscheidung aktualisiert wird",
+                    "Approval Requests": "Genehmigungsanfragen",
+                    "Alert when a decision requires your approval": "Benachrichtigen, wenn Genehmigung erforderlich ist",
+                    "Discussion Replies": "Diskussionsantworten",
+                    "Notify when someone replies in a thread you follow": "Benachrichtigen bei neuen Antworten",
+                    "Knowledge Repository Updates": "Wissensdatenbank-Updates",
+                    "Alert when new documents are added": "Benachrichtigen bei neuen Dokumenten",
+                    "Weekly Summary Emails": "Wöchentliche E-Mail-Zusammenfassungen",
+                    "Receive a weekly digest every Monday morning": "Erhalten Sie jeden Montagmorgen eine Zusammenfassung",
+                    "Show Online Status": "Online-Status Anzeigen",
+                    "Let others see when you are active": "Anderen anzeigen, wenn Sie aktiv sind",
+                    "Profile Visibility": "Profilsichtbarkeit",
+                    "Allow other users to view your profile": "Anderen Benutzern erlauben, Ihr Profil zu sehen",
+                    "Activity Visibility": "Aktivitätssichtbarkeit",
+                    "Show your recent decisions and actions to your team": "Aktuelle Entscheidungen für Ihr Team sichtbar machen",
+                    "Default Decision Category": "Standardkategorie",
+                    "Pre-select this category when creating a new decision": "Diese Kategorie standardmäßig vorwählen",
+                    "Default Reviewer": "Standardprüfer",
+                    "Automatically assign the reviewer to new decisions": "Prüfer neuen Entscheidungen automatisch zuweisen",
+                    "Auto Save Draft": "Entwurf Automatisch Speichern",
+                    "Automatically save your decision as a draft while editing": "Entwurf während der Bearbeitung automatisch speichern",
+                    "Default Document Format": "Standarddokumentformat",
+                    "Default format for exported decision documents": "Standardformat für exportierte Dokumente",
+                    "Accessibility": "Barrierefreiheit",
+                    "Enable high-contrast mode and screen reader support": "Hohen Kontrast und Screenreader aktivieren",
+                    "Keyboard Shortcuts": "Tastaturkürzel",
+                    "Enable keyboard shortcuts across the platform": "Tastaturkürzel auf der Plattform aktivieren",
+                    "Auto Logout Time": "Automatische Abmeldezeit",
+                    "Automatically sign out after a period of inactivity": "Nach Inaktivität automatisch abmelden",
+                    "Browser Session Timeout": "Browser-Sitzungszeitüberschreitung",
+                    "Maximum length of a single browser session": "Maximale Dauer einer Browser-Sitzung",
+                    "Export My Data": "Meine Daten Exportieren",
+                    "Download a copy of all your decisions, comments and profile data.": "Laden Sie eine Kopie aller Entscheidungen, Kommentare und Profildaten herunter.",
+                    "Export Data": "Daten Exportieren",
+                    "Reset Settings": "Einstellungen Zurücksetzen",
+                    "Restore all settings to their factory defaults. This cannot be undone.": "Alle Einstellungen auf Werkseinstellungen zurücksetzen.",
+                    "Delete Account": "Konto Löschen",
+                    "Permanently delete your account and all associated data. This action is irreversible.": "Ihr Konto und alle Daten unwiderruflich löschen.",
+                    "Unsaved changes will be lost if you navigate away.": "Nicht gespeicherte Änderungen gehen verloren.",
+                    "Cancel": "Abbrechen",
+                    "Save Changes": "Änderungen Speichern",
+                    "Manage your account preferences, security and application settings.": "Verwalten Sie Ihre Kontoeinstellungen, Sicherheit und Präferenzen.",
+                    "Home": "Startseite",
+                    "Decision Platform": "Entscheidungsplattform",
+                    "Technology": "Technologie",
+                    "Finance": "Finanzen",
+                    "Operations": "Betrieb",
+                    "HR Policy": "Personalpolitik"
+                },
+                "Hindi": {
+                    "Dashboard": "डैशबोर्ड",
+                    "My Decisions": "मेरे निर्णय",
+                    "Create Decision": "निर्णय बनाएं",
+                    "Discussions": "चर्चाएं",
+                    "Knowledge Repository": "ज्ञान भंडार",
+                    "Notifications": "सूचनाएं",
+                    "Email Service": "ईमेल सेवा",
+                    "Support Center": "सहायता केंद्र",
+                    "Support": "सहायता",
+                    "Profile": "प्रोफ़ाइल",
+                    "Settings": "सेटिंग्स",
+                    "General": "सामान्य",
+                    "Security": "सुरक्षा",
+                    "Privacy": "गोपनीयता",
+                    "Decision Preferences": "निर्णय प्राथमिकताएं",
+                    "System Preferences": "सिस्टम प्राथमिकताएं",
+                    "Danger Zone": "खतरा क्षेत्र",
+                    "Language": "भाषा",
+                    "Select your preferred interface language": "अपनी पसंदीदा इंटरफ़ेस भाषा चुनें",
+                    "Time Zone": "समय क्षेत्र",
+                    "All dates and times will display in this zone": "सभी दिनांक और समय इस क्षेत्र में प्रदर्शित होंगे",
+                    "Date Format": "दिनांक प्रारूप",
+                    "Choose how dates are displayed throughout the app": "चुनें कि पूरे ऐप में तारीखें कैसे प्रदर्शित होंगी",
+                    "Theme": "थीम",
+                    "Choose your preferred color theme": "अपनी पसंदीदा रंग थीम चुनें",
+                    "Light": "लाइट",
+                    "Dark": "डार्क",
+                    "System Default": "सिस्टम डिफ़ॉल्ट",
+                    "Default Dashboard": "डिफ़ॉल्ट डैशबोर्ड",
+                    "The view you see when you first sign in": "जब आप पहली बार साइन इन करते हैं तो दिखने वाला दृश्य",
+                    "Change Password": "पासवर्ड बदलें",
+                    "Current Password": "वर्तमान पासवर्ड",
+                    "New Password": "नया पासवर्ड",
+                    "Confirm Password": "पासवर्ड की पुष्टि करें",
+                    "Update Password": "पासवर्ड अपडेट करें",
+                    "Two-Factor Authentication": "दो-कारक प्रमाणीकरण",
+                    "Add an extra layer of security to your account": "अपने खाते में सुरक्षा की एक अतिरिक्त परत जोड़ें",
+                    "Active Sessions": "सक्रिय सत्र",
+                    "This device": "यह डिवाइस",
+                    "Logout All Other Devices": "अन्य सभी डिवाइस से लॉग आउट करें",
+                    "Email Notifications": "ईमेल सूचनाएं",
+                    "Receive updates via your registered email": "अपने पंजीकृत ईमेल के माध्यम से अपडेट प्राप्त करें",
+                    "In-App Notifications": "ऐप में सूचनाएं",
+                    "Show alerts inside the platform": "प्लेटफ़ॉर्म के अंदर अलर्ट दिखाएं",
+                    "Decision Updates": "निर्णय अपडेट",
+                    "Notify when a decision you own is updated": "जब आपका कोई निर्णय अपडेट हो तो सूचित करें",
+                    "Approval Requests": "अनुमोदन अनुरोध",
+                    "Alert when a decision requires your approval": "जब किसी निर्णय के लिए आपके अनुमोदन की आवश्यकता हो तो अलर्ट करें",
+                    "Discussion Replies": "चर्चा उत्तर",
+                    "Notify when someone replies in a thread you follow": "जब कोई आपके द्वारा फॉलो किए जा रहे थ्रेड में उत्तर दे तो सूचित करें",
+                    "Knowledge Repository Updates": "ज्ञान भंडार अपडेट",
+                    "Alert when new documents are added": "नए दस्तावेज़ जोड़े जाने पर अलर्ट करें",
+                    "Weekly Summary Emails": "साप्ताहिक सारांश ईमेल",
+                    "Receive a weekly digest every Monday morning": "हर सोमवार सुबह एक साप्ताहिक सारांश प्राप्त करें",
+                    "Show Online Status": "ऑनलाइन स्थिति दिखाएं",
+                    "Let others see when you are active": "दूसरों को देखने दें कि आप कब सक्रिय हैं",
+                    "Profile Visibility": "प्रोफ़ाइल दृश्यता",
+                    "Allow other users to view your profile": "अन्य उपयोगकर्ताओं को अपनी प्रोफ़ाइल देखने की अनुमति दें",
+                    "Activity Visibility": "गतिविधि दृश्यता",
+                    "Show your recent decisions and actions to your team": "अपनी टीम को अपने हाल के निर्णय और कार्य दिखाएं",
+                    "Default Decision Category": "डिफ़ॉल्ट निर्णय श्रेणी",
+                    "Pre-select this category when creating a new decision": "नया निर्णय बनाते समय इस श्रेणी को पूर्व-चयनित करें",
+                    "Default Reviewer": "डिफ़ॉल्ट समीक्षक",
+                    "Automatically assign the reviewer to new decisions": "नए निर्णयों के लिए स्वचालित रूप से समीक्षक असाइन करें",
+                    "Auto Save Draft": "ड्राफ़्ट स्वतः सहेजें",
+                    "Automatically save your decision as a draft while editing": "संपादन करते समय अपने निर्णय को स्वचालित रूप से ड्राफ़्ट के रूप में सहेजें",
+                    "Default Document Format": "डिफ़ॉल्ट दस्तावेज़ प्रारूप",
+                    "Default format for exported decision documents": "निर्यात किए गए निर्णय दस्तावेज़ों के लिए डिफ़ॉल्ट प्रारूप",
+                    "Accessibility": "सुलभता",
+                    "Enable high-contrast mode and screen reader support": "उच्च-कंट्रास्ट मोड और स्क्रीन रीडर समर्थन सक्षम करें",
+                    "Keyboard Shortcuts": "कीबोर्ड शॉर्टकट",
+                    "Enable keyboard shortcuts across the platform": "प्लेटफ़ॉर्म पर कीबोर्ड शॉर्टकट सक्षम करें",
+                    "Auto Logout Time": "ऑटो लॉगआउट समय",
+                    "Automatically sign out after a period of inactivity": "निष्क्रियता के बाद स्वचालित रूप से साइन आउट करें",
+                    "Browser Session Timeout": "ब्राउज़र सत्र समय समाप्ति",
+                    "Maximum length of a single browser session": "एकल ब्राउज़र सत्र की अधिकतम अवधि",
+                    "Export My Data": "मेरा डेटा निर्यात करें",
+                    "Download a copy of all your decisions, comments and profile data.": "अपने सभी निर्णयों, टिप्पणियों और प्रोफ़ाइल डेटा की एक प्रति डाउनलोड करें।",
+                    "Export Data": "डेटा निर्यात करें",
+                    "Reset Settings": "सेटिंग्स रीसेट करें",
+                    "Restore all settings to their factory defaults. This cannot be undone.": "सभी सेटिंग्स को उनके फ़ैक्टरी डिफ़ॉल्ट पर पुनर्स्थापित करें। इसे पूर्ववत नहीं किया जा सकता।",
+                    "Delete Account": "खाता हटाएं",
+                    "Permanently delete your account and all associated data. This action is irreversible.": "अपने खाते और सभी संबद्ध डेटा को स्थायी रूप से हटाएं। यह क्रिया अपरिवर्तनीय है।",
+                    "Unsaved changes will be lost if you navigate away.": "यदि आप बाहर जाते हैं तो सहेजे न गए परिवर्तन खो जाएंगे।",
+                    "Cancel": "रद्द करें",
+                    "Save Changes": "परिवर्तन सहेजें",
+                    "Manage your account preferences, security and application settings.": "अपनी खाता प्राथमिकताएं, सुरक्षा और एप्लिकेशन सेटिंग्स प्रबंधित करें।",
+                    "Home": "होम",
+                    "Decision Platform": "निर्णय प्लेटफ़ॉर्म",
+                    "Technology": "प्रौद्योगिकी",
+                    "Finance": "वित्त",
+                    "Operations": "संचालन",
+                    "HR Policy": "मानव संसाधन नीति"
+                }
+            };
+
+            window.applyLanguageGlobal = function(targetLang) {
+                if (!targetLang) targetLang = "English (US)";
+                localStorage.setItem('edrp_language', targetLang);
+
+                let langKey = "English";
+                if (targetLang.includes("Spanish")) langKey = "Spanish";
+                else if (targetLang.includes("French")) langKey = "French";
+                else if (targetLang.includes("German")) langKey = "German";
+                else if (targetLang.includes("Hindi")) langKey = "Hindi";
+
+                const dict = EDRP_TRANSLATIONS[langKey] || {};
+
+                function translateNode(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const raw = node.nodeValue;
+                        const trimmed = raw.trim();
+                        if (trimmed && trimmed.length > 1) {
+                            if (!node._edrpOrig) node._edrpOrig = trimmed;
+                            const orig = node._edrpOrig;
+
+                            if (langKey === "English") {
+                                if (node._edrpOrig) {
+                                    node.nodeValue = raw.replace(trimmed, orig);
+                                }
+                            } else if (dict[orig]) {
+                                node.nodeValue = raw.replace(trimmed, dict[orig]);
+                            } else {
+                                for (const [engPhrase, transPhrase] of Object.entries(dict)) {
+                                    if (orig === engPhrase || orig.toLowerCase() === engPhrase.toLowerCase()) {
+                                        node.nodeValue = raw.replace(trimmed, transPhrase);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } else if (node.nodeType === Node.ELEMENT_NODE) {
+                        const tag = node.tagName.toLowerCase();
+                        if (tag === 'script' || tag === 'style' || tag === 'noscript' || tag === 'select') return;
+
+                        if (node.placeholder) {
+                            if (!node._edrpOrigPh) node._edrpOrigPh = node.placeholder.trim();
+                            const origPh = node._edrpOrigPh;
+                            if (langKey === "English") node.placeholder = origPh;
+                            else if (dict[origPh]) node.placeholder = dict[origPh];
+                        }
+
+                        for (let child of Array.from(node.childNodes)) {
+                            translateNode(child);
+                        }
+                    }
+                }
+
+                if (document.body) {
+                    translateNode(document.body);
+                }
+            };
+        })();
+    </script>
 
     {% block js %}{% endblock %}
 </body>

@@ -13,3 +13,7 @@ from .comment import DiscussionThread, Comment
 from .meeting_note import MeetingNote
 from .notification import Notification
 from .decision_version import DecisionVersion
+from .system_setting import SystemSetting
+from .support_ticket import SupportTicket
+from .internal_email import InternalEmail
+from .backup_record import BackupRecord

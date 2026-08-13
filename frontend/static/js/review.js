@@ -16,7 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function fetchReviews() {
     try {
-        const res = await fetch(`${API_URL}/reviews/`);
+        const userParam = typeof USER_ID !== 'undefined' && USER_ID ? `?user_id=${USER_ID}` : '';
+        const res = await fetch(`${API_URL}/reviews/${userParam}`);
         if (!res.ok) throw new Error("Failed to load reviews");
         allReviews = await res.json();
         updateStats();
@@ -126,12 +127,13 @@ function renderTable() {
             const approvalType = r.approval_type || "Review";
             const commentsText = r.comments ? r.comments.substring(0, 60) + (r.comments.length > 60 ? "…" : "") : "<span class='text-muted fst-italic'>No comments</span>";
 
-            const actionButtons = r.status === "Pending" ? `
+            const isApprover = typeof CURRENT_USER_ROLE !== 'undefined' && ['Manager', 'Administrator', 'Admin', 'Reviewer', 'Team Lead'].includes(CURRENT_USER_ROLE);
+            const actionButtons = (r.status === "Pending" && isApprover) ? `
                 <div class="d-flex gap-1 justify-content-end align-items-center">
-                    <button class="btn btn-sm btn-success px-2 py-1 fw-semibold" style="font-size:11px;" onclick="submitReviewAction(${r.decision_id}, ${r.reviewer_id}, 'Approved')">
+                    <button class="btn btn-sm btn-success px-2 py-1 fw-semibold d-flex align-items-center" style="font-size:11px;" onclick="openApprovalWorkflowModal(${r.decision_id}, 'DEC-${r.decision_id}', ${r.reviewer_id}, 'Approved', '${(r.reviewer_name || 'Author').replace(/'/g, "\\'")}', '${r.approval_type || 'General'}')">
                         <i data-lucide="check-circle" style="width:12px;height:12px;" class="me-1"></i>Accept
                     </button>
-                    <button class="btn btn-sm btn-danger px-2 py-1 fw-semibold" style="font-size:11px;" onclick="submitReviewAction(${r.decision_id}, ${r.reviewer_id}, 'Rejected')">
+                    <button class="btn btn-sm btn-danger px-2 py-1 fw-semibold d-flex align-items-center" style="font-size:11px;" onclick="openApprovalWorkflowModal(${r.decision_id}, 'DEC-${r.decision_id}', ${r.reviewer_id}, 'Rejected', '${(r.reviewer_name || 'Author').replace(/'/g, "\\'")}', '${r.approval_type || 'General'}')">
                         <i data-lucide="x-circle" style="width:12px;height:12px;" class="me-1"></i>Reject
                     </button>
                     <a href="/decision/${r.decision_id}" class="btn btn-sm btn-outline-secondary px-2 py-1" style="font-size:11px;">View</a>

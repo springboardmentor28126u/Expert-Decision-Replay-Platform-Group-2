@@ -9,6 +9,7 @@ class RecentDecision(BaseModel):
     department: Optional[str] = None
     approver_name: Optional[str] = None
     created_at_str: Optional[str] = None
+    priority: Optional[str] = "Medium"
 
     class Config:
         from_attributes = True
@@ -21,6 +22,8 @@ class RecentReview(BaseModel):
     status: str
     comments: str | None = None
     time_ago: Optional[str] = None
+    task_type: Optional[str] = None
+    is_owner: Optional[bool] = None
 
     class Config:
         from_attributes = True
