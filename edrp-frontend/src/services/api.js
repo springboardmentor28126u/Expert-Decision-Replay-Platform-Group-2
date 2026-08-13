@@ -314,5 +314,13 @@ export async function getRatings(decisionId) {
 
 export async function rateDecision(decisionId, stars) {
   const response = await apiClient.post(`/decisions/${decisionId}/ratings`, { stars });
+<<<<<<< HEAD
+=======
+  return response.data;
+}
+// --- Decision Versioning ----
+export async function restoreDecisionVersion(decisionId, versionId) {
+  const response = await apiClient.post(`/decisions/${decisionId}/versions/${versionId}/restore`);
+>>>>>>> origin/Vedansh-Mudgal
   return response.data;
 }

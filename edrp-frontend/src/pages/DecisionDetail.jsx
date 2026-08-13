@@ -14,7 +14,11 @@ import StarRating from "../components/StarRating";
 import "./DecisionDetail.css";
 import { exportDecisionPDF } from "../services/api";
 import { deleteDecision } from "../services/api";
+<<<<<<< HEAD
 import { deleteComment } from "../services/api";
+=======
+import { deleteComment, restoreDecisionVersion  } from "../services/api";
+>>>>>>> origin/Vedansh-Mudgal
 
 
 const APPROVAL_LEVELS = ["Reviewer", "Manager", "Administrator"];
@@ -221,6 +225,21 @@ async function handleDeleteComment(commentId) {
   }
 }
 
+<<<<<<< HEAD
+=======
+async function handleRestoreVersion(versionId, versionNumber) {
+  if (!window.confirm(`Restore this decision to version ${versionNumber}? Current content will be saved as a new version first.`)) {
+    return;
+  }
+  try {
+    await restoreDecisionVersion(id, versionId);
+    loadEverything();
+  } catch (err) {
+    setError(err.friendlyMessage);
+  }
+}
+
+>>>>>>> origin/Vedansh-Mudgal
   if (!decision && !error) {
     return <p style={{ padding: 40, color: "var(--line)" }}>Loading case file...</p>;
   }
@@ -312,7 +331,10 @@ async function handleDeleteComment(commentId) {
             )}
           </div>
 
+<<<<<<< HEAD
           {/* ---- Version History ---- */}
+=======
+>>>>>>> origin/Vedansh-Mudgal
           {versions.length > 0 && (
             <section className="detail-section">
               <h2 className="detail-section__title">Version History</h2>
@@ -330,6 +352,18 @@ async function handleDeleteComment(commentId) {
                       <p className="approval-entry__comment">
                         "{v.title}" — {v.status}
                       </p>
+<<<<<<< HEAD
+=======
+                      {canEdit && (
+                        <button
+                          className="attachment-remove-button"
+                          onClick={() => handleRestoreVersion(v.id, v.version_number)}
+                          style={{ marginTop: 4 }}
+                        >
+                          Restore this version
+                        </button>
+                      )}
+>>>>>>> origin/Vedansh-Mudgal
                     </div>
                   </div>
                 ))}
@@ -377,9 +411,15 @@ async function handleDeleteComment(commentId) {
                   <button className="btn-reject" onClick={() => handleApprovalAction("Rejected")}>
                     Reject
                   </button>
+<<<<<<< HEAD
                   <button className="btn-ghost-light" onClick={() => handleApprovalAction("Escalated")}>
                     Escalate
                   </button>
+=======
+                  {/* <button className="btn-ghost-light" onClick={() => handleApprovalAction("Escalated")}>
+                    Escalate
+                  </button> */}
+>>>>>>> origin/Vedansh-Mudgal
                 </div>
               </div>
             )}

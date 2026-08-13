@@ -8,6 +8,11 @@ import RoleStamp from "../components/RoleStamp";
 import StatusStamp from "../components/StatusStamp";
 import "./Dashboard.css";
 import MyTeamCard from "../components/MyTeamCard";
+<<<<<<< HEAD
+=======
+import SystemStatsBarChart from "../components/SystemStatsBarChart";
+import DecisionStatusChart from "../components/DecisionStatusChart";
+>>>>>>> origin/Vedansh-Mudgal
 
 
 function Dashboard() {
@@ -95,7 +100,22 @@ function Dashboard() {
                   <span className="stat-box__label">Decisions</span>
                 </Link>
               </div>
+<<<<<<< HEAD
 
+=======
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: 16, margin: "20px 0 10px" }}>
+                  System Totals
+                </h3>
+                <SystemStatsBarChart
+                  totalUsers={adminStats.total_users}
+                  totalTeams={adminStats.total_teams}
+                  totalDecisions={adminStats.total_decisions}
+                />
+               <h3 style={{ fontFamily: "var(--font-display)", fontSize: 16, margin: "20px 0 10px" }}>
+                  Decisions by Status
+                </h3>
+                <DecisionStatusChart statusData={adminStats.decisions_by_status} />
+>>>>>>> origin/Vedansh-Mudgal
               <div className="status-breakdown">
                 {Object.entries(adminStats.decisions_by_status).map(([status, count]) => (
                   <Link
@@ -146,6 +166,10 @@ function Dashboard() {
               <h2 className="detail-section__title" style={{ border: "none", margin: 0, padding: 0 }}>
                 My Decisions
               </h2>
+<<<<<<< HEAD
+=======
+              <Link to="/decisions/new" className="btn-ghost-light">+ New Decision</Link>
+>>>>>>> origin/Vedansh-Mudgal
               <Link to="/decisions" className="btn-ghost-light">View All Decisions</Link>
             </div>
             {myDecisions.length === 0 && (
