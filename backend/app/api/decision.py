@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from app.models.decision_history import DecisionHistory
 from app.database.database import get_db
@@ -10,7 +10,6 @@ from app.schemas.decision import (
     DecisionUpdate
 )
 from app.services.email_service import send_email
-from fastapi import UploadFile, File
 import os
 
 from app.models.decision_document import DecisionDocument
@@ -40,13 +39,12 @@ def create_decision(
     db.add(new_decision)
     db.commit()
     db.refresh(new_decision)
-
     # Send email to decision creator
-
-    send_email(
-        current_user.email,
-        "Decision Created Successfully",
-        f"""
+    try:
+        send_email(
+            current_user.email,
+            "Decision Created Successfully",
+            f"""
     Hello {current_user.full_name},
 
     Your decision has been created successfully.
@@ -58,8 +56,10 @@ def create_decision(
 
     Expert Decision Replay Platform
     """
-    )
-
+        )
+    except Exception:
+        # don't block creation for email failures
+        pass
     # Audit Log
     log = AuditLog(
         user_id=current_user.id,
@@ -175,9 +175,6 @@ def reject_decision(
     action="Rejected Decision",
     description=f"Rejected decision '{decision.title}'"
     )
-
-    db.add(audit)
-    db.commit()
 
     db.add(audit)
     db.commit()
@@ -375,27 +372,31 @@ def get_decision_history(
     )
 
     return history
-from app.models.ai_review import AIReviewResult
-from app.schemas.ai_review import AIReviewOut
-from app.models.document import Document
 from app.services.ai_review_service import run_ai_review
 
 
 @router.post("/{decision_id}/ai-review", response_model=AIReviewOut)
-def request_ai_review(decision_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+def request_ai_review(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_reviewer)
+):
     decision = db.query(Decision).filter(Decision.id == decision_id).first()
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    user = db.query(User).filter(User.email == current_user["email"]).first()
+    doc_count = db.query(DecisionDocument).filter(
+        DecisionDocument.decision_id == decision_id
+    ).count()
 
-    # Only Reviewer, Manager, Administrator should be able to trigger this
-    if user.role not in ["Reviewer", "Manager", "Administrator"]:
-        raise HTTPException(status_code=403, detail="Not authorized to run AI review")
-
-    doc_count = db.query(Document).filter(Document.decision_id == decision_id).count()
-
-    result_json = run_ai_review(decision, doc_count)
+    try:
+        result_json = run_ai_review(decision, doc_count)
+    except TimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except ConnectionError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except (RuntimeError, ValueError) as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
     ai_result = AIReviewResult(
         decision_id=decision.id,
@@ -410,14 +411,32 @@ def request_ai_review(decision_id: int, current_user=Depends(get_current_user), 
         documents_status=result_json["supporting_documents"]["status"],
         documents_note=result_json["supporting_documents"]["note"],
         overall_summary=result_json["overall_summary"],
-        requested_by=user.id,
+        requested_by=current_user.id,
     )
     db.add(ai_result)
     db.commit()
     db.refresh(ai_result)
+
+    audit = AuditLog(
+        user_id=current_user.id,
+        action="Ran AI Review",
+        description=f"AI review generated for decision '{decision.title}'"
+    )
+    db.add(audit)
+    db.commit()
+
     return ai_result
 
 
 @router.get("/{decision_id}/ai-review", response_model=list[AIReviewOut])
-def get_ai_reviews(decision_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(AIReviewResult).filter(AIReviewResult.decision_id == decision_id).order_by(AIReviewResult.created_at.desc()).all()
+def get_ai_reviews(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return (
+        db.query(AIReviewResult)
+        .filter(AIReviewResult.decision_id == decision_id)
+        .order_by(AIReviewResult.created_at.desc())
+        .all()
+    )

@@ -19,36 +19,22 @@ function Login() {
 
   const login = async (e) => {
     e.preventDefault();
+    console.log("Login handler invoked", { username });
 
     try {
       const formData = new URLSearchParams();
       formData.append("username", username);
       formData.append("password", password);
 
-      const response = await api.post(
-        "/auth/login",
-        formData,
-        {
-          headers: {
-            "Content-Type":
-              "application/x-www-form-urlencoded",
-          },
-        }
-      );
+      const response = await api.post("/auth/login", formData, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
 
-      localStorage.setItem(
-        "token",
-        response.data.access_token
-      );
-
+      localStorage.setItem("token", response.data.access_token);
       navigate("/dashboard");
-
     } catch (err) {
       console.log(err);
-      alert(
-        err.response?.data?.detail ||
-          "Invalid email or password."
-      );
+      alert(err.response?.data?.detail || "Invalid email or password.");
     }
   };
 
@@ -164,6 +150,7 @@ function Login() {
                 </div>
 
                 <button
+                  type="submit"
                   className="btn btn-primary auth-btn w-100"
                 >
                   <FaSignInAlt className="me-2" />

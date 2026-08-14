@@ -10,7 +10,6 @@ class AIReviewResult(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=False)
-
     problem_status = Column(String(20))      # complete / incomplete / missing
     problem_note = Column(Text)
 

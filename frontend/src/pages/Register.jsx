@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import "../Auth.css";
@@ -17,6 +17,9 @@ import {
 
 function Register() {
   const navigate = useNavigate();
+  useEffect(() => {
+    console.log("Register mounted");
+  }, []);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -34,19 +37,27 @@ function Register() {
 
   const register = async (e) => {
     e.preventDefault();
+    console.log("Register handler invoked", formData);
 
     try {
-      await api.post("/auth/register", formData);
+      const payload = {
+        full_name: formData.full_name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      };
+
+      await api.post("/auth/register", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       alert("Registration Successful");
-
       navigate("/");
     } catch (err) {
-      console.log(err);
-      alert(
-        err.response?.data?.detail ||
-          "Registration Failed"
-      );
+      console.error(err);
+      const detail = err.response?.data?.detail;
+      const message = typeof detail === "string" ? detail : detail?.[0]?.msg || "Registration Failed";
+      alert(message);
     }
   };
 
@@ -202,9 +213,7 @@ function Register() {
 
                 </div>
 
-                <button
-                  className="btn btn-primary auth-btn w-100"
-                >
+                <button type="submit" className="btn btn-primary auth-btn w-100">
                   <FaUserPlus className="me-2" />
                   Register
                 </button>
