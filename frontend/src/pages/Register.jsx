@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import "../Auth.css";
@@ -17,6 +17,9 @@ import {
 
 function Register() {
   const navigate = useNavigate();
+  useEffect(() => {
+    console.log('Register mounted');
+  }, []);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -34,6 +37,7 @@ function Register() {
 
   const register = async (e) => {
     e.preventDefault();
+    console.log("Register handler invoked", formData);
 
     try {
       const payload = {
@@ -213,7 +217,9 @@ function Register() {
                 </div>
 
                 <button
+                  type="submit"
                   className="btn btn-primary auth-btn w-100"
+                  onClick={() => console.log('Register button clicked')}
                 >
                   <FaUserPlus className="me-2" />
                   Register

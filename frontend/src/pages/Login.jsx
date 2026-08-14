@@ -19,6 +19,7 @@ function Login() {
 
   const login = async (e) => {
     e.preventDefault();
+    console.log("Login handler invoked", { username });
 
     try {
       const formData = new URLSearchParams();
@@ -163,6 +164,7 @@ function Login() {
                 </div>
 
                 <button
+                  type="submit"
                   className="btn btn-primary auth-btn w-100"
                 >
                   <FaSignInAlt className="me-2" />

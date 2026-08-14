@@ -32,7 +32,7 @@ def list_reviewers(
 ):
     require_manager(current_user)
     reviewers = db.query(User).filter(
-        User.role.in_(["Reviewer", "Employee"])
+        User.role == "Reviewer"
     ).all()
     return [
         {"id": u.id, "full_name": u.full_name, "role": u.role}

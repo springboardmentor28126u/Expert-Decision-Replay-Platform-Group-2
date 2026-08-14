@@ -14,6 +14,7 @@ import {
   FaFilePdf,
   FaFileWord,
   FaFile,
+  FaRobot,
 } from "react-icons/fa";
 
 function DecisionDetails() {
@@ -47,6 +48,10 @@ function DecisionDetails() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  // AI Review state
+  const [aiReviews, setAiReviews] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -84,6 +89,9 @@ function DecisionDetails() {
 
       const userRes = await api.get("/me", { headers });
       setUser(userRes.data);
+
+      const aiReviewRes = await api.get(`/decisions/${id}/ai-review`, { headers });
+      setAiReviews(aiReviewRes.data);
 
     } catch (err) {
       console.log(err.response);
@@ -156,6 +164,32 @@ function DecisionDetails() {
 
     } catch (err) {
       alert(err.response?.data?.detail || "Rejection failed");
+    }
+  };
+
+  const runAIReview = async () => {
+    setAiLoading(true);
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await api.post(
+        `/decisions/${id}/ai-review`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setAiReviews([response.data, ...aiReviews]);
+
+    } catch (err) {
+      console.log(err.response);
+      alert(err.response?.data?.detail || "AI review failed. Please try again.");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -344,6 +378,7 @@ function DecisionDetails() {
     { key: "discussion", label: "Discussion", icon: <FaComments className="me-2" /> },
     { key: "documents", label: "Documents", icon: <FaFileAlt className="me-2" /> },
     { key: "history", label: "Version History", icon: <FaHistory className="me-2" /> },
+    { key: "aireview", label: "AI Review", icon: <FaRobot className="me-2" /> },
   ];
 
   return (
@@ -815,6 +850,104 @@ function DecisionDetails() {
                   })}
 
                 </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
+        {/* AI REVIEW TAB */}
+        {activeTab === "aireview" && (
+          <div className="card border-0 mb-4" style={cardStyle}>
+            <div className="card-body">
+
+              <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h5 className="fw-bold mb-0">
+                  <FaRobot className="me-2" />
+                  AI Review Assistant
+                </h5>
+
+                {user &&
+                  ["Reviewer", "Manager", "Administrator"].includes(user.role) && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={runAIReview}
+                      disabled={aiLoading}
+                    >
+                      {aiLoading ? "Analyzing..." : "Run AI Review"}
+                    </button>
+                )}
+              </div>
+
+              <p className="text-muted small mb-4">
+                AI-assisted completeness check. This does not approve or reject the decision —
+                the reviewer makes the final judgment.
+              </p>
+
+              {aiReviews.length === 0 ? (
+                <p className="text-muted text-center py-4">
+                  No AI review has been run yet.
+                </p>
+              ) : (
+                aiReviews.map((review) => {
+                  const fields = [
+                    { label: "Problem Statement", status: review.problem_status, note: review.problem_note },
+                    { label: "Alternatives", status: review.alternatives_status, note: review.alternatives_note },
+                    { label: "Cost Analysis", status: review.cost_status, note: review.cost_note },
+                    { label: "Risk Mitigation", status: review.risk_status, note: review.risk_note },
+                    { label: "Supporting Documents", status: review.documents_status, note: review.documents_note },
+                  ];
+
+                  return (
+                    <div
+                      key={review.id}
+                      className="p-3 mb-3"
+                      style={{
+                        background: "#f8fafc",
+                        borderRadius: "12px",
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+
+                      <div className="row">
+                        {fields.map((f) => (
+                          <div className="col-md-6 mb-3" key={f.label}>
+                            <div className="d-flex justify-content-between align-items-center mb-1">
+                              <span className="fw-semibold" style={{ fontSize: "14px" }}>
+                                {f.label}
+                              </span>
+                              <span
+                                className={`badge ${
+                                  f.status === "complete"
+                                    ? "bg-success"
+                                    : f.status === "incomplete"
+                                    ? "bg-warning text-dark"
+                                    : "bg-danger"
+                                }`}
+                              >
+                                {f.status}
+                              </span>
+                            </div>
+                            <p className="text-muted mb-0" style={{ fontSize: "13px" }}>
+                              {f.note}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <hr />
+
+                      <p className="mb-1">
+                        <strong>Summary:</strong> {review.overall_summary}
+                      </p>
+
+                      <small className="text-muted">
+                        Reviewed: {new Date(review.created_at).toLocaleString()}
+                      </small>
+
+                    </div>
+                  );
+                })
               )}
 
             </div>

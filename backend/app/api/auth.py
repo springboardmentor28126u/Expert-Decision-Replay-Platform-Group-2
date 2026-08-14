@@ -9,31 +9,41 @@ from app.utils.security import (
     verify_password,
     create_access_token,
 )
+import traceback
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserResponse)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    # Check if email already exists
-    existing_user = db.query(User).filter(User.email == user.email).first()
+    try:
+        # Check if email already exists
+        existing_user = db.query(User).filter(User.email == user.email).first()
 
-    if existing_user:
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        # Create new user
+        new_user = User(
+            full_name=user.full_name,
+            email=user.email,
+            password=hash_password(user.password),
+            role=user.role
+        )
+
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+        return new_user
+    except IntegrityError:
+        db.rollback()
         raise HTTPException(status_code=400, detail="Email already registered")
-
-    # Create new user
-    new_user = User(
-        full_name=user.full_name,
-        email=user.email,
-        password=hash_password(user.password),
-        role=user.role
-    )
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return new_user
+    except Exception as e:
+        db.rollback()
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/login")
 def login_user(

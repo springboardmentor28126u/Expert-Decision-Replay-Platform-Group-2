@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.sql import func
+from datetime import datetime, timezone
 
 from app.database.database import Base
 
@@ -15,4 +15,4 @@ class AuditLog(Base):
 
     description = Column(String, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
