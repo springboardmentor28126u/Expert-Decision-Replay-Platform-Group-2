@@ -1,24 +1,31 @@
 from pathlib import Path
 
-from pydantic import model_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
     APP_NAME: str = "Expert Decision Replay Platform API"
+
     DATABASE_HOST: str = "localhost"
     DATABASE_PORT: int = 5432
     DATABASE_NAME: str = "postgres"
     DATABASE_USER: str = "postgres"
     DATABASE_PASSWORD: str = "postgres"
-    DATABASE_URL: str | None = None
+    DATABASE_URL: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/postgres"
+    )
 
     SECRET_KEY: str = "dev-secret-key"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    SMTP_SERVER: str = ""
+    SMTP_PORT: int | None = None
+    SMTP_EMAIL: str = ""
+    SMTP_PASSWORD: str = ""
 
     GEMINI_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""

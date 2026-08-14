@@ -5,3 +5,13 @@ const api = axios.create({
 });
 
 export default api;
+
+export const runAIReview = (decisionId, token) =>
+  api.post(`/decisions/${decisionId}/ai-review`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const getAIReviews = (decisionId, token) =>
+  api.get(`/decisions/${decisionId}/ai-review`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
