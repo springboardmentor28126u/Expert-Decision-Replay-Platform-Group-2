@@ -1,6 +1,8 @@
 # Expert Decision Replay Platform Main Entry
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.database.base import Base
 from app.database.connection import engine
@@ -38,9 +40,14 @@ app = FastAPI(
     description="A centralized platform for managing organizational decisions."
 )
 
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS: list[str] = (
+    ["*"] if _raw_origins.strip() == "*" else [o.strip() for o in _raw_origins.split(",")]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,3 +76,9 @@ def home():
     return {
         "message": "Expert Decision Replay Platform API is Running"
     }
+
+
+@app.get("/health", tags=["health"])
+def health_check():
+    """Liveness probe used by Docker healthcheck."""
+    return JSONResponse(content={"status": "ok"})

@@ -1,5 +1,6 @@
 # Expert Decision Replay Platform (EDRP) — Milestone 3 Complete
 
+
 > **Group 5** | A centralized platform for documenting, managing, replaying, and reviewing strategic organizational decisions.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)
@@ -605,6 +606,11 @@ alembic upgrade head
 
 # Start the backend server
 uvicorn app.main:app --reload --port 8000
+
+
+cd C:\Users\vi180\OneDrive\Desktop\expertdecision\backend
+python -m uvicorn app.main:app --reload --port 8000
+
 ```
 
 ### Frontend Setup

@@ -1,11 +1,16 @@
 # Python
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.egg-info/
 
-# Environment
+# Environment – NEVER commit real .env files
 .env
+.env.*
+!.env.example
 
 # Node
 node_modules/
@@ -21,3 +26,20 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Database files (local dev only)
+*.db
+*.sqlite3
+
+# Logs
+*.log
+backend.log
+
+# Uploads (user-generated content)
+backend/uploads/
+
+# Docker overrides (personal local config)
+docker-compose.override.yml
+
+# Alembic version cache
+alembic/versions/__pycache__/

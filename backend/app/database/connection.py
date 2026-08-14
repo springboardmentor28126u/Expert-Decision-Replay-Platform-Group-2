@@ -1,36 +1,41 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
-from sqlalchemy import text
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./edrp.db")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Detect database type
+_is_sqlite = "sqlite" in DATABASE_URL
 
-# Automatic Fallback for Remote Connection Timeouts
-if not DATABASE_URL or "sqlite" in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL or "sqlite:///./edrp.db"
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+if _is_sqlite:
+    # Local development fallback – SQLite requires check_same_thread=False
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
 else:
-    try:
-        # Connect to Supabase Postgres with a reliable 15-second timeout
-        test_engine = create_engine(DATABASE_URL, connect_args={"connect_timeout": 15})
-        with test_engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        engine = test_engine
-    except Exception as db_err:
-        print(f"Notice: Remote database unreachable ({db_err}). Switching to local SQLite database.")
-        DATABASE_URL = "sqlite:///./edrp.db"
-        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    # PostgreSQL (production / Docker) – do NOT test connection at import time.
+    # The entrypoint.sh + depends_on healthcheck guarantees postgres is up
+    # before this module is loaded. An eager test here would silently fall back
+    # to SQLite if the DB is even slightly slow, causing data-loss bugs.
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"connect_timeout": 10},
+        pool_pre_ping=True,   # validates connections before handing them out
+        pool_size=5,
+        max_overflow=10,
+    )
 
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
 )
+
 
 from app.database.base import Base
 from app import models

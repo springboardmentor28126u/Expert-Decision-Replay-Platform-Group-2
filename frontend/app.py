@@ -8,13 +8,14 @@ from flask import (
     flash,
     make_response,
 )
+import os
 import requests
 from datetime import timedelta
 
 app = Flask(__name__)
 
-# Secret Key & Session Config
-app.secret_key = "expert_decision_platform"
+# Secret Key & Session Config – read from environment, never hardcode
+app.secret_key = os.getenv("SECRET_KEY", "expert_decision_platform_dev_only")
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=72)
 # Maximum upload size set to 200 MB
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
@@ -26,23 +27,31 @@ def disable_client_caching(response):
     response.headers["Expires"] = "0"
     return response
 
-# FastAPI Backend URL
-API_URL = "http://127.0.0.1:8000"
+# FastAPI Backend URL – injected via BACKEND_URL env var in docker-compose
+API_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+
 
 def make_backend_request(method, path, **kwargs):
     """
-    Sends an HTTP request to the FastAPI backend with automatic retry and host fallback.
+    Sends an HTTP request to the FastAPI backend.
+    In Docker (BACKEND_URL set), only the configured URL is used.
+    In local dev (BACKEND_URL not set), falls back to common localhost addresses.
     """
     if "timeout" not in kwargs:
         kwargs["timeout"] = 10
 
-    urls = [API_URL, "http://127.0.0.1:8000", "http://localhost:8000"]
-    seen = set()
-    unique_urls = []
-    for u in urls:
-        if u not in seen:
-            seen.add(u)
-            unique_urls.append(u)
+    # In containerised environments only ever use the configured URL.
+    # Local dev falls back to common localhost addresses.
+    if os.getenv("BACKEND_URL"):
+        unique_urls = [API_URL]
+    else:
+        urls = [API_URL, "http://127.0.0.1:8000", "http://localhost:8000"]
+        seen: set = set()
+        unique_urls = []
+        for u in urls:
+            if u not in seen:
+                seen.add(u)
+                unique_urls.append(u)
 
     last_exception = None
     for base in unique_urls:
@@ -57,6 +66,7 @@ def make_backend_request(method, path, **kwargs):
     if last_exception:
         raise last_exception
     return None
+
 
 CONTACT_CONFIG = {
     "company_email": "contact@edrp.org",
