@@ -164,7 +164,7 @@ export default function Navbar() {
                     }}
                   >
                     <div
-                      style={{ 
+                      style={{
                         fontSize: "14px",
                         fontWeight: "600",
                         color: "#334155",

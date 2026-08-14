@@ -22,7 +22,6 @@ function getUserRole() {
     return null;
   }
 }
-
 function Sidebar() {
   const linkStyle = ({ isActive }) => ({
     background: isActive ? "#2563eb" : "transparent",
