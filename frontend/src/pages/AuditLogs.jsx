@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import api from "../services/api";
 
+function formatToLocalTime(dateStr) {
+  if (!dateStr) return "N/A";
+  const hasTimezone = /Z|\+\d{2}:\d{2}$/.test(dateStr);
+  const isoString = hasTimezone ? dateStr : dateStr + "Z";
+  return new Date(isoString).toLocaleString();
+}
+
 function AuditLogs() {
   const [logs, setLogs] = useState([]);
 
@@ -63,7 +70,7 @@ function AuditLogs() {
                       </td>
                       <td>{log.description}</td>
                       <td>
-                        {new Date(log.created_at).toLocaleString()}
+                        {formatToLocalTime(log.created_at)}
                       </td>
                     </tr>
                   ))

@@ -9,7 +9,7 @@ from app.schemas.decision import (
     DecisionResponse,
     DecisionUpdate
 )
-
+from app.services.email_service import send_email
 from fastapi import UploadFile, File
 import os
 
@@ -40,6 +40,25 @@ def create_decision(
     db.add(new_decision)
     db.commit()
     db.refresh(new_decision)
+
+    # Send email to decision creator
+
+    send_email(
+        current_user.email,
+        "Decision Created Successfully",
+        f"""
+    Hello {current_user.full_name},
+
+    Your decision has been created successfully.
+
+    Title: {new_decision.title}
+    Category: {new_decision.category}
+
+    Status: Pending
+
+    Expert Decision Replay Platform
+    """
+    )
 
     # Audit Log
     log = AuditLog(
@@ -356,3 +375,49 @@ def get_decision_history(
     )
 
     return history
+from app.models.ai_review import AIReviewResult
+from app.schemas.ai_review import AIReviewOut
+from app.models.document import Document
+from app.services.ai_review_service import run_ai_review
+
+
+@router.post("/{decision_id}/ai-review", response_model=AIReviewOut)
+def request_ai_review(decision_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    user = db.query(User).filter(User.email == current_user["email"]).first()
+
+    # Only Reviewer, Manager, Administrator should be able to trigger this
+    if user.role not in ["Reviewer", "Manager", "Administrator"]:
+        raise HTTPException(status_code=403, detail="Not authorized to run AI review")
+
+    doc_count = db.query(Document).filter(Document.decision_id == decision_id).count()
+
+    result_json = run_ai_review(decision, doc_count)
+
+    ai_result = AIReviewResult(
+        decision_id=decision.id,
+        problem_status=result_json["problem_statement"]["status"],
+        problem_note=result_json["problem_statement"]["note"],
+        alternatives_status=result_json["alternatives"]["status"],
+        alternatives_note=result_json["alternatives"]["note"],
+        cost_status=result_json["cost_analysis"]["status"],
+        cost_note=result_json["cost_analysis"]["note"],
+        risk_status=result_json["risk_mitigation"]["status"],
+        risk_note=result_json["risk_mitigation"]["note"],
+        documents_status=result_json["supporting_documents"]["status"],
+        documents_note=result_json["supporting_documents"]["note"],
+        overall_summary=result_json["overall_summary"],
+        requested_by=user.id,
+    )
+    db.add(ai_result)
+    db.commit()
+    db.refresh(ai_result)
+    return ai_result
+
+
+@router.get("/{decision_id}/ai-review", response_model=list[AIReviewOut])
+def get_ai_reviews(decision_id: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(AIReviewResult).filter(AIReviewResult.decision_id == decision_id).order_by(AIReviewResult.created_at.desc()).all()

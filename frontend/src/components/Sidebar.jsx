@@ -8,8 +8,20 @@ import {
   FaChartBar,
   FaHistory,
   FaUser,
+  FaUsers,
   FaSignOutAlt,
 } from "react-icons/fa";
+
+function getUserRole() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.role;
+  } catch {
+    return null;
+  }
+}
 
 function Sidebar() {
   const linkStyle = ({ isActive }) => ({
@@ -24,6 +36,10 @@ function Sidebar() {
     transition: "0.3s",
     fontWeight: isActive ? "600" : "500",
   });
+
+  const userRole = getUserRole();
+  const canApprove = ["Reviewer", "Manager", "Administrator"].includes(userRole);
+  const isAdmin = userRole === "Administrator";
 
   return (
     <div
@@ -56,10 +72,19 @@ function Sidebar() {
           Decisions
         </NavLink>
 
-        <NavLink to="/approvals" style={linkStyle}>
-          <FaCheckCircle className="me-3" />
-          Approval Workflow
-        </NavLink>
+        {canApprove && (
+          <NavLink to="/approvals" style={linkStyle}>
+            <FaCheckCircle className="me-3" />
+            Approval Workflow
+          </NavLink>
+        )}
+
+        {isAdmin && (
+          <NavLink to="/users" style={linkStyle}>
+            <FaUsers className="me-3" />
+            Manage Users
+          </NavLink>
+        )}
 
         <NavLink to="/comments" style={linkStyle}>
           <FaComments className="me-3" />
