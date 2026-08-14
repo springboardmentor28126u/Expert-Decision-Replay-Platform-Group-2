@@ -65,6 +65,19 @@ class Settings(BaseSettings):
     RATE_LIMIT_REQUESTS: int = 60
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
+    # --- Email alerts (optional; email sending is skipped with a logged
+    # warning when SMTP_HOST/SMTP_FROM_EMAIL are unset — see
+    # services/email_service.py) -----------------------------------------
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM_EMAIL: str | None = None
+    SMTP_USE_TLS: bool = True
+
+    # Used to build the "view decision" link in emails.
+    FRONTEND_BASE_URL: str = "http://localhost:5173"
+
 
 settings = Settings()  # type: ignore[call-arg]  # DATABASE_URL supplied via env/.env
 

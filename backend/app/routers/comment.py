@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -26,9 +26,10 @@ router = APIRouter()
 
 
 def get_comment_service(
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> CommentService:
-    return CommentService(db)
+    return CommentService(db, background_tasks)
 
 
 # --------------------------------------------------

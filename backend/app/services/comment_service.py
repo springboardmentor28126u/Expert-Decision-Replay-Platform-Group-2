@@ -6,11 +6,14 @@ Business logic for comments and discussion threads.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.comment import Comment
+from app.models.decision import Decision
 from app.models.user import User
 
 from app.repositories.comment_repository import CommentRepository
@@ -23,10 +26,14 @@ from app.schemas.comment import (
     CommentUpdate,
 )
 
+from app.services import email_service
+
 from app.utils.exceptions import (
     NotFoundException,
     PermissionDeniedException,
 )
+
+logger = logging.getLogger("edrp.comments")
 
 
 class CommentService:
@@ -34,9 +41,11 @@ class CommentService:
     def __init__(
         self,
         db: AsyncSession,
+        background_tasks: BackgroundTasks | None = None,
     ) -> None:
 
         self.db = db
+        self.background_tasks = background_tasks
 
         self.comments = CommentRepository(db)
         self.decisions = DecisionRepository(db)
@@ -140,9 +149,62 @@ class CommentService:
             comment.id
         )
 
+        self._notify_new_comment(
+            decision=decision,
+            comment=created,
+            author=current_user,
+        )
+
         return CommentOut.model_validate(
             created
         )
+
+    def _notify_new_comment(
+        self,
+        *,
+        decision: Decision,
+        comment: Comment,
+        author: User,
+    ) -> None:
+        """
+        Best-effort email alert to the decision's creator. There is no
+        existing in-app notification for comments to piggyback on (unlike
+        approvals — see approval_service._notify_safely), so this only
+        supplements the discussion itself, exactly as the email alerts
+        requirement calls for; it never touches Notification rows.
+        """
+        if self.background_tasks is None:
+            return
+
+        if decision.created_by_id == author.id:
+            return
+
+        creator = decision.created_by
+
+        if creator is None or not creator.email:
+            return
+
+        try:
+            excerpt = (
+                comment.content
+                if len(comment.content) <= 200
+                else comment.content[:200] + "..."
+            )
+            email_service.queue_email(
+                self.background_tasks,
+                to_email=creator.email,
+                heading=f'New comment on "{decision.title}"',
+                message=f'{author.full_name} wrote: "{excerpt}"',
+                decision_title=decision.title,
+                decision_id=decision.id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to queue new-comment email (decision=%s, comment=%s); "
+                "comment creation is unaffected.",
+                decision.id,
+                comment.id,
+            )
 
     # --------------------------------------------------
     # Update

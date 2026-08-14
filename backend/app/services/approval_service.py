@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.approval import Approval
@@ -29,6 +30,7 @@ from app.schemas.approval import (
     ApprovalOut,
 )
 
+from app.services import email_service
 from app.services.audit_log_service import AuditLogService
 from app.services.notification_service import NotificationService
 
@@ -47,9 +49,11 @@ class ApprovalService:
     def __init__(
         self,
         db: AsyncSession,
+        background_tasks: BackgroundTasks | None = None,
     ) -> None:
 
         self.db = db
+        self.background_tasks = background_tasks
 
         self.approvals = ApprovalRepository(db)
         self.decisions = DecisionRepository(db)
@@ -126,6 +130,8 @@ class ApprovalService:
         message: str,
         related_entity_type: str,
         related_entity_id: uuid.UUID,
+        decision_id: uuid.UUID,
+        decision_title: str,
     ) -> None:
         """
         Notification delivery is best-effort: a failure here must never
@@ -133,6 +139,11 @@ class ApprovalService:
         decision state change. Called only after the workflow's own
         commit has already succeeded, so there is nothing to roll back —
         a failure here only affects the notification row itself.
+
+        Also queues the same event as a background email (if configured)
+        via the same title/message the in-app notification uses, so the
+        two never drift apart. Email delivery failures are isolated in
+        email_service and can't affect this method or its caller.
         """
         try:
             await self.notifications.create_notification(
@@ -153,6 +164,28 @@ class ApprovalService:
                 related_entity_id,
             )
             await self.db.rollback()
+
+        if self.background_tasks is None:
+            return
+
+        try:
+            recipient = await self.users.get_by_id(recipient_id)
+            if recipient is not None and recipient.email:
+                email_service.queue_email(
+                    self.background_tasks,
+                    to_email=recipient.email,
+                    heading=title,
+                    message=message,
+                    decision_title=decision_title,
+                    decision_id=decision_id,
+                )
+        except Exception:
+            logger.exception(
+                "Failed to queue email (recipient=%s, decision=%s); "
+                "in-app notification is unaffected.",
+                recipient_id,
+                decision_id,
+            )
 
     async def _resolve_escalation_recipients(
         self,
@@ -289,6 +322,8 @@ class ApprovalService:
                 f'You have been assigned to review "{decision.title}" '
                 f"at level {payload.level}."
             ),
+            decision_id=decision.id,
+            decision_title=decision.title,
             related_entity_type="approval",
             related_entity_id=approval.id,
         )
@@ -398,6 +433,8 @@ class ApprovalService:
                 f'You have been assigned to review "{decision.title}" '
                 f"at level 2, as manager of the team that created it."
             ),
+            decision_id=decision.id,
+            decision_title=decision.title,
             related_entity_type="approval",
             related_entity_id=approval.id,
         )
@@ -513,6 +550,8 @@ class ApprovalService:
                 f'Level {approval.level} was {payload.status.value} '
                 f'for "{decision_title}".'
             ),
+            decision_id=approval.decision_id,
+            decision_title=decision_title,
             related_entity_type="approval",
             related_entity_id=approval.id,
         )
@@ -531,6 +570,8 @@ class ApprovalService:
                         f'Level {approval.level} review of "{decision_title}" '
                         f"has been escalated and needs attention."
                     ),
+                    decision_id=approval.decision_id,
+                    decision_title=decision_title,
                     related_entity_type="approval",
                     related_entity_id=approval.id,
                 )
@@ -544,6 +585,8 @@ class ApprovalService:
                     f'"{changed_decision.title}" status changed to '
                     f"{changed_decision.status.value}."
                 ),
+                decision_id=changed_decision.id,
+                decision_title=changed_decision.title,
                 related_entity_type="decision",
                 related_entity_id=changed_decision.id,
             )
@@ -603,6 +646,8 @@ class ApprovalService:
                 f'Your review of "{decision_title}" at level {approval.level} '
                 f"has been reset and requires action again."
             ),
+            decision_id=approval.decision_id,
+            decision_title=decision_title,
             related_entity_type="approval",
             related_entity_id=approval.id,
         )
@@ -616,6 +661,8 @@ class ApprovalService:
                     f'"{changed_decision.title}" status changed to '
                     f"{changed_decision.status.value}."
                 ),
+                decision_id=changed_decision.id,
+                decision_title=changed_decision.title,
                 related_entity_type="decision",
                 related_entity_id=changed_decision.id,
             )
