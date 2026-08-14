@@ -56,6 +56,15 @@ class Settings(BaseSettings):
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
 
+    # --- LLM (optional; summarization / NL query fall back to
+    # deterministic behavior when unset) ---------------------------------
+    GOOGLE_API_KEY: str | None = None
+    GEMINI_MODEL: str = "gemini-flash-lite-latest"
+
+    # --- Rate limiting -----------------------------------------------------
+    RATE_LIMIT_REQUESTS: int = 60
+    RATE_LIMIT_WINDOW_SECONDS: int = 60
+
 
 settings = Settings()  # type: ignore[call-arg]  # DATABASE_URL supplied via env/.env
 

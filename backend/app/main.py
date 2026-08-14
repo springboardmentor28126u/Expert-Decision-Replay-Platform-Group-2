@@ -25,6 +25,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.utils.exceptions import AppException
 
 logger = logging.getLogger("edrp")
@@ -121,6 +122,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(RateLimitMiddleware)
+
 # ---------------------------------------------------------------------
 # Exception Handlers
 # ---------------------------------------------------------------------
@@ -194,6 +197,7 @@ from app.routers import notification
 from app.routers import audit_log
 from app.routers import dashboard
 from app.routers import report
+from app.routers import nl_query
 
 # ---------------------------------------------------------------------
 # Health
@@ -323,4 +327,14 @@ app.include_router(
     report.router,
     prefix=f"{settings.API_V1_PREFIX}/reports",
     tags=["Reports"],
+)
+
+# ---------------------------------------------------------------------
+# Natural-language querying
+# ---------------------------------------------------------------------
+
+app.include_router(
+    nl_query.router,
+    prefix=f"{settings.API_V1_PREFIX}/nl-query",
+    tags=["NL Query"],
 )

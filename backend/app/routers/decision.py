@@ -21,7 +21,9 @@ from app.schemas.decision import (
     DecisionUpdate,
 )
 from app.schemas.decision_version import DecisionVersionOut
+from app.schemas.decision_summary import DecisionSummaryOut
 from app.services.decision_service import DecisionService
+from app.services.decision_summary_service import DecisionSummaryService
 
 router = APIRouter()
 
@@ -30,6 +32,12 @@ def get_decision_service(
     db: AsyncSession = Depends(get_db),
 ) -> DecisionService:
     return DecisionService(db)
+
+
+def get_decision_summary_service(
+    db: AsyncSession = Depends(get_db),
+) -> DecisionSummaryService:
+    return DecisionSummaryService(db)
 
 
 @router.get(
@@ -127,6 +135,18 @@ async def get_versions(
     service: DecisionService = Depends(get_decision_service),
 ):
     return await service.get_versions(decision_id)
+
+
+@router.get(
+    "/{decision_id}/summary",
+    response_model=DecisionSummaryOut,
+)
+async def get_decision_summary(
+    decision_id: uuid.UUID,
+    _: User = Depends(get_current_user),
+    service: DecisionSummaryService = Depends(get_decision_summary_service),
+):
+    return await service.get_summary(decision_id)
 
 
 @router.delete(

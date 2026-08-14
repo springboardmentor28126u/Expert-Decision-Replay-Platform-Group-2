@@ -18,3 +18,5 @@ python-dotenv
 
 reportlab
 openpyxl
+
+httpx

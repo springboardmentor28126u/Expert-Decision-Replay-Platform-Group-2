@@ -15,6 +15,7 @@ import ChangePassword from "../components/ChangePassword";
 import NotificationsPage from "./NotificationsPage";
 import ReportsPage from "./ReportsPage";
 import AnalyticsDashboard from "../components/AnalyticsDashboard";
+import AskBox from "../components/AskBox";
 import "../styles/dashboard.css";
 
 function Dashboard({ token, onLogout }) {
@@ -257,6 +258,8 @@ function Dashboard({ token, onLogout }) {
             notifications={notifications}
             notificationsLoading={notificationsLoading}
           />
+
+          <AskBox token={token} />
 
           {adminStats && (
             <section className="view-section">
