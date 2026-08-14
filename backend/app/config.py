@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     RATE_LIMIT_REQUESTS: int = 60
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
+    # Optional — enables shared/distributed rate limiting across multiple
+    # backend processes via Redis. Falls back to in-memory (per-process)
+    # rate limiting when unset or unreachable — see middleware/rate_limit.py.
+    REDIS_URL: str | None = None
+
     # --- Email alerts (optional; email sending is skipped with a logged
     # warning when SMTP_HOST/SMTP_FROM_EMAIL are unset — see
     # services/email_service.py) -----------------------------------------

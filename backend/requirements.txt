@@ -20,3 +20,5 @@ reportlab
 openpyxl
 
 httpx
+
+redis

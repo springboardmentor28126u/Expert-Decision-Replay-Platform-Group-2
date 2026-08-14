@@ -42,6 +42,15 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState("");
 
+  const [similar, setSimilar] = useState(null);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarError, setSimilarError] = useState("");
+
+  const [askQuestion, setAskQuestion] = useState("");
+  const [askResult, setAskResult] = useState(null);
+  const [askLoading, setAskLoading] = useState(false);
+  const [askError, setAskError] = useState("");
+
   useEffect(() => {
     setEditTitle(decision.title);
     setEditProblemStatement(decision.problem_statement);
@@ -137,6 +146,54 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
       fetchSummary();
     }
   }, [activeTab, summary, summaryLoading, fetchSummary]);
+
+  // Same on-demand pattern as fetchSummary — a second, independent
+  // LLM-backed lookup, fetched only once the tab is opened.
+  const fetchSimilar = useCallback(async () => {
+    if (!decision?.id) return;
+    setSimilarLoading(true);
+    setSimilarError("");
+    try {
+      const res = await apiClient.get(
+        `/api/v1/decisions/${decision.id}/similar`,
+        authHeaders(token)
+      );
+      setSimilar(res.data);
+    } catch (err) {
+      console.error("Failed to load similar decisions", err);
+      setSimilarError(err?.response?.data?.detail || "Could not load similar decisions.");
+    } finally {
+      setSimilarLoading(false);
+    }
+  }, [decision?.id, token]);
+
+  useEffect(() => {
+    if (activeTab === "summary" && !similar && !similarLoading) {
+      fetchSimilar();
+    }
+  }, [activeTab, similar, similarLoading, fetchSimilar]);
+
+  const handleAsk = async (e) => {
+    e.preventDefault();
+    if (!askQuestion.trim()) return;
+
+    setAskLoading(true);
+    setAskError("");
+    try {
+      const res = await apiClient.post(
+        `/api/v1/decisions/${decision.id}/ask`,
+        { question: askQuestion },
+        authHeaders(token)
+      );
+      setAskResult(res.data);
+    } catch (err) {
+      console.error("Failed to get an answer", err);
+      setAskError(err?.response?.data?.detail || "Could not get an answer.");
+      setAskResult(null);
+    } finally {
+      setAskLoading(false);
+    }
+  };
 
   // Downloads stream through the API with an auth header, so a plain
   // <a href> won't work — fetch the bytes and trigger a client-side save.
@@ -719,6 +776,78 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
               </Button>
             </>
           ) : null}
+        </div>
+      )}
+
+      {activeTab === "summary" && (
+        <div className="dash-card" style={{ marginTop: 16 }}>
+          <p className="dash-card-label" style={{ marginBottom: 12 }}>Similar Decisions</p>
+
+          {similarLoading ? (
+            <p className="dash-card-note">Looking for similar decisions...</p>
+          ) : similarError ? (
+            <div className="auth-message error">{similarError}</div>
+          ) : similar && similar.length > 0 ? (
+            <ul style={{ marginTop: 4, listStyle: "none", padding: 0 }}>
+              {similar.map((s) => (
+                <li
+                  key={s.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 0",
+                    borderBottom: "1px solid var(--border-subtle, #2a2a2a)",
+                  }}
+                >
+                  <span>{s.title}</span>
+                  <Badge tone={STATUS_TONE[s.status] || "neutral"}>
+                    {s.status.replace("_", " ")}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="dash-card-note">
+              No similar decisions found in the same category yet.
+            </p>
+          )}
+        </div>
+      )}
+
+      {activeTab === "summary" && (
+        <div className="dash-card" style={{ marginTop: 16 }}>
+          <p className="dash-card-label" style={{ marginBottom: 12 }}>Ask About This Decision</p>
+
+          <form onSubmit={handleAsk} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <input
+              type="text"
+              value={askQuestion}
+              onChange={(e) => setAskQuestion(e.target.value)}
+              placeholder="e.g. Why was this escalated?"
+              style={{ flex: "1 1 280px" }}
+            />
+            <Button type="submit" variant="primary" disabled={askLoading}>
+              {askLoading ? "Asking..." : "Ask"}
+            </Button>
+          </form>
+
+          {askError && (
+            <div className="auth-message error" style={{ marginTop: 12 }}>
+              {askError}
+            </div>
+          )}
+
+          {askResult && !askError && (
+            <div style={{ marginTop: 16 }}>
+              <p style={{ color: "var(--text-primary)", lineHeight: 1.6 }}>{askResult.answer}</p>
+              {askResult.generated_by === "unavailable" && (
+                <div className="dash-card-note" style={{ marginTop: 8, fontStyle: "italic" }}>
+                  AI is temporarily unavailable — this is a fallback message, not a generated answer.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

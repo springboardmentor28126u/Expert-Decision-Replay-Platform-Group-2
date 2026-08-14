@@ -22,8 +22,14 @@ from app.schemas.decision import (
 )
 from app.schemas.decision_version import DecisionVersionOut
 from app.schemas.decision_summary import DecisionSummaryOut
+from app.schemas.decision_insight import (
+    AskDecisionRequest,
+    AskDecisionResponse,
+    SimilarDecisionOut,
+)
 from app.services.decision_service import DecisionService
 from app.services.decision_summary_service import DecisionSummaryService
+from app.services.decision_insight_service import DecisionInsightService
 
 router = APIRouter()
 
@@ -38,6 +44,12 @@ def get_decision_summary_service(
     db: AsyncSession = Depends(get_db),
 ) -> DecisionSummaryService:
     return DecisionSummaryService(db)
+
+
+def get_decision_insight_service(
+    db: AsyncSession = Depends(get_db),
+) -> DecisionInsightService:
+    return DecisionInsightService(db)
 
 
 @router.get(
@@ -147,6 +159,40 @@ async def get_decision_summary(
     service: DecisionSummaryService = Depends(get_decision_summary_service),
 ):
     return await service.get_summary(decision_id)
+
+
+@router.get(
+    "/{decision_id}/similar",
+    response_model=list[SimilarDecisionOut],
+)
+async def get_similar_decisions(
+    decision_id: uuid.UUID,
+    _: User = Depends(get_current_user),
+    service: DecisionInsightService = Depends(get_decision_insight_service),
+):
+    return await service.find_similar(decision_id)
+
+
+@router.post(
+    "/{decision_id}/ask",
+    response_model=AskDecisionResponse,
+)
+async def ask_about_decision(
+    decision_id: uuid.UUID,
+    payload: AskDecisionRequest,
+    _: User = Depends(get_current_user),
+    service: DecisionInsightService = Depends(get_decision_insight_service),
+):
+    answer, generated_by = await service.answer_question(
+        decision_id,
+        payload.question,
+    )
+    return AskDecisionResponse(
+        decision_id=decision_id,
+        question=payload.question,
+        answer=answer,
+        generated_by=generated_by,
+    )
 
 
 @router.delete(

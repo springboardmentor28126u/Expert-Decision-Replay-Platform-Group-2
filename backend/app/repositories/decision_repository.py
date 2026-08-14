@@ -80,6 +80,27 @@ class DecisionRepository(BaseRepository[Decision]):
 
         return result.scalars().all()
 
+    async def list_by_category(
+        self,
+        category: str,
+        exclude_id: uuid.UUID,
+        limit: int = 20,
+    ) -> Sequence[Decision]:
+        """For the "similar decisions" AI feature — other decisions in the
+        same category, most recent first."""
+
+        result = await self.db.execute(
+            self._base_query()
+            .where(
+                Decision.category == category,
+                Decision.id != exclude_id,
+            )
+            .order_by(Decision.created_at.desc())
+            .limit(limit)
+        )
+
+        return result.scalars().all()
+
     async def count(self) -> int:
 
         result = await self.db.execute(

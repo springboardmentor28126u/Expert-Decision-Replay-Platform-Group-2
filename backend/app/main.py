@@ -25,7 +25,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
-from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.rate_limit import RateLimitMiddleware, close_redis_client
 from app.utils.exceptions import AppException
 
 logger = logging.getLogger("edrp")
@@ -94,6 +94,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("Shutting down %s", settings.PROJECT_NAME)
 
+    await close_redis_client()
     await engine.dispose()
 
 
