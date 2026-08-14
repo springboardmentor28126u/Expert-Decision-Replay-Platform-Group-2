@@ -1,6 +1,9 @@
 import "./dashboard-shell.css";
 import { useNavigate } from "react-router-dom";
 import ProfileMenu from "./ProfileMenu";
+import { useState } from "react";
+import AIAssistantButton from "./AIAssistantButton";
+import AIAssistantPanel from "./AIAssistantPanel";
 
 function AppShell({
   profile,
@@ -10,11 +13,13 @@ function AppShell({
   unreadCount,
   children,
   topbarExtra,
+  selectedDecisionId,
 }) {
   const navigate = useNavigate();
   const isManagerOrAdmin = profile.role === "manager" || profile.role === "admin";
   const isAdmin = profile.role === "admin";
-
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  
   const dashboardPaths = {
     employee: "/dashboard/employee",
     reviewer: "/dashboard/reviewer",
@@ -114,6 +119,12 @@ function AppShell({
 
         <main className="shell-content">{children}</main>
       </div>
+
+      <AIAssistantButton onClick={() => setIsAIAssistantOpen(true)} />
+      <AIAssistantPanel isOpen={isAIAssistantOpen} onClose={() => setIsAIAssistantOpen(false)} 
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
+        decisionId={selectedDecisionId} />
     </div>
   );
 }

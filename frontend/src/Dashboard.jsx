@@ -498,6 +498,7 @@ function Dashboard({ token, onLogout }) {
       onNavigate={handleNavigate}
       onLogout={onLogout}
       unreadCount={unreadCount}
+      selectedDecisionId={selectedDecision?.id}
       topbarExtra={
         <NotificationBell
           notifications={notifications}
