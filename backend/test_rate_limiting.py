@@ -8,6 +8,18 @@ from fastapi.testclient import TestClient
 # We can import RateLimitingMiddleware from main since we've added it there
 from main import RateLimitingMiddleware
 
+@pytest.fixture(autouse=True)
+def clear_redis_ratelimit():
+    try:
+        from redis_client import get_redis
+        r = get_redis()
+        if r:
+            keys = r.keys("ratelimit:*")
+            if keys:
+                r.delete(*keys)
+    except Exception:
+        pass
+
 def test_rate_limiting_under_limit():
     # Create a fresh app to isolate test state
     app = FastAPI()

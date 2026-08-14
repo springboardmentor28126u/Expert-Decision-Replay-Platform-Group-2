@@ -43,6 +43,14 @@ from audit_helper import log_activity, log_security, log_access
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
+from redis_cache import (
+    get_cached_data,
+    set_cached_data,
+    delete_cached_data,
+    invalidate_decisions_cache,
+    invalidate_dashboard_cache,
+    invalidate_admin_dashboard_cache,
+)
 from notifications import router as notifications_router
 from notifications import notify_all_users
 from schemas import UserCreate, UserLogin, UserResponse, Token, ReviewerAssignmentCreate, ReviewerAssignmentResponse, TeamCreate, TeamUpdate, TeamMemberAssign, TeamResponse, TeamDetailResponse, TeamReportResponse, TeamReportItem
@@ -56,6 +64,11 @@ try:
     RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "60"))
 except ValueError:
     RATE_LIMIT_PER_MIN = 60
+
+from redis_client import get_redis
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RateLimitingMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, limit: int, window: int = 60):
@@ -89,6 +102,48 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 
         current_time = time.time()
         
+        # Try to use Redis for rate limiting
+        r = get_redis()
+        if r is not None:
+            try:
+                key = f"ratelimit:{client_identifier}"
+                member = f"{current_time}:{uuid4()}"
+                
+                # Sliding window Lua script to check limit and record request atomically
+                lua_script = """
+                local key = KEYS[1]
+                local now = tonumber(ARGV[1])
+                local window = tonumber(ARGV[2])
+                local limit = tonumber(ARGV[3])
+                local member = ARGV[4]
+
+                -- Remove elements older than (now - window)
+                redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+                
+                -- Count current elements
+                local current_requests = redis.call('ZCARD', key)
+
+                if current_requests < limit then
+                    -- Record request
+                    redis.call('ZADD', key, now, member)
+                    redis.call('EXPIRE', key, window)
+                    return 1 -- Allowed
+                else
+                    return 0 -- Rate limited
+                end
+                """
+                
+                allowed = r.eval(lua_script, 1, key, current_time, self.window, self.limit, member)
+                if not allowed:
+                    return JSONResponse(
+                        status_code=429,
+                        content={"detail": "Too many requests. Please try again later."}
+                    )
+                return await call_next(request)
+            except Exception as e:
+                logger.error(f"Redis rate limiting error: {e}. Falling back to in-memory mode.")
+
+        # Fallback: In-memory sliding window rate limiter
         # Clean up older timestamps
         self.requests[client_identifier] = [
             t for t in self.requests[client_identifier]
@@ -157,6 +212,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         user_id=new_user.id,
         details="User registered successfully",
     )
+    invalidate_admin_dashboard_cache()
     return new_user
 
 
@@ -239,7 +295,7 @@ def update_user_role(
     target_user.role = role_update.role
     db.commit()
     db.refresh(target_user)
-
+    invalidate_admin_dashboard_cache()
     return target_user
 
 @app.get("/teams", response_model=List[TeamResponse], tags=["Team Management"])
@@ -525,6 +581,20 @@ def _with_creator_name(decision: Decision) -> Decision:
     decision.creator_name = decision.creator.full_name if decision.creator else None
     return decision
 
+def serialize_decision(d: Decision) -> dict:
+    return {
+        "id": d.id,
+        "title": d.title,
+        "problem_statement": d.problem_statement,
+        "category": d.category,
+        "status": d.status.value if hasattr(d.status, "value") else d.status,
+        "created_by": d.created_by,
+        "creator_name": d.creator_name or (d.creator.full_name if d.creator else None),
+        "attachment_url": d.attachment_url,
+        "created_at": d.created_at.isoformat() if hasattr(d.created_at, "isoformat") else str(d.created_at),
+        "updated_at": d.updated_at.isoformat() if d.updated_at and hasattr(d.updated_at, "isoformat") else (str(d.updated_at) if d.updated_at else None),
+    }
+
 @app.post("/decisions", response_model=DecisionResponse, tags=["Decision Management"])
 def create_decision(
     decision: DecisionCreate,
@@ -551,6 +621,10 @@ def create_decision(
         details="Decision created",
     )
     new_decision.creator_name = new_decision.creator.full_name
+    
+    # Invalidate decisions and dashboard caches
+    invalidate_decisions_cache()
+
     return new_decision
 
 @app.get("/decisions", response_model=ListType[DecisionResponse], tags=["Decision Management"])
@@ -564,6 +638,12 @@ def list_decisions(
             status_code=403,
             detail="You can only request your own decisions."
         )
+
+    # Try cache
+    cache_key = f"db_cache:decisions:all" if user_id is None else f"db_cache:decisions:user:{user_id}"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
 
     query = select(Decision)
     if user_id is not None:
@@ -580,8 +660,11 @@ def list_decisions(
         entity_id=None,
         user_id=current_user.id,
         details="Listed decisions",
-    )  
-    return decisions
+    )
+    
+    serialized = [serialize_decision(d) for d in decisions]
+    set_cached_data(cache_key, serialized, expire=300)
+    return serialized
 
 from datetime import datetime, timedelta
 
@@ -611,13 +694,21 @@ def get_decision(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    cache_key = f"db_cache:decision:{decision_id}"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
+
     decision = db.execute(
         select(Decision).where(Decision.id == decision_id)
     ).scalar_one_or_none()
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
     decision.creator_name = decision.creator.full_name if decision.creator else None
-    return decision
+    
+    serialized = serialize_decision(decision)
+    set_cached_data(cache_key, serialized, expire=300)
+    return serialized
 
 @app.get("/decisions/{decision_id}/ai-summary", tags=["Decision Management"])
 def get_ai_summary(
@@ -661,6 +752,7 @@ def update_decision_status(
     decision.status = status_update.status
     db.commit()
     db.refresh(decision)
+    invalidate_decisions_cache(decision_id)
     return decision
 
 @app.post("/reviewer-assignments", response_model=ReviewerAssignmentResponse, tags=["Approval Workflow"])
@@ -839,6 +931,7 @@ def approve_decision(
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
+    invalidate_decisions_cache(decision_id)
     return new_approval
 
 @app.post("/decisions/{decision_id}/reject", response_model=ApprovalResponse, tags=["Approval Workflow"])
@@ -901,6 +994,7 @@ def reject_decision(
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
+    invalidate_decisions_cache(decision_id)
     return new_approval
 
 @app.post("/decisions/{decision_id}/resubmit", response_model=DecisionResponse, tags=["Approval Workflow"])
@@ -956,6 +1050,7 @@ def resubmit_decision(
     decision.status = DecisionStatus.under_review
     db.commit()
     db.refresh(decision)
+    invalidate_decisions_cache(decision_id)
     return decision
 
 @app.get("/decisions/{decision_id}/approvals", response_model=ListType[ApprovalResponse], tags=["Approval Workflow"])
@@ -1029,6 +1124,7 @@ def update_decision(
 
     db.commit()
     db.refresh(decision)
+    invalidate_decisions_cache(decision_id)
     return decision
 
 
@@ -1068,7 +1164,7 @@ def delete_decision(
 
     db.delete(decision)
     db.commit()
-
+    invalidate_decisions_cache(decision_id)
     return {"message": "Decision deleted successfully"}
 
 
@@ -1687,21 +1783,28 @@ def employee_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    cache_key = f"dashboard:employee:user:{current_user.id}"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
 
     stats = get_dashboard_stats(
         db,
         current_user.id,
     )
 
-    return EmployeeDashboardResponse(
-        my_decisions=stats["total_decisions"],
-        draft_decisions=stats["draft_decisions"],
-        under_review_decisions=stats["under_review_decisions"],
-        approved_decisions=stats["approved_decisions"],
-        rejected_decisions=stats["rejected_decisions"],
-        archived_decisions=stats["archived_decisions"],
-        recent_decisions=stats["recent_decisions"],
-    )
+    recent_serialized = [serialize_decision(d) for d in stats["recent_decisions"]]
+    response_data = {
+        "my_decisions": stats["total_decisions"],
+        "draft_decisions": stats["draft_decisions"],
+        "under_review_decisions": stats["under_review_decisions"],
+        "approved_decisions": stats["approved_decisions"],
+        "rejected_decisions": stats["rejected_decisions"],
+        "archived_decisions": stats["archived_decisions"],
+        "recent_decisions": recent_serialized,
+    }
+    set_cached_data(cache_key, response_data, expire=300)
+    return response_data
     
 @app.get(
     "/dashboard/reviewer",
@@ -1712,12 +1815,16 @@ def reviewer_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     if current_user.role != UserRole.reviewer:
         raise HTTPException(
             status_code=403,
             detail="Only reviewers can access this dashboard."
         )
+
+    cache_key = "dashboard:reviewer"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
 
     under_review_decisions = db.execute(
         select(func.count(Decision.id))
@@ -1749,12 +1856,15 @@ def reviewer_dashboard(
         .limit(5)
     ).scalars().all()
 
-    return ReviewerDashboardResponse(
-        under_review_decisions=under_review_decisions,
-        approved_decisions=approved_decisions,
-        rejected_decisions=rejected_decisions,
-        recent_under_review=recent_under_review,
-    )
+    recent_serialized = [serialize_decision(d) for d in recent_under_review]
+    response_data = {
+        "under_review_decisions": under_review_decisions,
+        "approved_decisions": approved_decisions,
+        "rejected_decisions": rejected_decisions,
+        "recent_under_review": recent_serialized,
+    }
+    set_cached_data(cache_key, response_data, expire=300)
+    return response_data
     
 @app.get(
     "/dashboard/manager",
@@ -1771,17 +1881,25 @@ def manager_dashboard(
             detail="Only managers can access this dashboard."
         )
 
+    cache_key = "dashboard:manager"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
+
     stats = get_dashboard_stats(db)
 
-    return ManagerDashboardResponse(
-        total_decisions=stats["total_decisions"],
-        draft_decisions=stats["draft_decisions"],
-        under_review_decisions=stats["under_review_decisions"],
-        approved_decisions=stats["approved_decisions"],
-        rejected_decisions=stats["rejected_decisions"],
-        archived_decisions=stats["archived_decisions"],
-        recent_decisions=stats["recent_decisions"],
-    )
+    recent_serialized = [serialize_decision(d) for d in stats["recent_decisions"]]
+    response_data = {
+        "total_decisions": stats["total_decisions"],
+        "draft_decisions": stats["draft_decisions"],
+        "under_review_decisions": stats["under_review_decisions"],
+        "approved_decisions": stats["approved_decisions"],
+        "rejected_decisions": stats["rejected_decisions"],
+        "archived_decisions": stats["archived_decisions"],
+        "recent_decisions": recent_serialized,
+    }
+    set_cached_data(cache_key, response_data, expire=300)
+    return response_data
     
 @app.get(
     "/dashboard/admin",
@@ -1797,6 +1915,11 @@ def admin_dashboard(
             status_code=403,
             detail="Only admins can access this dashboard."
         )
+
+    cache_key = "dashboard:admin"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
 
     # Reuse dashboard statistics
     stats = get_dashboard_stats(db)
@@ -1828,26 +1951,25 @@ def admin_dashboard(
         select(func.count(Alternative.id))
     ).scalar_one()
 
-    return AdminDashboardResponse(
-        total_users=total_users,
-        active_users=active_users,
-
-        employees=role_counts.get(UserRole.employee, 0),
-        reviewers=role_counts.get(UserRole.reviewer, 0),
-        managers=role_counts.get(UserRole.manager, 0),
-        admins=role_counts.get(UserRole.admin, 0),
-
-        total_alternatives=total_alternatives,
-
-        total_decisions=stats["total_decisions"],
-        draft_decisions=stats["draft_decisions"],
-        under_review_decisions=stats["under_review_decisions"],
-        approved_decisions=stats["approved_decisions"],
-        rejected_decisions=stats["rejected_decisions"],
-        archived_decisions=stats["archived_decisions"],
-
-        recent_decisions=stats["recent_decisions"],
-    )
+    recent_serialized = [serialize_decision(d) for d in stats["recent_decisions"]]
+    response_data = {
+        "total_users": total_users,
+        "active_users": active_users,
+        "employees": role_counts.get(UserRole.employee, 0),
+        "reviewers": role_counts.get(UserRole.reviewer, 0),
+        "managers": role_counts.get(UserRole.manager, 0),
+        "admins": role_counts.get(UserRole.admin, 0),
+        "total_alternatives": total_alternatives,
+        "total_decisions": stats["total_decisions"],
+        "draft_decisions": stats["draft_decisions"],
+        "under_review_decisions": stats["under_review_decisions"],
+        "approved_decisions": stats["approved_decisions"],
+        "rejected_decisions": stats["rejected_decisions"],
+        "archived_decisions": stats["archived_decisions"],
+        "recent_decisions": recent_serialized,
+    }
+    set_cached_data(cache_key, response_data, expire=300)
+    return response_data
 
 # Report Helper Functions
 
