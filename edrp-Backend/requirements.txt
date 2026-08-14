@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+psycopg2-binary
+pydantic
+python-jose[cryptography]
+bcrypt
+python-dotenv
+python-multipart
+email-validator
+reportlab
+openpyxl
+supabase
+aiosmtplib
+openai
