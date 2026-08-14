@@ -7,10 +7,30 @@ from flask import (
     session,
     flash,
     make_response,
+    jsonify,
 )
 import os
+import sys
 import requests
+import time
 from datetime import timedelta
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+import importlib.util
+
+def _load_ai_support_generator():
+    try:
+        service_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend", "app", "services", "ai_support_service.py"))
+        spec = importlib.util.spec_from_file_location("ai_support_service_module", service_file)
+        ai_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ai_module)
+        return ai_module.generate_ai_response
+    except Exception as e:
+        print(f"AI loader note: {e}")
+        return None
+
+generate_ai_response = _load_ai_support_generator()
 
 app = Flask(__name__)
 
@@ -19,6 +39,12 @@ app.secret_key = os.getenv("SECRET_KEY", "expert_decision_platform_dev_only")
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=72)
 # Maximum upload size set to 200 MB
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
+
+# Reusable high-performance HTTP session with connection pooling
+http_session = requests.Session()
+adapter = HTTPAdapter(pool_connections=30, pool_maxsize=30, max_retries=Retry(total=2, backoff_factor=0.05))
+http_session.mount("http://", adapter)
+http_session.mount("https://", adapter)
 
 @app.after_request
 def disable_client_caching(response):
@@ -33,12 +59,12 @@ API_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 
 def make_backend_request(method, path, **kwargs):
     """
-    Sends an HTTP request to the FastAPI backend.
+    Sends an HTTP request to the FastAPI backend with automatic retry and connection pooling.
     In Docker (BACKEND_URL set), only the configured URL is used.
     In local dev (BACKEND_URL not set), falls back to common localhost addresses.
     """
     if "timeout" not in kwargs:
-        kwargs["timeout"] = 10
+        kwargs["timeout"] = 5
 
     # In containerised environments only ever use the configured URL.
     # Local dev falls back to common localhost addresses.
@@ -57,7 +83,7 @@ def make_backend_request(method, path, **kwargs):
     for base in unique_urls:
         full_url = f"{base}{path}" if path.startswith("/") else f"{base}/{path}"
         try:
-            res = requests.request(method, full_url, **kwargs)
+            res = http_session.request(method, full_url, **kwargs)
             return res
         except requests.exceptions.RequestException as e:
             last_exception = e
@@ -75,6 +101,8 @@ CONTACT_CONFIG = {
     "location": "Enterprise Tech Tower, Suite 500, New York, NY 10001"
 }
 
+_GLOBAL_STATS_CACHE = {}
+
 @app.context_processor
 def inject_global_stats():
     base_data = {
@@ -85,20 +113,31 @@ def inject_global_stats():
     if not session.get("logged_in"):
         return base_data
     
+    user_id = session.get("user_id")
+    token = session.get("token")
+    if not user_id or not token:
+        return base_data
+
+    now = time.time()
+    cached = _GLOBAL_STATS_CACHE.get(user_id)
+    if cached and (now - cached["ts"] < 25):
+        base_data.update(cached["data"])
+        return base_data
+        
     try:
-        user_id = session.get("user_id")
-        token = session.get("token")
-        if not user_id or not token:
-            return base_data
-            
         headers = {"Authorization": f"Bearer {token}"}
-        response = requests.get(f"{API_URL}/dashboard/{user_id}", headers=headers, timeout=2.0)
+        response = http_session.get(f"{API_URL}/dashboard/{user_id}", headers=headers, timeout=0.6)
         if response.status_code == 200:
             data = response.json()
-            base_data["unread_notifications_count"] = data.get("unread_notifications_count", 0)
-            base_data["pending_reviews"] = data.get("pending_reviews", 0)
+            fresh = {
+                "unread_notifications_count": data.get("unread_notifications_count", 0),
+                "pending_reviews": data.get("pending_reviews", 0)
+            }
+            _GLOBAL_STATS_CACHE[user_id] = {"data": fresh, "ts": now}
+            base_data.update(fresh)
     except Exception:
-        pass
+        if cached:
+            base_data.update(cached["data"])
     
     return base_data
 
@@ -393,12 +432,52 @@ def api_delete_support_ticket(ticket_id):
         return jsonify({"detail": "Access Denied: Only Administrators can delete support tickets."}), 403
 
     try:
-        response = requests.delete(f"{API_URL}/support/{ticket_id}", timeout=5)
+        response = http_session.delete(f"{API_URL}/support/{ticket_id}", timeout=5)
         if response.status_code == 404:
-            response = requests.delete(f"{API_URL}/support/delete/{ticket_id}", timeout=5)
+            response = http_session.delete(f"{API_URL}/support/delete/{ticket_id}", timeout=5)
         return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"detail": f"Error deleting support ticket: {e}"}), 500
+
+
+@app.route("/api/support/ai-chat", methods=["POST"])
+def api_support_ai_chat():
+    data = request.json or {}
+    user_id = session.get("user_id")
+    user_name = session.get("full_name") or "User"
+    if user_id and not data.get("user_id"):
+        data["user_id"] = user_id
+    if user_name and not data.get("user_name"):
+        data["user_name"] = user_name
+
+    # 1. Primary: Forward to FastAPI backend (which runs live Groq LLM with hot reload)
+    try:
+        response = http_session.post(f"{API_URL}/support/ai-chat", json=data, timeout=15)
+        if response.status_code == 200:
+            return jsonify(response.json()), 200
+    except Exception as e:
+        print(f"AI chat backend forward note: {e}")
+
+    # 2. Dynamic direct execution fallback
+    try:
+        fn = _load_ai_support_generator()
+        if fn:
+            res_dict = fn(
+                user_message=data.get("message", ""),
+                user_name=user_name,
+                user_id=data.get("user_id") or user_id,
+                conversation_history=data.get("conversation_history")
+            )
+            return jsonify(res_dict), 200
+    except Exception as ai_err:
+        print(f"Direct AI service fallback note: {ai_err}")
+
+    return jsonify({
+        "reply": f"Hello {user_name}! In EDRP, decisions follow a structured lifecycle: Draft → In Review → Approved / Rejected. You can create decisions from the sidebar, evaluate alternatives, track reviewer approval chains, or inspect audit diffs.",
+        "suggested_actions": ["How do I create a new decision?", "Explain the approval workflow", "How does Decision Replay work?"],
+        "source": "EDRP AI Assistant"
+    }), 200
+
 
 
 @app.route("/api/pending-approvals/action", methods=["POST"])
@@ -509,17 +588,26 @@ def api_dashboard():
 
 @app.route("/api/decisions", methods=["GET"])
 def api_decisions():
-    if not session.get("logged_in"):
-        return jsonify({"detail": "Unauthorized"}), 401
-    user_id = session.get("user_id")
-    role_name = session.get("role_name", "Employee")
     try:
-        response = make_backend_request("GET", f"/decisions/?user_id={user_id}&role_name={role_name}", timeout=5)
-        if response is not None and response.status_code == 200:
+        params = {}
+        user_id = request.args.get("user_id") or session.get("user_id")
+        role_name = request.args.get("role_name") or session.get("role_name") or "Employee"
+        if user_id:
+            params["user_id"] = user_id
+        if role_name:
+            params["role_name"] = role_name
+
+        headers = {}
+        if "token" in session:
+            headers["Authorization"] = f"Bearer {session['token']}"
+
+        response = requests.get(f"{API_URL}/decisions/", params=params, headers=headers, timeout=5)
+        if response.status_code == 200:
             return jsonify(response.json()), 200
-        return jsonify([]), 200
-    except Exception:
-        return jsonify([]), 200
+        return jsonify([]), response.status_code
+    except Exception as e:
+        print(f"Error fetching decisions in frontend proxy: {e}")
+        return jsonify([]), 500
 
 # ===========================
 # NOTIFICATIONS PROXIES
@@ -558,26 +646,6 @@ def clear_all_notifications(user_id):
     except Exception as e:
         return jsonify({"detail": "Error"}), 500
 
-@app.route("/api/decisions")
-def api_get_decisions():
-    if not session.get("logged_in") and "token" not in session:
-        return jsonify([]), 401
-    try:
-        params = {}
-        user_id = request.args.get("user_id") or session.get("user_id")
-        role_name = request.args.get("role_name") or session.get("role_name")
-        if user_id:
-            params["user_id"] = user_id
-        if role_name:
-            params["role_name"] = role_name
-        response = requests.get(f"{API_URL}/decisions/", params=params, timeout=5)
-        if response.status_code == 200:
-            return jsonify(response.json()), 200
-        return jsonify([]), response.status_code
-    except Exception as e:
-        print(f"Error fetching decisions in frontend proxy: {e}")
-        return jsonify([]), 500
-
 @app.route("/api/dashboard")
 def api_get_dashboard():
     if "token" not in session or "user_id" not in session:
@@ -608,15 +676,16 @@ def dashboard():
 
     user_id = session.get("user_id", 2)
 
-    response = requests.get(
-        f"{API_URL}/dashboard/{user_id}",
-        headers=headers
-    )
-
     dashboard = {}
-
-    if response.status_code == 200:
-        dashboard = response.json()
+    try:
+        response = make_backend_request("GET", f"/dashboard/{user_id}", headers=headers, timeout=5)
+        if response is not None and response.status_code == 200:
+            dashboard = response.json()
+        else:
+            flash("Backend service returned an error. Showing offline dashboard view.", "warning")
+    except Exception as e:
+        print(f"[FRONTEND DASHBOARD REQ ERR] {e}")
+        flash("Backend server is unreachable. Please ensure the backend is running.", "warning")
 
     role = (session.get("role_name") or "Employee").strip()
     role_lower = role.lower()
@@ -871,18 +940,22 @@ def profile():
         return redirect(url_for("login"))
 
     current_user_id = session.get("user_id")
-    response = requests.get(
-        f"{API_URL}/profile/{current_user_id}",
-        params={"current_user_id": current_user_id}
-    )
-
-    if response.status_code != 200:
-
-        flash("Unable to load profile.", "danger")
-
+    profile = {}
+    try:
+        response = make_backend_request(
+            "GET",
+            f"/profile/{current_user_id}",
+            params={"current_user_id": current_user_id},
+            timeout=5
+        )
+        if response is None or response.status_code != 200:
+            flash("Unable to load profile.", "danger")
+            return redirect(url_for("dashboard"))
+        profile = response.json()
+    except Exception as e:
+        print(f"[FRONTEND PROFILE REQ ERR] {e}")
+        flash("Backend connection error. Please ensure the backend service is running.", "danger")
         return redirect(url_for("dashboard"))
-
-    profile = response.json()
 
     return render_template(
         "profile.html",
@@ -907,21 +980,20 @@ def update_profile():
 
     }
 
-    response = requests.put(
-
-        f"{API_URL}/profile/{session['user_id']}",
-
-        json=payload
-
-    )
-
-    if response.status_code == 200:
-
-        flash("Profile Updated Successfully", "success")
-
-    else:
-
-        flash("Unable to update profile", "danger")
+    try:
+        response = make_backend_request(
+            "PUT",
+            f"/profile/{session['user_id']}",
+            json=payload,
+            timeout=5
+        )
+        if response is not None and response.status_code == 200:
+            flash("Profile Updated Successfully", "success")
+        else:
+            flash("Unable to update profile", "danger")
+    except Exception as e:
+        print(f"[FRONTEND PROFILE UPDATE REQ ERR] {e}")
+        flash("Backend connection error. Unable to save profile changes.", "danger")
 
     return redirect(url_for("profile"))
 
@@ -995,6 +1067,17 @@ def logout():
     session.clear()
     session.permanent = False
     flash("Logged Out Successfully", "info")
+    res = make_response(redirect(url_for("login")))
+    res.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    res.headers["Pragma"] = "no-cache"
+    res.headers["Expires"] = "0"
+    return res
+
+@app.route("/account-deleted")
+def account_deleted():
+    session.clear()
+    session.permanent = False
+    flash("Your account and all associated data have been permanently deleted.", "warning")
     res = make_response(redirect(url_for("login")))
     res.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     res.headers["Pragma"] = "no-cache"

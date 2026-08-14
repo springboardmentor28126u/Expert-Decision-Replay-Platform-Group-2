@@ -1,386 +1,75 @@
-# Expert Decision Replay Platform (EDRP) — Milestone 3 Complete
-
+# Expert Decision Replay Platform (EDRP) — Milestone 3
 
 > **Group 5** | A centralized platform for documenting, managing, replaying, and reviewing strategic organizational decisions.
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?style=flat&logo=fastapi&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=flat&logo=postgresql&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-3.1+-000000?style=flat&logo=flask&logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-ORM-D71F00?style=flat&logo=python&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker&logoColor=white)
+## Milestone 3 Executive Summary
+
+
+Milestone 3 completes the core enterprise requirements of the **Expert Decision Replay Platform (EDRP)**, delivering:
+1. **Append-Only Structured Audit Logging** with field-level before/after diff tracking and database-level immutability triggers.
+2. **Configurable Multi-Tier Approval Chains** supporting dynamic routing, sequential reviewer evaluations, and SLA notifications.
+3. **Interactive Decision Replay & Versioning Engine** providing point-in-time snapshotting and visual historical playback.
+4. **Reviewer Workspace & Role-Tailored Dashboards** for Administrators, Managers, Reviewers, and Employees.
+5. **Security Hardening & Access Control** with PostgreSQL Row-Level Security (RLS), least-privilege database roles, 6-digit SMTP OTP onboarding, and 72-hour persistent sessions.
+6. **Enterprise Settings & Support Ticketing System** for platform configuration, SMTP controls, and user issue resolution.
 
 ---
 
-## Overview
+## Key Modules Implemented in Milestone 3
 
-The **Expert Decision Replay Platform (EDRP)** is a full-stack web application designed to help organizations preserve institutional knowledge by capturing the complete lifecycle of strategic decisions. From initial draft through expert review to final archival, every step is documented, versioned, and audit-logged.
-
-The platform serves four user roles — **Administrator**, **Manager**, **Reviewer**, and **Employee** — each with role-based access controls. Administrators can monitor all activity through real-time dashboards and comprehensive audit trails, while decision creators can replay the full history of any decision to understand how and why it was made.
-
----
-
-## System Architecture
-
-```mermaid
-graph TB
-    subgraph "Frontend Layer"
-        Browser["Web Browser"]
-        FlaskApp["Flask Proxy Server<br/>Port 5000"]
-    end
-
-    subgraph "Backend Layer"
-        FastAPIApp["FastAPI Backend<br/>Port 8000"]
-        AuthModule["Authentication<br/>JWT + OTP + RBAC"]
-        AuditEngine["Audit Engine<br/>Structured Logging"]
-        EmailService["Email Service<br/>SMTP Threaded"]
-    end
-
-    subgraph "Data Layer"
-        PostgreSQL[("PostgreSQL<br/>Database")]
-        SQLAlchemy["SQLAlchemy ORM"]
-        Alembic["Alembic<br/>Migrations"]
-    end
-
-    subgraph "External Services"
-        SMTPServer["SMTP Server<br/>Email Delivery"]
-    end
-
-    Browser -->|"HTTP"| FlaskApp
-    FlaskApp -->|"REST API"| FastAPIApp
-    FastAPIApp --> AuthModule
-    FastAPIApp --> AuditEngine
-    FastAPIApp --> EmailService
-    FastAPIApp --> SQLAlchemy
-    SQLAlchemy --> PostgreSQL
-    Alembic --> PostgreSQL
-    EmailService -->|"Email"| SMTPServer
-
-    style Browser fill:#e3f2fd,stroke:#1565c0
-    style FlaskApp fill:#fff3e0,stroke:#e65100
-    style FastAPIApp fill:#e8f5e9,stroke:#2e7d32
-    style PostgreSQL fill:#fce4ec,stroke:#c62828
-    style SMTPServer fill:#f3e5f5,stroke:#6a1b9a
-```
+### 1. Structured & Append-Only Audit Logging System
+An enterprise-grade audit trail designed for regulatory compliance (SOC 2, ISO 27001) that tracks every state change across the platform:
+- **Structured Log Model (`AuditLog`)**: Captures actor ID, action type, entity type, entity ID, JSON diffs, client IP address, User-Agent, and timestamps.
+- **Field-Level Diff Engine (`diff.py`)**: Computes granular per-field differences between previous and updated states (`before`/`after`).
+- **Database Immutability Triggers**: PostgreSQL triggers block any `UPDATE` or `DELETE` operations on the `audit_logs` table to guarantee an append-only, tamper-proof record.
+- **Decision Audit Trail Timeline API**: Aggregates decision versions, reviewer assessments, comments, uploads, and audit records into a single unified timeline.
+- **Live Polling Audit Viewer**: Real-time 5-second polling interface with multi-criteria filtering (Entity, Actor, Action, Date Range) and one-click CSV export.
 
 ---
 
-## Entity Relationship Diagram
-
-```mermaid
-erDiagram
-    USERS ||--o{ ROLES : has
-    USERS ||--o{ TEAMS : belongs_to
-    USERS ||--o{ DECISIONS : creates
-    USERS ||--o{ REVIEWS : performs
-    USERS ||--o{ ACTIVITY_LOGS : generates
-    USERS ||--o{ AUDIT_LOGS : actor
-    USERS ||--o{ NOTIFICATIONS : receives
-    USERS ||--o{ EMAIL_VERIFICATIONS : has
-    USERS ||--o{ DISCUSSION_THREADS : creates
-    USERS ||--o{ COMMENTS : writes
-    USERS ||--o{ MEETING_NOTES : creates
-    USERS ||--o{ ATTACHMENTS : uploads
-    USERS ||--o{ SUPPORT_TICKETS : submits
-    USERS ||--o{ APPROVAL_CHAIN_CONFIGS : configures
-
-    DECISIONS ||--o{ ALTERNATIVES : evaluates
-    DECISIONS ||--o{ REVIEWS : receives
-    DECISIONS ||--o{ DECISION_VERSIONS : versioned_by
-    DECISIONS ||--o{ REPLAYS : has
-    DECISIONS ||--o{ DISCUSSION_THREADS : discussed_in
-    DECISIONS ||--o{ MEETING_NOTES : documented_in
-    DECISIONS ||--o{ ATTACHMENTS : has
-
-    DISCUSSION_THREADS ||--o{ COMMENTS : contains
-
-    ROLES {
-        int id PK
-        string name
-        string description
-    }
-
-    TEAMS {
-        int id PK
-        string name
-        string description
-    }
-
-    USERS {
-        int id PK
-        string full_name
-        string email
-        string email_hashed
-        string password_hashed
-        string employee_id UK
-        int role_id FK
-        int team_id FK
-        string status
-        boolean email_verified
-        datetime created_at
-    }
-
-    DECISIONS {
-        int id PK
-        string title
-        string category
-        string urgency
-        string status
-        int creator_id FK
-        text rationale
-        text alternatives
-        decimal financial_impact
-        string risk_level
-        datetime created_at
-    }
-
-    ALTERNATIVES {
-        int id PK
-        int decision_id FK
-        string title
-        text description
-        decimal estimated_cost
-        string feasibility
-        string recommendation
-    }
-
-    REVIEWS {
-        int id PK
-        int decision_id FK
-        int reviewer_id FK
-        string status
-        text comments
-        datetime reviewed_at
-    }
-
-    DECISION_VERSIONS {
-        int id PK
-        int decision_id FK
-        int version_number
-        json snapshot
-        string change_reason
-        int changed_by FK
-        datetime created_at
-    }
-
-    AUDIT_LOGS {
-        int id PK
-        int company_id
-        int actor_id FK
-        string action
-        string entity_type
-        int entity_id
-        json diff
-        text details
-        string ip_address
-        string user_agent
-        datetime created_at
-    }
-
-    ACTIVITY_LOGS {
-        int id PK
-        int user_id FK
-        string action
-        string module
-        string details
-        datetime created_at
-    }
-
-    APPROVAL_CHAIN_CONFIGS {
-        int id PK
-        int company_id
-        string name
-        text description
-        json steps
-        boolean is_active
-        int created_by FK
-        datetime created_at
-    }
-
-    NOTIFICATIONS {
-        int id PK
-        int user_id FK
-        string message
-        string notification_type
-        boolean is_read
-        datetime created_at
-    }
-
-    DISCUSSION_THREADS {
-        int id PK
-        int decision_id FK
-        int created_by FK
-        string topic
-        datetime created_at
-    }
-
-    COMMENTS {
-        int id PK
-        int thread_id FK
-        int user_id FK
-        text content
-        datetime created_at
-    }
-
-    ATTACHMENTS {
-        int id PK
-        int decision_id FK
-        int uploaded_by FK
-        string filename
-        bigint file_size
-        datetime uploaded_at
-    }
-
-    MEETING_NOTES {
-        int id PK
-        int decision_id FK
-        int created_by FK
-        string title
-        text notes
-        datetime created_at
-    }
-
-    EMAIL_VERIFICATIONS {
-        int id PK
-        string email
-        string code
-        string purpose
-        datetime expires_at
-        boolean is_verified
-    }
-
-    SUPPORT_TICKETS {
-        int id PK
-        int user_id FK
-        string subject
-        text message
-        string status
-        datetime created_at
-    }
-
-    SYSTEM_SETTINGS {
-        int id PK
-        string key_name
-        text value
-        string description
-    }
-```
+### 2. Configurable Multi-Tier Approval Chains
+A dynamic workflow engine for routing and approving strategic decisions:
+- **Dynamic Approval Chain Configs**: Admin-configurable multi-step approval workflows based on decision category and budget threshold rules.
+- **Reviewer Evaluation States**:
+  - **Approve**: Advances decision to next approval stage or finalizes to `Approved`.
+  - **Reject**: Terminated with mandatory justification comment; alerts creator.
+  - **Request Revision**: Reverts decision status to `Draft`; creator updates and resubmits, creating version `v2`.
+- **Reviewer Assignment & Notifications**: Reviewers assigned directly via UI; automated alerts dispatched via in-app notifications and background SMTP emails.
 
 ---
 
-## Decision Workflow
-
-```mermaid
-stateDiagram-v2
-    [*] --> Draft: Create Decision
-
-    Draft --> InReview: Submit for Review
-    Draft --> Archived: Discard
-
-    InReview --> Approved: All Reviewers Approve
-    InReview --> Rejected: Any Reviewer Rejects
-    InReview --> Draft: Send Back for Revision
-
-    Approved --> Archived: Archive Decision
-    Rejected --> Draft: Revise & Resubmit
-
-    Archived --> [*]
-
-    note right of Draft
-        Decision creator can edit
-        all fields freely
-    end note
-
-    note right of InReview
-        Reviewers assigned by admin
-        can approve or reject
-    end note
-
-    note right of Approved
-        Decision is finalized and
-        versioned for replay
-    end note
-```
+### 3. Interactive Decision Replay & Versioning Engine
+Preserves the complete evolution of organizational decisions:
+- **Automated Version Snapshots**: Stores complete JSON state snapshots whenever a decision is submitted, reviewed, or modified.
+- **Visual Replay Viewer**: Step-by-step playback interface allowing stakeholders to inspect who contributed, what alternatives were evaluated, what meeting notes were captured, and why final consensus was reached.
 
 ---
 
-## User Onboarding Flow
-
-```mermaid
-flowchart TD
-    Start([New User Visits /register]) --> EnterInfo[Enter Full Name & Email]
-    EnterInfo --> SendOTP[System Sends 6-Digit OTP via SMTP]
-    SendOTP --> VerifyOTP{OTP Verified?}
-    VerifyOTP -->|No| RetryOTP[Resend OTP]
-    RetryOTP --> VerifyOTP
-    VerifyOTP -->|Yes| SetCreds[Set Employee ID & Password]
-    SetCreds --> AutoGenID[Auto-Generate Role-Prefixed ID]
-    AutoGenID --> Pending[Account Status: Pending Approval]
-    Pending --> AdminNotif[Admin Receives Notification]
-    AdminNotif --> AdminReview{Admin Decision}
-    AdminReview -->|Approve| Approved[Status: Approved]
-    AdminReview -->|Reject| Rejected[Status: Rejected]
-    Approved --> EmailNotif[User Receives Approval Email]
-    EmailNotif --> Login[User Can Now Login]
-    Rejected --> RejectedNotif[User Receives Rejection Email]
-    RejectedNotif --> End([Account Cannot Login])
-    Login --> Dashboard[Redirect to Dashboard]
-
-    style Start fill:#e8f5e9,stroke:#2e7d32
-    style Dashboard fill:#e3f2fd,stroke:#1565c0
-    style End fill:#ffebee,stroke:#c62828
-    style Pending fill:#fff3e0,stroke:#e65100
-    style Approved fill:#e8f5e9,stroke:#2e7d32
-    style Rejected fill:#ffebee,stroke:#c62828
-```
+### 4. Reviewer Workspace & Role-Tailored Dashboards
+Specialized interfaces for all 4 user roles:
+- **Reviewer Dashboard**: Pending review queue, side-by-side alternative comparison, and fast-action approval/rejection modal.
+- **Admin Dashboard**: Org-wide decision analytics, pending user approval queue, user directory, system settings, and global audit log.
+- **Manager Dashboard**: Team decisions, financial impact totals, member activity overview, and escalation handling.
+- **Employee Dashboard**: Personal decision tracker, draft resume panel, assigned reviews, and notification feed.
 
 ---
 
-## Features by Milestone
+### 5. Enterprise Security & Hardened Onboarding
+- **Multi-Step OTP Registration**: Cryptographic 6-digit OTP dispatched via SMTP email before password setup.
+- **Auto-Generated Role-Prefixed IDs**: Automatic identifier assignment (`AD-xxx`, `MN-xxx`, `RW-xxx`, `EMP-xxx`).
+- **Admin Verification Queue**: Newly registered accounts remain in `Pending Approval` until verified by an Administrator.
+- **Row-Level Security (RLS)**: PostgreSQL RLS policies restrict audit log access to authorized roles.
+- **Least-Privilege Database Role**: Application connections utilize `edrp_app` restricted to `SELECT` and `INSERT` on audit tables.
+- **Persistent Sessions**: 72-hour persistent login with JWT tokens and Flask session security.
+- **Telemetry Capture**: Client IP addresses and browser User-Agent strings stored in every audit log entry.
 
-### Milestone 1 — Foundation
+---
 
-| Feature | Description |
-|---------|-------------|
-| User Registration & Login | Email/password authentication with JWT tokens |
-| Role-Based Access Control | Four roles: Administrator, Manager, Reviewer, Employee |
-| Team Management | Create, assign, and manage organizational teams |
-| Decision CRUD | Create, read, update, and delete decisions |
-| Alternative Evaluation | Evaluate multiple alternatives per decision with cost analysis |
-| Basic Dashboard | Role-based dashboard views for each user type |
-| File Uploads | Attach documents (PDF, DOCX, PPTX) to decisions |
-
-### Milestone 2 — Decision Lifecycle & Audit
-
-| Feature | Description |
-|---------|-------------|
-| Decision Workflow Lifecycle | State machine: Draft → In Review → Approved/Rejected → Archived |
-| Multi-Step OTP Registration | 6-digit Email OTP verification via SMTP before account creation |
-| Auto-Generated Employee IDs | Role-prefixed unique IDs (`AD`, `MN`, `RW`, `EMP`) |
-| Admin Approval Workflow | Pending accounts verified by administrators with email notifications |
-| 72-Hour Persistent Sessions | "Remember Me" extended JWT session lifetime |
-| Real-Time Audit Logging | Automatic capture of all platform events with module classification |
-| 5-Second Auto-Refresh Audit | Live polling audit logs dashboard with relative timestamps |
-| Decision Replay Engine | Step-by-step playback of decision history and reviewer contributions |
-| Reviewer Assignment | Assign strategic reviewers to evaluate submitted decisions |
-| Discussion Threads | Threaded discussions on decisions with comment support |
-| Meeting Notes | Document meeting notes linked to specific decisions |
-| Single-Screen User Directory | Compact user table with profile modals and cascade deletion |
-| Admin/Manager/Employee Dashboards | Role-specific dashboards with live PostgreSQL data |
-
-### Latest — Enhanced Audit & Approval Chains
-
-| Feature | Description |
-|---------|-------------|
-| Structured Audit Logging | New `AuditLog` model with JSON field-level diffs (`before`/`after`) |
-| Append-Only Audit Table | PostgreSQL triggers prevent UPDATE/DELETE on audit_logs |
-| Decision Audit Trail API | Full timeline of versions, reviews, comments, uploads, and audit events per decision |
-| Field-Level Diff Engine | `diff_dicts()` utility captures per-field changes between snapshots |
-| Approval Chain Configuration | Admin-configurable multi-step approval chains with role-based steps |
-| Decision Versioning | Automatic version snapshots on every decision state change |
-| Row-Level Security | PostgreSQL RLS policies on audit_logs for restricted access |
-| Least-Privilege DB Roles | Separate `edrp_app` role with SELECT/INSERT only on audit tables |
-| IP & User-Agent Tracking | Audit logs capture client IP and browser user-agent strings |
+### 6. Enterprise Collaboration, Settings & Support Ticketing
+- **Discussion Threads & Comments**: Threaded commenting and collaboration tied directly to decisions.
+- **Meeting Notes**: Capture offline meeting minutes, attendee lists, and trade-off summaries.
+- **System Settings Console**: Administrative control over SMTP credentials, maintenance mode, and session policies.
+- **Support Ticketing System**: In-app support request submission with real-time status tracking (Open, In Progress, Resolved).
 
 ---
 
@@ -687,3 +376,13 @@ The audit system provides enterprise-grade compliance tracking:
 
 
 
+## Milestone 3 Deliverables Summary
+
+| Component | Quantity | Details |
+|---|:---:|---|
+| **Database Tables** | **18** | PostgreSQL 15 schema with RLS, triggers, JSONB, and foreign keys |
+| **API Routers** | **20** | FastAPI endpoints on Port 8000 with OpenAPI / Swagger documentation |
+| **UI Templates** | **36** | Jinja2 templates styled with Glassmorphism dark theme |
+| **ORM Models** | **19** | SQLAlchemy models with cascade rules and relationships |
+| **Business Services** | **17** | Decoupled business logic services and repositories |
+| **Frontend JS Modules** | **14** | Asynchronous ES6+ modules with Fetch API |
