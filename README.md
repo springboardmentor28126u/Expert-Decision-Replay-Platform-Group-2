@@ -33,10 +33,32 @@ Manager| Standard registered role with dashboard and reporting access alongside 
 Reviewer| Sees the Approval Workflow, but only decisions assigned to them (their own pending/approved items). Can leave a comment and then approve or reject. |
 Administrator| Full access — Approval Workflow across all decisions plus Team/User Management (assign roles, manage users). |
 
-### Frontend
-Screen , Description,Screenshot 
+## Frontend
+Screen,Description,Screenshot
 
-- Dashboard - Overview with total, approved, pending, rejected decision counts
+Dashboard | Overview with total, approved, pending, rejected decision counts  
+![Dashboard](screenshots/dashboard.png)
+
+Decision Management | List/search all decisions by title, category, status  
+![Decision Management](screenshots/Decision-Management.png)
+
+Decision Detail | Single decision view — Overview, Alternatives, Discussion, Documents, Version History tabs  
+![Decision Detail](screenshots/detail-decision-management.png)
+
+Approval Workflow | Assign Reviewer / All Approvals tabs  
+![Approval Workflow](screenshots/Approval-workflow.png)
+
+Chats | Decision comments and discussion thread  
+![Chats](screenshots/chats.png)
+
+Reports Dashboard | Decision totals + category-wise breakdown  
+![Reports](screenshots/reports.png)
+
+Audit Logs | Full activity log — created/updated decisions with timestamps 
+![Audit Logs](screenshots/audit-logs.png)
+
+Profile | User profile view  
+![Profile](screenshots/profile.png)
 
 
   
