@@ -335,7 +335,7 @@ function Dashboard({ token, onLogout }) {
         const res = await axios.get("http://127.0.0.1:8000/decisions", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setDecisions(res.data);
+        setDecisions(res.data.items);
       } catch (err) {
         console.log("Failed to load decisions for stats", err);
       }

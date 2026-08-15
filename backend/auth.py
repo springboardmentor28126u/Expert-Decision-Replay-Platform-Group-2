@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from jose import jwt
 from passlib.context import CryptContext
 import os
+import time
 
 # Secret key used to sign JWT tokens - keep this secret and unique
 SECRET_KEY = os.getenv("SECRET_KEY", "temporary-secret-change-this-later")
@@ -55,7 +56,13 @@ def get_current_user(token = Depends(oauth2_scheme), db: Session = Depends(get_d
     except JWTError:
         raise credentials_exception
 
-    user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    auth_db_start = time.perf_counter()
+
+    user = db.execute(
+        select(User).where(User.email == email)
+    ).scalar_one_or_none()
+
+    print(f"AUTH USER QUERY TIME: {time.perf_counter() - auth_db_start:.4f}s")
     if user is None:
         raise credentials_exception
 

@@ -396,3 +396,10 @@ class TeamReportItem(BaseModel):
 class TeamReportResponse(BaseModel):
     total_teams: int
     teams: list[TeamReportItem]
+
+class PaginatedDecisionResponse(BaseModel):
+    items: list[DecisionResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

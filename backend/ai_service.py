@@ -53,10 +53,10 @@ Summary:"""
 
     return safe_generate(prompt)
 
-def find_similar_decisions(current_decision, all_decisions):
+def find_similar_decisions(current_decision, candidates):
     candidates = [
-        d for d in all_decisions
-        if d.id != current_decision.id and d.category == current_decision.category
+        d for d in candidates
+        if d.id != current_decision.id 
     ]
 
     if not candidates:

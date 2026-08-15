@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select, func, text
 from pathlib import Path
 from shutil import copyfileobj
@@ -9,6 +9,7 @@ from uuid import uuid4
 from typing import List
 from fastapi import UploadFile, File
 import io
+import time
 from reportlab.lib import colors
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -455,7 +456,7 @@ def add_team_member(
     return TeamDetailResponse.from_team(team)
 
 from schemas import (
-    DecisionCreate, DecisionResponse, DecisionStatusUpdate, DecisionReportResponse, ApprovalReportResponse, AuditReportResponse, )
+    DecisionCreate, DecisionResponse, DecisionStatusUpdate, DecisionReportResponse, ApprovalReportResponse, AuditReportResponse, PaginatedDecisionResponse, )
 from models import ( Decision, DecisionStatus, Approval, ApprovalAction, ReviewerAssignment, )
 from typing import List as ListType
 
@@ -506,11 +507,13 @@ def get_generated_problem_statement(
 
     return {"title": title, "problem_statement": result}
 
-@app.get("/decisions", response_model=ListType[DecisionResponse], tags=["Decision Management"])
+@app.get("/decisions", response_model=PaginatedDecisionResponse, tags=["Decision Management"])
 def list_decisions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     user_id: int | None = None,
+    page: int = 1,
+    limit: int = 10,
 ):
     if user_id is not None and current_user.role != UserRole.admin and current_user.id != user_id:
         raise HTTPException(
@@ -518,13 +521,41 @@ def list_decisions(
             detail="You can only request your own decisions."
         )
 
-    query = select(Decision)
+    # Keep pagination values safe
+    page = max(page, 1)
+    limit = min(max(limit, 1), 100)
+
+    query = select(Decision).options(selectinload(Decision.creator))
+
     if user_id is not None:
         query = query.where(Decision.created_by == user_id)
 
+    # Get total number of matching decisions
+    count_start = time.perf_counter()
+
+    count_query = select(func.count()).select_from(query.subquery())
+    total = db.execute(count_query).scalar_one()
+
+    print(f"COUNT QUERY TIME: {time.perf_counter() - count_start:.4f}s")
+
+    # Fetch only the required page
+    offset = (page - 1) * limit
+
+    query = (
+        query
+        .order_by(Decision.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+
+    query_start = time.perf_counter()
+
     decisions = db.execute(query).scalars().all()
+    print(f"DECISION QUERY TIME: {time.perf_counter() - query_start:.4f}s")
     for d in decisions:
         d.creator_name = d.creator.full_name if d.creator else None
+
+    log_start = time.perf_counter()
 
     log_access(
         db=db,
@@ -534,7 +565,14 @@ def list_decisions(
         user_id=current_user.id,
         details="Listed decisions",
     )  
-    return decisions
+    print(f"LOG ACCESS TIME: {time.perf_counter() - log_start:4f}s")
+    return {
+        "items": decisions,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 from datetime import datetime, timedelta
 
@@ -637,9 +675,15 @@ def get_similar_decisions(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    all_decisions = db.execute(select(Decision)).scalars().all()
+    candidate_decisions = db.execute(
+        select(Decision)
+        .where(Decision.category == decision.category,
+                Decision.id != decision.id
+                )
+                .limit(20)
+    ).scalars().all()
 
-    similar = find_similar_decisions(decision, all_decisions)
+    similar = find_similar_decisions(decision, candidate_decisions)
 
     return {
         "decision_id": decision.id,
@@ -938,8 +982,16 @@ def get_approval_recommendation(
         f"{a.title} — Cost: {a.cost}, Risk: {a.risk_level}, Feasibility: {a.feasibility}" for a in alternatives
     ]) if alternatives else ""
 
-    all_decisions = db.execute(select(Decision)).scalars().all()
-    similar = find_similar_decisions(decision, all_decisions)
+    candidate_decisions = db.execute(
+       select(Decision)
+       .where(
+          Decision.category == decision.category,
+          Decision.id != decision.id
+       )
+       .limit(20)
+    ).scalars().all()
+
+    similar = find_similar_decisions(decision, candidate_decisions)
     similar_text = "\n".join([f"{d.title} — {d.status}" for d in similar]) if similar else ""
 
     recommendation = recommend_approval(decision, discussion_text, alternatives_text, similar_text)
@@ -1228,10 +1280,12 @@ def update_decision(
             )
 
     # Save a version snapshot of the CURRENT state, before making changes
-    existing_versions = db.execute(
-        select(DecisionVersion).where(DecisionVersion.decision_id == decision_id)
-    ).scalars().all()
-    next_version_number = len(existing_versions) + 1
+    max_version = db.execute(
+        select(func.max(DecisionVersion.version_number))
+        .where(DecisionVersion.decision_id == decision_id)
+    ).scalar()
+
+    next_version_number = (max_version or 0) + 1
 
     snapshot = DecisionVersion(
         decision_id=decision.id,
