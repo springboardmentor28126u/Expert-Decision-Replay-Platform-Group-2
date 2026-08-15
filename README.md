@@ -60,6 +60,65 @@ Audit Logs | Full activity log — created/updated decisions with timestamps
 Profile | User profile view  
 ![Profile](screenshots/profile.png)
 
+## ER Diagram
+The diagram below illustrates the complete lifecycle of a decision within the EDRP platform, from user authentication to final reporting.
+1. **Authentication & Routing** — Every session begins at Login/Register. Once authenticated, the system performs role-based dashboard routing, directing the user to one of four dashboards — Employee, Manager, Reviewer, or Admin — based on their assigned role.
+2. **Decision Creation** — Employees and Managers can initiate a new decision by defining the problem statement. This is followed by adding alternatives (with pros, cons, cost, and risk analysis), opening a discussion thread for team input, and attaching supporting documents.
+3. **Submission & Review** — Once finalized, the decision is submitted for review. The system assigns a reviewer, who evaluates the decision from their dedicated Reviewer Dashboard.
+4. **Approval Decision** — The reviewer either approves or rejects the decision. Approved decisions are archived into the Knowledge Repository for future reference, while rejected ones trigger a notification back to the creator. Both outcomes notify relevant stakeholders.
+5. **Administration** — Admins operate through a separate path, managing teams and users via the Admin Dashboard, with full visibility into reports and system-wide activity.
+6. **Audit Trail** — Every critical action — decision creation, submission, review, approval/rejection, and admin operations — is logged in the Audit Log (shown as dashed red lines), ensuring full traceability and compliance.
+7. **Reporting** — All processed decisions and activity ultimately feed into the Reports & Analytics module, which generates exportable PDF/Excel summaries for organizational insight.
+This flow ensures that every decision is transparent, traceable, and backed by a documented rationale — fulfilling the platform's core goal of preserving institutional knowledge.
+![ER Diagram](screenshots/ER-Diagram.png)
+
+## Backend
+Screen,Description,Screenshot
+|API / Backend | Backend structure and API view |
+![backend](screenshots/backend.png)
+
+## Modules Implemented
+1. **User Management** — Registration/Login, Role Management, Team Management, Profiles
+2. **Decision Management** — Create/Edit, Categories, Attachments, Version History, Status (Draft → Under Review →                                        Approved/Rejected → Archived)
+3. **Alternative Analysis** — Multiple options, Pros & Cons, Cost comparison, Feasibility & Risk assessment
+4. **Discussion Module** — Comments, Threads, Meeting notes, Decision rationale, File attachments
+5. **Approval Workflow** — Multi-level approvals, Reviewer assignment, Approval history, Notifications, Escalation
+6. **Knowledge Repository** — Search, Category filtering, Tag management, Timeline view
+7. **Dashboards** — Role-specific views for Employee, Manager, and Admin
+8. **Audit & Compliance** — Activity logs, Version tracking, Change history, Access logs
+9. **Reports & Export** — Decision/Approval/Team/Audit reports, PDF & Excel export
+
+## Project Phases
+| Milestone | Weeks | Focus |
+|---|---|---|
+| Milestone 1 | 1–2 | Requirements, DB design, wireframes, FastAPI/React setup, Authentication |
+| Milestone 2 | 3–4 | Decision management, alternative comparison, file uploads, discussion module |
+| Milestone 3 | 5–6 | Approval workflows, notifications, audit logging, reports, dashboards |
+| Milestone 4 | 7–8 | Testing, bug fixing, Docker deployment, documentation, final presentation |
+
+## Challenges & Error Cycles
+
+Real issues hit and resolved during development:
+
+- **Environment variables not loading:** .env was accidentally placed inside the venv/ folder instead of the project root. pydantic-settings resolves env_file relative to the working directory, so all SMTP/DB values silently defaulted to None. Fixed by relocating .env to backend/.
+- **Config/schema mismatch:** .env initially stored a single DATABASE_URL, while the Settings class expected separate DATABASE_HOST, PORT, NAME, USER, PASSWORD fields (with DATABASE_URL built as a computed property). Storing both caused a conflict, since the property has no setter — resolved by keeping only the split fields in .env.
+- **Missing required fields:** Validation failed on ACCESS_TOKEN_EXPIRE_MINUTES until it was added explicitly to .env.
+
+## Setup & Installation
+```bash
+# Backend
+cd backend
+python -m venv venv
+venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+
+
 
   
 
