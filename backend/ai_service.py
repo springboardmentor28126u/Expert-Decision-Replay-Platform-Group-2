@@ -1,6 +1,12 @@
 import os
 from dotenv import load_dotenv
 from google import genai
+from pathlib import Path
+from groq import Groq
+
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 load_dotenv()
 
@@ -12,10 +18,28 @@ def safe_generate(prompt: str) -> str:
             model="gemini-2.5-flash",
             contents=prompt
         )
+        if not response.text:
+            print("Gemini returned empty response. Trying Groq fallback...")
+            return generate_with_groq(prompt)
+        return response.text.strip()
     except Exception as e:
+        print("Gemini error:", repr(e))
         if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
-            return "AI_RATE_LIMITED"
-        raise
+            print("Gemini rate-limited. Trying Groq fallback...")
+            return generate_with_groq(prompt)
+        return "AI_ERROR"
+
+
+def generate_with_groq(prompt: str) -> str:
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print("Groq fallback also failed:", repr(e))
+        return "AI_RATE_LIMITED"
 
 def summarize_decision(problem_statement: str, discussion_text: str = "") -> str:
     prompt = f"""Summarize this organizational decision in 2 short sentences.
@@ -187,3 +211,41 @@ Answer clearly and concisely:"""
         if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
             return "AI_RATE_LIMITED"
         raise
+
+def recommend_approval(decision, discussion_text: str = "", alternatives_text: str = "", similar_history: str = "") -> str:
+    prompt = f"""You are helping a Reviewer or Manager decide whether to approve or reject a decision.
+Analyze the information below and give a clear recommendation.
+
+Decision Title: {decision.title}
+Category: {decision.category}
+Problem Statement: {decision.problem_statement}
+
+Alternatives Considered:
+{alternatives_text if alternatives_text else "None recorded."}
+
+Discussion:
+{discussion_text if discussion_text else "No discussion recorded."}
+
+Similar Past Decisions (for context on precedent):
+{similar_history if similar_history else "No similar past decisions found."}
+
+Respond in this exact format:
+Recommendation: Approve OR Reject
+Reasoning:
+- (bullet point 1)
+- (bullet point 2)
+- (bullet point 3, optional)
+
+Be honest — if the information is too thin to make a confident call, say so in the reasoning rather than guessing."""
+
+    return safe_generate(prompt)
+
+def generate_problem_statement(title: str) -> str:
+    prompt = f"""Based on this decision title, write a clear, professional problem statement (2-3 sentences) explaining what issue or need this decision addresses.
+This is a draft starting point for a human to review and edit — be reasonable and generic if the title doesn't give much detail.
+
+Title: {title}
+
+Problem Statement:"""
+
+    return safe_generate(prompt)

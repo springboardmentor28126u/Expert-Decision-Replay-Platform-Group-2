@@ -139,6 +139,8 @@
 
 .landing-hero-text {
   max-width: 650px;
+  display: flex;
+  flex-direction: column;
 }
 
 .landing-eyebrow {
@@ -177,9 +179,15 @@
 .landing-hero-ctas {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
 
+  width: 100%;
   margin-top: 34px;
+}
+
+.landing-hero-ctas .landing-cta-btn {
+  min-width: 140px;
 }
 
 .landing-cta-btn {
@@ -243,21 +251,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
+
+  padding-left: 10px;
+  box-sizing: border-box;
 }
 
 .replay-card {
   width: 100%;
-  max-width: 450px;
+  max-width: 440px;
 
-  padding: 26px 28px;
+  padding: 24px 26px;
 
-  background: #151b23;
-  border: 1px solid #2b3442;
+  background: linear-gradient(
+    145deg,
+    #171e27 0%,
+    #131920 100%
+  );
+
+  border: 1px solid #303b4a;
   border-radius: 16px;
 
   box-shadow:
-    0 22px 55px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(79, 209, 181, 0.03);
+    0 24px 60px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(79, 209, 181, 0.025);
 
   box-sizing: border-box;
 }
@@ -269,10 +285,10 @@
   align-items: center;
   justify-content: space-between;
 
-  padding-bottom: 18px;
-  margin-bottom: 8px;
+  padding-bottom: 17px;
+  margin-bottom: 4px;
 
-  border-bottom: 1px solid #252d39;
+  border-bottom: 1px solid #293340;
 }
 
 .replay-card-header-left {
@@ -288,11 +304,12 @@
   flex-shrink: 0;
 
   border-radius: 50%;
+
   background: #4fd1b5;
 
   box-shadow:
-    0 0 0 4px rgba(79, 209, 181, 0.08),
-    0 0 12px rgba(79, 209, 181, 0.4);
+    0 0 0 4px rgba(79, 209, 181, 0.07),
+    0 0 12px rgba(79, 209, 181, 0.38);
 }
 
 .replay-card-title {
@@ -322,6 +339,7 @@
   color: #4fd1b5;
 
   background: rgba(79, 209, 181, 0.08);
+
   border: 1px solid rgba(79, 209, 181, 0.2);
   border-radius: 5px;
 
@@ -331,19 +349,22 @@
 }
 
 /* ---------- Timeline ---------- */
+
 .replay-steps {
   display: flex;
   flex-direction: column;
 
-  padding-top: 4px;
+  padding-top: 5px;
 }
 
 .replay-step {
   display: grid;
+
   grid-template-columns: 40px minmax(0, 1fr);
+
   column-gap: 13px;
 
-  min-height: 72px;
+  min-height: 70px;
 }
 
 .replay-step-marker {
@@ -362,16 +383,18 @@
   width: 34px;
   height: 34px;
 
+  margin-top: 12px;
+
   display: flex;
   align-items: center;
   justify-content: center;
 
-   margin-top: 12px;
-
   color: #4fd1b5;
 
   background: #182129;
+
   border: 1px solid rgba(79, 209, 181, 0.22);
+
   border-radius: 9px;
 
   box-sizing: border-box;
@@ -397,7 +420,7 @@
 .replay-step-body {
   min-width: 0;
 
-  padding: 15px 0 14px;
+  padding: 14px 0 13px;
 }
 
 .replay-step-label {
@@ -407,6 +430,7 @@
 
   font-size: 13px;
   font-weight: 650;
+
   line-height: 1.4;
 }
 
@@ -418,6 +442,7 @@
   color: #8792a2;
 
   font-size: 11px;
+
   line-height: 1.55;
 }
 
@@ -429,6 +454,7 @@
   padding: 4px 10px 4px 0;
 
   background: rgba(79, 209, 181, 0.035);
+
   border-radius: 9px;
 }
 
@@ -436,6 +462,7 @@
   color: #0d1117;
 
   background: #4fd1b5;
+
   border-color: #4fd1b5;
 
   box-shadow:

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile
+from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -12,7 +12,7 @@ import io
 from reportlab.lib import colors
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from ai_service import summarize_decision, find_similar_decisions, generate_sql_query, is_query_safe, parse_task_command, answer_decision_question, answer_with_file
+from ai_service import summarize_decision, find_similar_decisions, generate_sql_query, is_query_safe, parse_task_command, answer_decision_question, answer_with_file, recommend_approval, generate_problem_statement
 from discussion import DiscussionMessage
 
 from fastapi.responses import StreamingResponse
@@ -32,7 +32,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 
 from database import engine, Base, get_db
-from models import User, UserRole, AuditLog, ReviewerAssignment, Team
+from models import User, UserRole, AuditLog, ReviewerAssignment, ChatHistory, Team
 from audit_helper import log_activity, log_security, log_access
 from discussion import DiscussionMessage
 
@@ -491,6 +491,21 @@ def create_decision(
     new_decision.creator_name = new_decision.creator.full_name
     return new_decision
 
+@app.post("/ai/generate-problem-statement", tags=["Decision Management"])
+def get_generated_problem_statement(
+    title: str = Body(..., embed=True),
+    current_user: User = Depends(get_current_user),
+):
+    if not title or len(title.strip()) < 3:
+        raise HTTPException(status_code=400, detail="Please provide a title first.")
+
+    result = generate_problem_statement(title)
+
+    if result == "AI_RATE_LIMITED":
+        raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
+
+    return {"title": title, "problem_statement": result}
+
 @app.get("/decisions", response_model=ListType[DecisionResponse], tags=["Decision Management"])
 def list_decisions(
     db: Session = Depends(get_db),
@@ -569,14 +584,36 @@ def get_ai_summary(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
+    # Use cached summary if it exists and the decision hasn't changed since
+    if decision.ai_summary and decision.ai_summary_updated_at and decision.updated_at:
+        if decision.ai_summary_updated_at >= decision.updated_at:
+            return {
+                "decision_id": decision.id,
+                "title": decision.title,
+                "status": decision.status,
+                "category": decision.category,
+                "created_by": decision.creator.full_name if decision.creator else None,
+                "created_at": decision.created_at,
+                "summary": decision.ai_summary,
+                "cached": True,
+            }
+
     messages = db.execute(
         select(DiscussionMessage).where(DiscussionMessage.decision_id == decision_id)
     ).scalars().all()
     discussion_text = "\n".join([m.message for m in messages]) if messages else ""
 
     summary = summarize_decision(decision.problem_statement, discussion_text)
+
     if summary == "AI_RATE_LIMITED":
         summary = "AI summary temporarily unavailable (rate limit reached) — please try again in a minute."
+    elif summary == "AI_EMPTY_RESPONSE" or summary == "AI_ERROR":
+        summary = "AI summary could not be generated for this decision. Please try again."
+    else:
+        decision.ai_summary = summary
+        decision.ai_summary_updated_at = datetime.utcnow()
+        db.commit()
+
     return {
         "decision_id": decision.id,
         "title": decision.title,
@@ -585,6 +622,7 @@ def get_ai_summary(
         "created_by": decision.creator.full_name if decision.creator else None,
         "created_at": decision.created_at,
         "summary": summary,
+        "cached": False,
     }
 
 @app.get("/decisions/{decision_id}/similar", tags=["Decision Management"])
@@ -636,6 +674,9 @@ def ask_ai(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Query failed: {str(e)}")
 
+    db.add(ChatHistory(user_id=current_user.id, tab_type="ask", question=question, answer=f"Found {len(rows)} result(s)"))
+    db.commit()
+
     return {
         "question": question,
         "generated_sql": sql,
@@ -676,6 +717,10 @@ def run_task_command(
 
         decision.assigned_reviewer_id = new_reviewer_id
         db.commit()
+
+        db.add(ChatHistory(user_id=current_user.id, decision_id=decision_id, tab_type="task", question=command, answer=f"reassign_reviewer: done"))
+        db.commit()
+
         return {"action": "reassign_reviewer", "decision_id": decision_id, "new_reviewer_id": new_reviewer_id, "status": "done"}
 
     elif action == "escalate":
@@ -689,6 +734,10 @@ def run_task_command(
         )
         db.add(notification)
         db.commit()
+
+        db.add(ChatHistory(user_id=current_user.id, decision_id=decision_id, tab_type="task", question=command, answer="escalate: flagged"))
+        db.commit()
+
         return {"action": "escalate", "decision_id": decision_id, "status": "flagged"}
 
     raise HTTPException(status_code=400, detail="Unsupported action")
@@ -716,8 +765,6 @@ async def ask_with_file(
         raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
 
     return {"question": question, "answer": answer, "filename": file.filename}
-
-from sqlalchemy import select as sa_select
 
 @app.post("/decisions/{decision_id}/ai-ask", tags=["Decision Management"])
 def ask_about_decision(
@@ -749,7 +796,35 @@ def ask_about_decision(
     if answer == "AI_RATE_LIMITED":
         raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
 
+    db.add(ChatHistory(user_id=current_user.id, decision_id=decision_id, tab_type="ask", question=question, answer=answer))
+    db.commit()
+
     return {"decision_id": decision_id, "question": question, "answer": answer}
+
+@app.get("/ai/history", tags=["AI Assistant"])
+def get_chat_history(
+    tab_type: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = select(ChatHistory).where(ChatHistory.user_id == current_user.id)
+    if tab_type:
+        query = query.where(ChatHistory.tab_type == tab_type)
+    query = query.order_by(ChatHistory.created_at.desc()).limit(20)
+
+    history = db.execute(query).scalars().all()
+
+    return [
+        {
+            "id": h.id,
+            "decision_id": h.decision_id,
+            "tab_type": h.tab_type,
+            "question": h.question,
+            "answer": h.answer,
+            "created_at": h.created_at,
+        }
+        for h in history
+    ]
 
 @app.put("/decisions/{decision_id}/status", response_model=DecisionResponse, tags=["Decision Management"])
 def update_decision_status(
@@ -838,6 +913,41 @@ def list_reviewer_assignments(
         a.reviewer_name = a.reviewer.full_name if a.reviewer else None
 
     return assignments
+
+@app.get("/decisions/{decision_id}/ai-recommendation", tags=["Decision Management"])
+def get_approval_recommendation(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("reviewer", "manager", "admin")),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    messages = db.execute(
+        select(DiscussionMessage).where(DiscussionMessage.decision_id == decision_id)
+    ).scalars().all()
+    discussion_text = "\n".join([m.message for m in messages]) if messages else ""
+
+    alternatives = db.execute(
+        select(Alternative).where(Alternative.decision_id == decision_id)
+    ).scalars().all()
+    alternatives_text = "\n".join([
+        f"{a.title} — Cost: {a.cost}, Risk: {a.risk_level}, Feasibility: {a.feasibility}" for a in alternatives
+    ]) if alternatives else ""
+
+    all_decisions = db.execute(select(Decision)).scalars().all()
+    similar = find_similar_decisions(decision, all_decisions)
+    similar_text = "\n".join([f"{d.title} — {d.status}" for d in similar]) if similar else ""
+
+    recommendation = recommend_approval(decision, discussion_text, alternatives_text, similar_text)
+
+    if recommendation == "AI_RATE_LIMITED":
+        raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
+
+    return {"decision_id": decision_id, "recommendation": recommendation}
 
 from schemas import ApprovalCreate, ApprovalResponse
 from models import Approval, ApprovalAction

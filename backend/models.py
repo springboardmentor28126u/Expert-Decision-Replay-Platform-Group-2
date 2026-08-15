@@ -3,6 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy import DateTime
 from sqlalchemy.orm import relationship
 from database import Base
+from datetime import datetime
 import enum
 
 class UserRole(str, enum.Enum):
@@ -55,6 +56,8 @@ class Decision(Base):
     attachment_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    ai_summary = Column(Text, nullable=True)
+    ai_summary_updated_at = Column(DateTime, nullable=True)
     
     creator = relationship("User", foreign_keys=[created_by])
 
@@ -172,3 +175,14 @@ class Team(Base):
 
     manager = relationship("User", foreign_keys=[manager_id])
     members = relationship("User", foreign_keys="[User.team_id]", back_populates="team")
+
+class ChatHistory(Base):
+    __tablename__ = "chat_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=True)
+    tab_type = Column(String, nullable=False)  # "ask" or "task"
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

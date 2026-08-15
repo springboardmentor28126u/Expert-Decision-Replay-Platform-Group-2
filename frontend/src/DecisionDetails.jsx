@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
+import { Pencil, FileDown, Paperclip } from "lucide-react";
 import VersionHistory from "./VersionHistory";
 import AlternativesPanel from "./AlternativesPanel";
 import "./discussion.css";
@@ -627,7 +628,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 
                <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
                  <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
-                   ✏️ Edit Decision
+                   <Pencil size={15} />
+                   Edit Decision
                  </button>
                  <a
                   href={`http://127.0.0.1:8000/decisions/${decision.id}/export`}
@@ -648,7 +650,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   className="dash-back-btn"
                   style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
                 >
-                  ⬇ Download PDF
+                  <FileDown size={15} />
+                  Download PDF
                  </a>
                 </div>
               </div>
@@ -870,7 +873,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
 
                 <div className="form-file-input-wrapper">
                   <label className="form-file-label">
-                    📎 Attach File (PDF, DOCX, JPG, PNG)
+                    <Paperclip size={15} />
+                    Attach File (PDF, DOCX, JPG, PNG)
                     <input
                       type="file"
                       className="form-file-input"
