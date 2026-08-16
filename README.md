@@ -15,7 +15,32 @@ It supports structured decision documentation, multi-level approval workflows, d
 - 📜 Full audit trail and compliance logs
 - 📊 Reports, analytics, and export (PDF/Excel)
 
-  ## Architecture
+## Technology Used
+**Backend**
+- Python 3.x
+- FastAPI — REST API framework
+- Uvicorn — ASGI server
+- SQLAlchemy — ORM
+- Alembic — Database migrations
+- Pydantic — Data validation & settings management
+- JWT — Authentication & authorization
+  
+**Frontend**
+- React (Vite)
+- Axios — API client
+- CSS (App.css, Auth.css)
+  
+**Database & Storage**
+- PostgreSQL — Relational database
+- Local/Cloud file storage — Document uploads
+  
+**DevOps & Tools**
+- Docker — Containerization
+- GitHub & GitHub Actions — Version control & CI/CD
+- Postman — API testing
+- HTTPS/SSL — Secure communication
+
+## Architecture
   ![Architecture Diagram](screenshots/architecture-diagram.png)
 
 ## Layers 
@@ -32,6 +57,121 @@ Employee | Create/view decisions, participate in discussions. No approval/reject
 Manager| Standard registered role with dashboard and reporting access alongside decision creation and discussion. |
 Reviewer| Sees the Approval Workflow, but only decisions assigned to them (their own pending/approved items). Can leave a comment and then approve or reject. |
 Administrator| Full access — Approval Workflow across all decisions plus Team/User Management (assign roles, manage users). |
+
+```
+backend/
+├── app/
+│   ├── main.py                    # App entrypoint, registers all routers
+│   ├── database.py                # DB engine/session setup
+│   ├── audit_logger.py            # Centralized audit logging helper
+│   │
+│   ├── api/
+│   │   ├── auth.py                # Register, login endpoints
+│   │   ├── user.py                # Profile, admin user list, roles
+│   │   ├── decision.py            # Decision CRUD, search, status
+│   │   ├── alternative.py         # Alternatives nested under decisions
+│   │   ├── approval.py            # Multi-level approval workflow
+│   │   ├── comment.py             # Discussion threads
+│   │   ├── history.py             # Decision version history
+│   │   ├── notification.py        # In-app notifications
+│   │   ├── report.py              # Analytics & report generation
+│   │   └── audit.py               # Audit log endpoints
+│   │
+│   ├── auth/
+│   │   ├── security.py            # Password hashing, JWT handling
+│   │   └── dependencies.py        # Auth guards, get_current_user
+│   │
+│   ├── core/
+│   │   ├── config.py              # Settings (.env loading via pydantic)
+│   │   └── dependencies.py        # Shared FastAPI dependencies
+│   │
+│   ├── database/
+│   │   ├── models/
+│   │   │   ├── user.py
+│   │   │   ├── team.py
+│   │   │   ├── decision.py
+│   │   │   ├── alternative.py
+│   │   │   ├── approval.py
+│   │   │   ├── comment.py
+│   │   │   ├── document.py
+│   │   │   ├── decision_document.py
+│   │   │   ├── decision_history.py
+│   │   │   ├── decision_version.py
+│   │   │   ├── audit_log.py
+│   │   │   ├── notification.py
+│   │   │   └── ai_review.py
+│   │   │
+│   │   └── schemas/
+│   │       ├── decision.py        # Pydantic request/response models
+│   │       ├── alternative.py
+│   │       ├── approval.py
+│   │       ├── comment.py
+│   │       └── ai_review.py
+│   │
+│   ├── routers/
+│   │   ├── auth.py
+│   │   ├── user.py
+│   │   ├── team.py
+│   │   ├── decision.py
+│   │   ├── alternative.py
+│   │   ├── approval.py
+│   │   ├── comment.py
+│   │   └── notification.py
+│   │
+│   └── services/
+│       ├── auth_service.py
+│       ├── email_service.py
+│       └── ai_review_service.py
+│
+├── scripts/
+│   ├── check_password.py
+│   ├── inspect_users.py
+│   └── reset_password.py
+│
+├── tests/
+│   └── test_register.py
+│
+├── alembic/                       # Database migrations
+│   ├── versions/
+│   ├── env.py
+│   └── script.py.mako
+│
+├── uploads/                       # User-uploaded documents
+├── utils/
+├── venv/
+├── .env.example
+├── alembic.ini
+└── requirements.txt
+
+frontend/
+└── src/
+    ├── pages/
+    │   ├── Login.jsx
+    │   ├── Register.jsx
+    │   ├── Dashboard.jsx
+    │   ├── DecisionList.jsx
+    │   ├── DecisionDetail.jsx
+    │   ├── DecisionHistory.jsx
+    │   ├── CreateDecision.jsx
+    │   ├── EditDecision.jsx
+    │   ├── Alternatives.jsx
+    │   ├── ApprovalWorkflow.jsx
+    │   ├── Comments.jsx
+    │   ├── UploadDocument.jsx
+    │   ├── Reports.jsx
+    │   ├── AuditLogs.jsx
+    │   ├── Users.jsx
+    │   └── Profile.jsx
+    │
+    ├── components/                # Shared UI: cards, headers, nav
+    ├── services/                  # Centralized Axios client + API calls
+    │
+    ├── App.jsx
+    ├── App.css
+    ├── Auth.css
+    ├── main.jsx
+    └── index.css
+```
 
 ## Frontend
 Screen,Description,Screenshot
