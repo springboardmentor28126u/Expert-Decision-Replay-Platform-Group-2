@@ -3,7 +3,7 @@ import time
 from collections import defaultdict
 from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 
 from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, Body
 from fastapi.staticfiles import StaticFiles
@@ -162,7 +162,32 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class SPAMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "GET":
+            accept = request.headers.get("accept", "")
+            path = request.url.path
+            
+            # Allow static files, uploads, and backend docs to bypass
+            is_static_or_upload = (
+                path.startswith("/uploads") or 
+                path.startswith("/assets") or
+                path.startswith("/docs") or
+                path.startswith("/redoc") or
+                path.startswith("/openapi.json") or
+                any(path.endswith(ext) for ext in [".js", ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".json", ".txt"])
+            )
+            
+            if "text/html" in accept and not is_static_or_upload:
+                index_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist", "index.html")
+                if os.path.exists(index_path):
+                    return FileResponse(index_path)
+                    
+        return await call_next(request)
+
+
 app = FastAPI()
+app.add_middleware(SPAMiddleware)
 app.add_middleware(RateLimitingMiddleware, limit=RATE_LIMIT_PER_MIN)
 
 UPLOAD_ROOT = Path(__file__).resolve().parent / "uploads"
@@ -4306,4 +4331,10 @@ def export_audit_report_excel(
             "attachment; filename=audit_report.xlsx"
         },
     )
+
+
+# Serve frontend static files
+frontend_dist_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(frontend_dist_dir):
+    app.mount("/", StaticFiles(directory=frontend_dist_dir), name="frontend")
 

@@ -8,6 +8,8 @@ import "./dashboard.css";
 import FileUpload from "./FileUpload";
 import ApprovalHistory from "./ApprovalHistory";
 
+const API_BASE = import.meta.env.PROD ? "" : "http://127.0.0.1:8000";
+
 function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const getAttachmentUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `http://127.0.0.1:8000${url}`;
+    return `${API_BASE}${url}`;
   };
 
   const isImageFile = (url) => {
@@ -632,10 +634,10 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                    Edit Decision
                  </button>
                  <a
-                  href={`http://127.0.0.1:8000/decisions/${decision.id}/export`}
+                  href={`${API_BASE}/decisions/${decision.id}/export`}
                   onClick={(e) => {
                     e.preventDefault();
-                    fetch(`http://127.0.0.1:8000/decisions/${decision.id}/export`, {
+                    fetch(`${API_BASE}/decisions/${decision.id}/export`, {
                       headers: { Authorization: `Bearer ${token}` },
                     })
                       .then((res) => res.blob())
@@ -715,7 +717,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             {decision.attachment_url && (
               <div style={{ marginTop: "12px", display: "flex", gap: "16px" }}>
                 <a
-                  href={`http://127.0.0.1:8000${decision.attachment_url}`}
+                  href={`${API_BASE}${decision.attachment_url}`}
                   target="_blank"
                   rel="noreferrer"
                   style={{ color: "#4FD1B5", fontSize: "13px", textDecoration: "none" }}
@@ -727,7 +729,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   href="#"
                   onClick={(e) => {
                    e.preventDefault();
-                   fetch(`http://127.0.0.1:8000${decision.attachment_url}?download=true`)
+                   fetch(`${API_BASE}${decision.attachment_url}?download=true`)
                       .then((res) => res.blob())
                       .then((blob) => {
                         const url = window.URL.createObjectURL(blob);
