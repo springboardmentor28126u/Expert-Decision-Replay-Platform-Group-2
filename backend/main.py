@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 
-from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, Body
+from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, Body, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, selectinload
@@ -55,6 +55,7 @@ from redis_cache import (
 )
 from notifications import router as notifications_router
 from notifications import notify_all_users, Notification
+from email_service import queue_email
 from schemas import UserCreate, UserLogin, UserResponse, Token, ReviewerAssignmentCreate, ReviewerAssignmentResponse, TeamCreate, TeamUpdate, TeamMemberAssign, TeamResponse, TeamDetailResponse, TeamReportResponse, TeamReportItem
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 # Create all tables (safe to keep, won't duplicate existing ones)
@@ -651,6 +652,7 @@ def list_decisions(
     user_id: int | None = None,
     page: int = 1,
     limit: int = 10,
+    search: str | None = None,
 ):
     if user_id is not None and current_user.role != UserRole.admin and current_user.id != user_id:
         raise HTTPException(
@@ -662,7 +664,13 @@ def list_decisions(
     page = max(page, 1)
     limit = min(max(limit, 1), 100)
 
-    cache_key = f"db_cache:decisions:all:page{page}:limit{limit}" if user_id is None else f"db_cache:decisions:user:{user_id}:page{page}:limit{limit}"
+    search_key = search.strip().lower() if search else "all"
+
+    cache_key = (
+        f"db_cache:decisions:all:search:{search_key}:page{page}:limit{limit}"
+        if user_id is None
+        else f"db_cache:decisions:user:{user_id}:search:{search_key}:page{page}:limit{limit}"
+    )
     cached_data = get_cached_data(cache_key)
     if cached_data is not None:
         return cached_data
@@ -671,6 +679,14 @@ def list_decisions(
 
     if user_id is not None:
         query = query.where(Decision.created_by == user_id)
+
+    if search:
+        search_term = f"%{search.strip()}%"
+        query = query.where(
+            Decision.title.ilike(search_term)
+            | Decision.category.ilike(search_term)
+            | Decision.problem_statement.ilike(search_term)
+        )
 
     # Get total number of matching decisions
     count_start = time.perf_counter()
@@ -709,14 +725,17 @@ def list_decisions(
 
     )  
     print(f"LOG ACCESS TIME: {time.perf_counter() - log_start:4f}s")
-    return {
+    response_data = {
         "items": decisions,
         "total": total,
         "page": page,
         "limit": limit,
         "total_pages": (total + limit - 1) // limit,
     }
-    set_cached_data(cache_key, response_data, expire=300)
+
+    #Enable this later after testing search
+    #set_cached_data(cache_key, response_data, expire=300)
+    
     return response_data
 
 from datetime import datetime, timedelta
@@ -1162,6 +1181,7 @@ from models import Approval, ApprovalAction
 def approve_decision(
     decision_id: int,
     approval: ApprovalCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1268,12 +1288,24 @@ def approve_decision(
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
     invalidate_decisions_cache(decision_id)
+
+    if decision.creator and decision.creator.email:
+        heading = "Your decision was approved" if next_stage == 2 else "Your decision passed stage 1 review"
+        queue_email(
+            background_tasks,
+            to_email=decision.creator.email,
+            heading=heading,
+            message=f"Comment: {approval.comment}" if approval.comment else "No comment was left.",
+            decision_title=decision.title,
+            decision_id=decision.id,
+        )
     return new_approval
 
 @app.post("/decisions/{decision_id}/reject", response_model=ApprovalResponse, tags=["Approval Workflow"])
 def reject_decision(
     decision_id: int,
     approval: ApprovalCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.reviewer, UserRole.manager, UserRole.admin)),
 ):
@@ -1331,6 +1363,16 @@ def reject_decision(
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
     invalidate_decisions_cache(decision_id)
+
+    if decision.creator and decision.creator.email:
+        queue_email(
+            background_tasks,
+            to_email=decision.creator.email,
+            heading="Your decision was rejected",
+            message=f"Reason: {approval.comment}",
+            decision_title=decision.title,
+            decision_id=decision.id,
+        )
     return new_approval
 
 @app.post("/decisions/{decision_id}/resubmit", response_model=DecisionResponse, tags=["Approval Workflow"])

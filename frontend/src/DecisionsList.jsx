@@ -18,6 +18,10 @@ function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, page
           limit: pageSize,
         });
 
+        if (searchQuery.trim()) {
+          params.append("search", searchQuery.trim());
+        }
+
         if (userId) {
           params.append("user_id", userId);
         }
@@ -34,7 +38,7 @@ function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, page
       }
     };
     fetchDecisions();
-  }, [token, refreshKey, userId, currentPage, pageSize]);
+  }, [token, refreshKey, userId, currentPage, pageSize, searchQuery]);
 
   // Reset page when filter or search changes
   useEffect(() => {
@@ -56,17 +60,7 @@ function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, page
   }
 
   // Filter decisions based on status, owner, and search query
-  const filteredDecisions = decisions.filter((d) => {
-    const matchesStatus = statusFilter === "all" || d.status === statusFilter;
-    const matchesOwner = ownerFilter === "all" || (ownerFilter === "mine" && d.created_by === currentUserId);
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !searchQuery ||
-      d.title.toLowerCase().includes(q) ||
-      (d.category && d.category.toLowerCase().includes(q)) ||
-      d.problem_statement.toLowerCase().includes(q);
-      
-    return matchesStatus && matchesOwner && matchesSearch;
-  });
+  const filteredDecisions = decisions;
 
   // Sort decisions by created_at descending (most recent first)
   const sortedDecisions = [...filteredDecisions].sort((a, b) => {
@@ -78,8 +72,7 @@ function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, page
   }
 
   // Pagination math
-  const startIndex = (currentPage - 1) * pageSize;
-  const paginatedDecisions = sortedDecisions.slice(startIndex, startIndex + pageSize);
+  const paginatedDecisions = sortedDecisions;
 
   return (
     <div>
