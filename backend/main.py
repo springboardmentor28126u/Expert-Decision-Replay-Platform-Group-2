@@ -821,7 +821,14 @@ def get_ai_summary(
 
     # Use cached summary if it exists and the decision hasn't changed since
     if decision.ai_summary and decision.ai_summary_updated_at and decision.updated_at:
-        if decision.ai_summary_updated_at >= decision.updated_at:
+        summary_at = decision.ai_summary_updated_at
+        updated_at = decision.updated_at
+        if summary_at.tzinfo is not None:
+            summary_at = summary_at.replace(tzinfo=None)
+        if updated_at.tzinfo is not None:
+            updated_at = updated_at.replace(tzinfo=None)
+
+        if summary_at >= updated_at:
             return {
                 "decision_id": decision.id,
                 "title": decision.title,
