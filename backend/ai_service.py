@@ -15,7 +15,7 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 def safe_generate(prompt: str) -> str:
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt
         )
         if not response.text:
