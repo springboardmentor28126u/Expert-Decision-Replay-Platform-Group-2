@@ -1551,3 +1551,278 @@ def get_audit_report(
         security_events=security_events,
         recent_events=recent_events,
     )
+
+# ============================================================
+# Report Export (PDF)
+# ============================================================
+
+def _report_pdf_lines(report_type: str, data: dict) -> list[tuple[str, dict]]:
+    """Turn a report's already-computed dict into (text, style) lines for the PDF."""
+    lines: list[tuple[str, dict]] = []
+
+    def add(text, size=11, bold=False, gap=0.28):
+        lines.append((text, {"size": size, "bold": bold, "gap": gap}))
+
+    if report_type == "decision":
+        add(f"Total Decisions: {data['total_decisions']}", bold=True, gap=0.35)
+        add("By Status:", bold=True)
+        for row in data["by_status"]:
+            add(f"  - {row['status'].replace('_', ' ').title()}: {row['count']}")
+        add("By Category:", bold=True, gap=0.3)
+        for row in data["by_category"]:
+            add(f"  - {row['category']}: {row['count']}")
+        add("Recent Decisions:", bold=True, gap=0.3)
+        for row in data["recent_decisions"]:
+            add(f"  - #{row['id']} {row['title']} ({row['status']})")
+
+    elif report_type == "approvals":
+        add(f"Total Approvals: {data['total_approvals']}", bold=True, gap=0.35)
+        add(f"Pending: {data['pending']}   Approved: {data['approved']}   "
+            f"Rejected: {data['rejected']}   Escalated: {data['escalated']}")
+        if data.get("average_completion_hours") is not None:
+            add(f"Average Completion Time: {data['average_completion_hours']:.1f} hours", gap=0.35)
+        add("By Level:", bold=True, gap=0.3)
+        for row in data["by_level"]:
+            add(f"  - Level {row['level']}: pending {row['pending']}, approved {row['approved']}, "
+                f"rejected {row['rejected']}, escalated {row['escalated']}")
+
+    elif report_type == "audit":
+        add(f"Total Events: {data['total_events']}", bold=True, gap=0.35)
+        add("By Action:", bold=True)
+        for row in data["by_action"]:
+            add(f"  - {row['action']}: {row['count']}")
+        add("By Actor:", bold=True, gap=0.3)
+        for row in data["by_actor"]:
+            add(f"  - {row['actor_name']}: {row['count']}")
+        add("Recent Events:", bold=True, gap=0.3)
+        for row in data["recent_events"][:15]:
+            actor = row["actor"]["full_name"] if row["actor"] else "Unknown"
+            add(f"  - {row['action']} by {actor}")
+
+    else:
+        raise HTTPException(status_code=404, detail=f"Unknown report type: {report_type}")
+
+    return lines
+
+
+REPORT_TITLES = {
+    "decision": "Decision Report",
+    "approvals": "Approval Report",
+    "audit": "Audit Report",
+}
+
+
+def _report_excel_sections(report_type: str, data: dict) -> list[dict]:
+    """Turn a report's dict into tabular sections: [{title, headers, rows}]."""
+    sections: list[dict] = []
+
+    if report_type == "decision":
+        sections.append({
+            "title": "Summary",
+            "headers": ["Metric", "Value"],
+            "rows": [["Total Decisions", data["total_decisions"]]],
+        })
+        sections.append({
+            "title": "By Status",
+            "headers": ["Status", "Count"],
+            "rows": [[row["status"].replace("_", " ").title(), row["count"]] for row in data["by_status"]],
+        })
+        sections.append({
+            "title": "By Category",
+            "headers": ["Category", "Count"],
+            "rows": [[row["category"], row["count"]] for row in data["by_category"]],
+        })
+        sections.append({
+            "title": "Recent Decisions",
+            "headers": ["ID", "Title", "Status", "Category"],
+            "rows": [[row["id"], row["title"], row["status"], row["category"]] for row in data["recent_decisions"]],
+        })
+
+    elif report_type == "approvals":
+        sections.append({
+            "title": "Summary",
+            "headers": ["Metric", "Value"],
+            "rows": [
+                ["Total Approvals", data["total_approvals"]],
+                ["Pending", data["pending"]],
+                ["Approved", data["approved"]],
+                ["Rejected", data["rejected"]],
+                ["Escalated", data["escalated"]],
+                ["Average Completion (hrs)", data.get("average_completion_hours") if data.get("average_completion_hours") is not None else "N/A"],
+            ],
+        })
+        sections.append({
+            "title": "By Level",
+            "headers": ["Level", "Pending", "Approved", "Rejected", "Escalated"],
+            "rows": [
+                [row["level"], row["pending"], row["approved"], row["rejected"], row["escalated"]]
+                for row in data["by_level"]
+            ],
+        })
+
+    elif report_type == "audit":
+        sections.append({
+            "title": "Summary",
+            "headers": ["Metric", "Value"],
+            "rows": [["Total Events", data["total_events"]]],
+        })
+        sections.append({
+            "title": "By Action",
+            "headers": ["Action", "Count"],
+            "rows": [[row["action"], row["count"]] for row in data["by_action"]],
+        })
+        sections.append({
+            "title": "By Actor",
+            "headers": ["Actor", "Count"],
+            "rows": [[row["actor_name"], row["count"]] for row in data["by_actor"]],
+        })
+        sections.append({
+            "title": "Recent Events",
+            "headers": ["Action", "Entity Type", "Actor", "Created At"],
+            "rows": [
+                [
+                    row["action"],
+                    row["entity_type"],
+                    row["actor"]["full_name"] if row["actor"] else "Unknown",
+                    row["created_at"].strftime("%d %b %Y, %I:%M %p") if hasattr(row["created_at"], "strftime") else row["created_at"],
+                ]
+                for row in data["recent_events"]
+            ],
+        })
+
+    else:
+        raise HTTPException(status_code=404, detail=f"Unknown report type: {report_type}")
+
+    return sections
+
+
+def _build_report_pdf(report_type: str, data: dict) -> io.BytesIO:
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = height - 1 * inch
+
+    def line(text, size=11, bold=False, gap=0.28):
+        nonlocal y, p
+        if y < 1 * inch:
+            p.showPage()
+            y = height - 1 * inch
+        p.setFont("Helvetica-Bold" if bold else "Helvetica", size)
+        p.drawString(1 * inch, y, text)
+        y -= gap * inch
+
+    line("Expert Decision Replay Platform", size=10, bold=True)
+    line(REPORT_TITLES[report_type], size=16, bold=True, gap=0.4)
+    line(f"Generated on: {datetime.utcnow().strftime('%d %b %Y, %I:%M %p')} UTC", size=9, gap=0.4)
+
+    for text, style in _report_pdf_lines(report_type, data):
+        line(text, **style)
+
+    p.setFont("Helvetica-Oblique", 8)
+    p.drawString(1 * inch, 0.6 * inch, "Generated from Expert Decision Replay Platform")
+
+    p.save()
+    buffer.seek(0)
+    return buffer
+
+
+def _build_report_excel(report_type: str, data: dict) -> io.BytesIO:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = REPORT_TITLES[report_type][:31]  # sheet names capped at 31 chars
+
+    title_font = Font(bold=True, size=14)
+    meta_font = Font(italic=True, size=9, color="666666")
+    section_font = Font(bold=True, size=12, color="FFFFFF")
+    section_fill = PatternFill(start_color="2F5496", end_color="2F5496", fill_type="solid")
+    header_font = Font(bold=True)
+    header_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+
+    row_idx = 1
+    ws.cell(row=row_idx, column=1, value=REPORT_TITLES[report_type]).font = title_font
+    row_idx += 1
+    ws.cell(
+        row=row_idx, column=1,
+        value=f"Generated on: {datetime.utcnow().strftime('%d %b %Y, %I:%M %p')} UTC",
+    ).font = meta_font
+    row_idx += 2
+
+    max_cols = 1
+    for section in _report_excel_sections(report_type, data):
+        max_cols = max(max_cols, len(section["headers"]))
+
+        cell = ws.cell(row=row_idx, column=1, value=section["title"])
+        cell.font = section_font
+        cell.fill = section_fill
+        for c in range(2, len(section["headers"]) + 1):
+            ws.cell(row=row_idx, column=c).fill = section_fill
+        row_idx += 1
+
+        for c, header in enumerate(section["headers"], start=1):
+            cell = ws.cell(row=row_idx, column=c, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+        row_idx += 1
+
+        if section["rows"]:
+            for row_data in section["rows"]:
+                for c, value in enumerate(row_data, start=1):
+                    ws.cell(row=row_idx, column=c, value=value)
+                row_idx += 1
+        else:
+            ws.cell(row=row_idx, column=1, value="No data")
+            row_idx += 1
+
+        row_idx += 1  # blank row between sections
+
+    for c in range(1, max_cols + 1):
+        ws.column_dimensions[get_column_letter(c)].width = 24
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+@app.get("/reports/{report_type}/export/{export_format}", tags=["Reports"])
+def export_report(
+    report_type: str,
+    export_format: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if report_type not in REPORT_TITLES:
+        raise HTTPException(status_code=404, detail=f"Unknown report type: {report_type}")
+
+    if export_format not in ("pdf", "excel"):
+        raise HTTPException(status_code=400, detail="Supported export formats: pdf, excel")
+
+    # Re-run the same access checks + data assembly as the on-screen report,
+    # then hand the resulting dict to the shared PDF/Excel renderer.
+    if report_type == "decision":
+        report = get_decision_report(db=db, current_user=current_user)
+    elif report_type == "approvals":
+        report = get_approval_report(db=db, current_user=current_user)
+    elif report_type == "audit":
+        report = get_audit_report(db=db, current_user=current_user)
+
+    data = report if isinstance(report, dict) else report.model_dump()
+
+    if export_format == "pdf":
+        buffer = _build_report_pdf(report_type, data)
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={report_type}_report.pdf"}
+        )
+    else:
+        buffer = _build_report_excel(report_type, data)
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={report_type}_report.xlsx"}
+        )
