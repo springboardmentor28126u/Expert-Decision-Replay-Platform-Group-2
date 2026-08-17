@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { Paperclip } from 'lucide-react';
 
 const FileUpload = ({ onUploadSuccess }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -52,7 +53,8 @@ const FileUpload = ({ onUploadSuccess }) => {
     <div className="file-upload-container">
       <div className="form-file-input-wrapper">
         <label htmlFor="file-input" className="form-file-label">
-          📎 Attach File
+          <Paperclip size={15} />
+           Attach File
         </label>
         <input
           id="file-input"

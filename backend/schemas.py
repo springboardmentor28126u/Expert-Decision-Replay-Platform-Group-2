@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import datetime
 from models import UserRole, DecisionStatus, RiskLevel, FeasibilityLevel
 from discussion import DiscussionMessageType
@@ -22,9 +22,9 @@ class UserResponse(BaseModel):
     role: UserRole
     is_active: bool
     created_at: datetime
+    team_id: int | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Data sent back after successful login
 class Token(BaseModel):
@@ -52,8 +52,7 @@ class DecisionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DecisionStatusUpdate(BaseModel):
     status: DecisionStatus
@@ -81,8 +80,7 @@ class AlternativeResponse(BaseModel):
     feasibility: FeasibilityLevel
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AlternativeUpdate(BaseModel):
     title: str | None = None
@@ -130,8 +128,7 @@ class DiscussionResponse(BaseModel):
     updated_at: datetime | None
     user: UserResponse
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
     
 class ChangePassword(BaseModel):
     current_password: str
@@ -154,8 +151,7 @@ class DecisionVersionResponse(BaseModel):
     changed_by: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 from models import ApprovalAction
 
@@ -172,8 +168,7 @@ class ApprovalResponse(BaseModel):
     stage: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class NotificationResponse(BaseModel):
     id: int
@@ -185,8 +180,7 @@ class NotificationResponse(BaseModel):
     is_read: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
         
 class NotificationResponse(BaseModel):
     id: int
@@ -207,8 +201,7 @@ class RecentDecisionResponse(BaseModel):
     status: DecisionStatus
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
         
 class EmployeeDashboardResponse(BaseModel):
     my_decisions: int
@@ -257,10 +250,6 @@ class AdminDashboardResponse(BaseModel):
 
     recent_decisions: list[RecentDecisionResponse]
 
-# ============================================================
-# Milestone 3 - Reports
-# ============================================================
-
 class ReportStatusCount(BaseModel):
     status: str
     count: int
@@ -308,10 +297,6 @@ class ApprovalReportResponse(BaseModel):
     average_completion_hours: float | None
     by_level: list[ApprovalLevelReport]
 
-# ============================================================
-# Audit Reports
-# ============================================================
-
 class AuditActionCount(BaseModel):
     action: str
     count: int
@@ -350,3 +335,84 @@ class AuditReportResponse(BaseModel):
     timeline: list[AuditTimelineCount]
     security_events: list[AuditSecurityEvent]
     recent_events: list[AuditRecentEvent]
+
+class ReviewerAssignmentCreate(BaseModel):
+    category: str
+    reviewer_id: int
+
+
+class ReviewerAssignmentResponse(BaseModel):
+    id: int
+    category: str
+    reviewer_id: int
+    reviewer_name: str | None = None
+    assigned_by: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class TeamCreate(BaseModel):
+    name: str
+    description: str | None = None
+    manager_id: int | None = None
+
+
+class TeamUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    manager_id: int | None = None
+
+
+class TeamMemberAssign(BaseModel):
+    user_id: int
+
+
+class TeamResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    manager_id: int | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TeamDetailResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    manager_id: int | None
+    member_count: int 
+
+    @classmethod
+    def from_team(cls, team):
+        return cls( 
+            id=team.id,
+            name=team.name,
+            description=team.description,
+            manager_id=team.manager_id,
+            member_count=len(team.members),
+        )
+
+    model_config = ConfigDict(from_attributes=True)
+
+class TeamReportItem(BaseModel):
+    team_id: int
+    team_name: str
+    member_count: int
+    decision_count: int
+    pending_approvals: int
+    approved_approvals: int
+    rejected_approvals: int
+    escalated_approvals: int
+
+
+class TeamReportResponse(BaseModel):
+    total_teams: int
+    teams: list[TeamReportItem]
+
+class PaginatedDecisionResponse(BaseModel):
+    items: list[DecisionResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

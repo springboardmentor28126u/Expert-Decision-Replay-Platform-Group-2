@@ -7,6 +7,8 @@ function ApprovalHistory({ token, decisionId, profile, onApprovalChanged, decisi
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [aiRecommendation, setAiRecommendation] = useState(null);
+  const [loadingRecommendation, setLoadingRecommendation] = useState(false);
 
   const canReview = profile.role === "reviewer" || profile.role === "manager" || profile.role === "admin";
   const canResubmit = decisionStatus === "rejected" && (profile.id === decisionCreatedBy || profile.role === "admin");
@@ -47,6 +49,22 @@ function ApprovalHistory({ token, decisionId, profile, onApprovalChanged, decisi
       setSubmitting(false);
     }
   };
+
+  const fetchRecommendation = async () => {
+    setLoadingRecommendation(true);
+    setAiRecommendation(null);
+    try {
+      const res = await axios.get(
+        `http://127.0.0.1:8000/decisions/${decisionId}/ai-recommendation`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAiRecommendation(res.data.recommendation);
+    } catch (err) {
+      setAiRecommendation("Couldn't generate a recommendation right now.");
+    } finally {
+      setLoadingRecommendation(false);
+   }
+ };
 
   const handleResubmit = async () => {
     setError("");
@@ -94,6 +112,31 @@ function ApprovalHistory({ token, decisionId, profile, onApprovalChanged, decisi
           {error && <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "8px" }}>{error}</p>}
         </div>
       )}
+
+      {canReview && (
+  <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aiRecommendation ? "10px" : "0" }}>
+      <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+        ✨ AI Recommendation
+      </p>
+      <button
+        onClick={fetchRecommendation}
+        disabled={loadingRecommendation}
+        style={{ background: "none", border: "1px solid var(--accent)", color: "var(--accent)", borderRadius: "6px", padding: "4px 10px", fontSize: "12px", cursor: "pointer" }}
+      >
+        {loadingRecommendation ? "Thinking..." : aiRecommendation ? "Regenerate" : "Get Recommendation"}
+      </button>
+    </div>
+    {aiRecommendation && (
+      <p style={{ fontSize: "13px", color: "var(--text-primary)", whiteSpace: "pre-line", margin: 0 }}>
+        {aiRecommendation}
+      </p>
+    )}
+    <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "8px", marginBottom: 0 }}>
+      This is a suggestion only — you make the final decision using the Approve/Reject buttons below.
+    </p>
+  </div>
+)}
 
       {canReview && (
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "16px", marginBottom: "16px" }}>

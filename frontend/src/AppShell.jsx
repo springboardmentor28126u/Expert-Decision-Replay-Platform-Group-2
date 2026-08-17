@@ -1,6 +1,20 @@
 import "./dashboard-shell.css";
 import { useNavigate } from "react-router-dom";
 import ProfileMenu from "./ProfileMenu";
+import { useState } from "react";
+import AIAssistantButton from "./AIAssistantButton";
+import AIAssistantPanel from "./AIAssistantPanel";
+
+import {
+  Home,
+  LayoutDashboard,
+  ClipboardList,
+  BarChart3,
+  Users,
+  UserCog,
+  Settings,
+  LogOut,
+} from "lucide-react";
 
 function AppShell({
   profile,
@@ -10,11 +24,13 @@ function AppShell({
   unreadCount,
   children,
   topbarExtra,
+  selectedDecisionId,
 }) {
   const navigate = useNavigate();
   const isManagerOrAdmin = profile.role === "manager" || profile.role === "admin";
   const isAdmin = profile.role === "admin";
-
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  
   const dashboardPaths = {
     employee: "/dashboard/employee",
     reviewer: "/dashboard/reviewer",
@@ -32,10 +48,15 @@ function AppShell({
     { key: "decisions", label: "Decisions", icon: "📋" },
     { key: "reports", label: "Reports", icon: "📈" },
     { key: "notifications", label: "Notifications", icon: "🔔" },
+    { key: "home", label: "Home", icon: Home },
+    { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { key: "decisions", label: "Decisions", icon: ClipboardList },
+    { key: "reports", label: "Reports", icon: BarChart3 },
+    { key: "my-team", label: "My Team", icon: Users },
   ];
 
   const adminNavItems = [
-    { key: "users", label: "User Management", icon: "👥" },
+    { key: "users", label: "User Management", icon: "UserCog" },
   ];
 
   return (
@@ -51,7 +72,9 @@ function AppShell({
               className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
               onClick={() => handleNavClick(item)}
             >
-              <span className="shell-nav-icon">{item.icon}</span>
+              <span className="shell-nav-icon">
+                <item.icon size={18} strokeWidth={1.8} />
+              </span>
               <span className="label">{item.label}</span>
               {item.key === "notifications" && unreadCount > 0 && (
                 <span
@@ -82,7 +105,9 @@ function AppShell({
                   className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
                   onClick={() => onNavigate(item.key)}
                 >
-                  <span className="shell-nav-icon">{item.icon}</span>
+                  <span className="shell-nav-icon"> 
+                    <item.icon size={18} strokeWidth={1.8} />
+                  </span>
                   <span className="label">{item.label}</span>
                 </button>
               ))}
@@ -95,7 +120,9 @@ function AppShell({
             className={`shell-nav-item ${activeView === "account" ? "active" : ""}`}
             onClick={() => onNavigate("account")}
           >
-            <span className="shell-nav-icon">⚙️</span>
+            <span className="shell-nav-icon">
+              <Settings size={18} strokeWidth={1.8} />
+            </span>
             <span className="label">Account Settings</span>
           </button>
           <button
@@ -103,7 +130,9 @@ function AppShell({
             onClick={onLogout}
             style={{ color: "#F0555A" }}
           >
-            <span className="shell-nav-icon">🚪</span>
+            <span className="shell-nav-icon">
+              <LogOut size={18} strokeWidth={1.8} />
+            </span>
             <span className="label">Log Out</span>
           </button>
         </div>
@@ -117,6 +146,7 @@ function AppShell({
             {activeView === "decisions" && "Decisions"}
             {activeView === "reports" && "Reports"}
             {activeView === "notifications" && "Notifications"}
+            {activeView === "my-team" && "My Team"}
             {activeView === "users" && "User Management"}
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}
@@ -130,6 +160,12 @@ function AppShell({
 
         <main className="shell-content">{children}</main>
       </div>
+
+      <AIAssistantButton onClick={() => setIsAIAssistantOpen(true)} />
+      <AIAssistantPanel isOpen={isAIAssistantOpen} onClose={() => setIsAIAssistantOpen(false)} 
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
+        decisionId={selectedDecisionId} />
     </div>
   );
 }

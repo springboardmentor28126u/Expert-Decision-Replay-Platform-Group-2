@@ -7,6 +7,7 @@ import DecisionDetails from "./DecisionDetails";
 import ChangePassword from "./ChangePassword";
 import ReportsPage from "./ReportsPage";
 import NotificationsPage from "./NotificationsPage";
+import MyTeam from "./MyTeam";
 import useNotifications from "./useNotifications";
 import {
   getEmployeeDashboard,
@@ -353,7 +354,7 @@ function Dashboard({ token, onLogout }) {
         const res = await axios.get("http://127.0.0.1:8000/decisions", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setDecisions(res.data);
+        setDecisions(res.data.items);
       } catch (err) {
         console.log("Failed to load decisions for stats", err);
       }
@@ -522,6 +523,7 @@ function Dashboard({ token, onLogout }) {
       onNavigate={handleNavigate}
       onLogout={onLogout}
       unreadCount={unreadCount}
+      selectedDecisionId={selectedDecision?.id}
       topbarExtra={
         <NotificationBell
           notifications={notifications}
@@ -679,80 +681,82 @@ function Dashboard({ token, onLogout }) {
 
       {activeView === "decisions" && (
         <div className="panel">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <p className="panel-title" style={{ margin: 0 }}>All Decisions</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              style={{
-                padding: "8px 16px", background: "var(--accent)", border: "none",
-                borderRadius: "6px", color: "#fff", fontWeight: "600", cursor: "pointer",
-                display: "flex", alignItems: "center", gap: "6px", fontSize: "13px"
-              }}
-            >
-              ➕ Create Decision
-            </button>
-          </div>
+          {/* Decisions toolbar */}
+<div className="decisions-toolbar">
+  <div className="decisions-toolbar-header">
+    <div>
+      <p className="panel-title decisions-toolbar-title">
+        All Decisions
+      </p>
+      <p className="decisions-toolbar-subtitle">
+        Browse, search, and manage your organization's decisions
+      </p>
+    </div>
 
-          <div className="filter-container" style={{ margin: "20px 0 16px 0", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px" }}>
-            <div style={{ flex: "1 1 auto", display: "flex", alignItems: "center", gap: "10px" }}>
-              <label htmlFor="decision-search" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
-                Search:
-              </label>
-              <input
-                id="decision-search"
-                type="text"
-                placeholder="🔍 Search decisions by title or category..."
-                value={decisionSearchQuery}
-                onChange={(e) => setDecisionSearchQuery(e.target.value)}
-                style={{
-                  padding: "8px 12px", background: "#12161D", border: "1px solid #2E3646",
-                  borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", width: "100%",
-                  maxWidth: "350px", outline: "none"
-                }}
-              />
-            </div>
+    <button
+      className="decisions-create-btn"
+      onClick={() => setShowCreateModal(true)}
+    >
+      <span className="decisions-create-icon">+</span>
+      Create Decision
+    </button>
+  </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <label htmlFor="owner-filter" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
-                Created By:
-              </label>
-              <select
-                id="owner-filter"
-                value={ownerFilter}
-                onChange={(e) => setOwnerFilter(e.target.value)}
-                style={{
-                  padding: "8px 12px", background: "#12161D", border: "1px solid #2E3646",
-                  borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", cursor: "pointer", outline: "none"
-                }}
-              >
-                <option value="all">All Decisions</option>
-                <option value="mine">My Decisions</option>
-              </select>
-            </div>
+  <div className="decisions-filters">
+    <div className="decision-search-group">
+      <label htmlFor="decision-search">
+        Search decisions
+      </label>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <label htmlFor="status-filter" style={{ color: "var(--text-secondary)", fontSize: "14px", fontWeight: "600" }}>
-                Filter by Status:
-              </label>
-              <select
-                id="status-filter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="status-select"
-                style={{
-                  padding: "8px 12px", background: "#12161D", border: "1px solid #2E3646",
-                  borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", cursor: "pointer", outline: "none"
-                }}
-              >
-                <option value="all">All Statuses</option>
-                <option value="draft">Draft</option>
-                <option value="under_review">Under Review</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-          </div>
+      <div className="decision-search-wrapper">
+        <span className="decision-search-icon">⌕</span>
+
+        <input
+          id="decision-search"
+          type="text"
+          placeholder="Search by title or category..."
+          value={decisionSearchQuery}
+          onChange={(e) => setDecisionSearchQuery(e.target.value)}
+        />
+      </div>
+    </div>
+
+    <div className="decision-filter-group">
+      <label htmlFor="owner-filter">
+        Created By
+      </label>
+
+      <select
+        id="owner-filter"
+        value={ownerFilter}
+        onChange={(e) => setOwnerFilter(e.target.value)}
+      >
+        <option value="all">All Decisions</option>
+        <option value="mine">My Decisions</option>
+      </select>
+    </div>
+
+    <div className="decision-filter-group">
+      <label htmlFor="status-filter">
+        Status
+      </label>
+
+      <select
+        id="status-filter"
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+        className="status-select"
+      >
+        <option value="all">All Statuses</option>
+        <option value="draft">Draft</option>
+        <option value="under_review">Under Review</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="archived">Archived</option>
+      </select>
+    </div>
+  </div>
+</div>
 
           <DecisionsList
             token={token}
@@ -769,6 +773,9 @@ function Dashboard({ token, onLogout }) {
       )}
 
       {activeView === "reports" && <ReportsPage token={token} />}
+      {activeView === "my-team" && (
+         <MyTeam token={token} profile={profile} />
+      )}
 
       {activeView === "notifications" && (
         <NotificationsPage
@@ -830,7 +837,8 @@ function Dashboard({ token, onLogout }) {
                     <tr>
                       <th style={{ width: "25%" }}>Name</th>
                       <th style={{ width: "30%" }}>Email</th>
-                      <th style={{ width: "20%" }}>Role</th>
+                      <th style={{ width: "15%" }}>Role</th>
+                      <th style={{ width: "12%" }}>Team</th>
                       <th style={{ width: "12%" }}>Status</th>
                       <th style={{ width: "13%" }}>Actions</th>
                     </tr>
@@ -858,6 +866,11 @@ function Dashboard({ token, onLogout }) {
                               <option value="admin">Admin</option>
                             </select>
                           </td>
+
+                          <td>
+                            {u.team_id ? `Team ${u.team_id}` : "Not assigned"}
+                          </td>
+
                           <td>
                             <span
                               style={{
@@ -943,11 +956,43 @@ function Dashboard({ token, onLogout }) {
       })()}
 
       {activeView === "account" && (
-        <div className="panel">
-          <p className="panel-title">Account Settings</p>
-          <ChangePassword token={token} />
-        </div>
-      )}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="panel">
+            <p className="panel-title">Profile Information</p>
+
+            <div style={{ marginTop: "16px", display: "grid", gap: "12px" }}>
+              <div>
+                <strong>Full Name</strong>
+                <p>{profile.full_name}</p>
+              </div>
+
+              <div>
+                <strong>Email</strong>
+                <p>{profile.email}</p>
+              </div>
+
+              <div>
+                <strong>Role</strong>
+                <p style={{ textTransform: "capitalize" }}>{profile.role}</p>
+              </div>
+
+              <div>
+                <strong>Team</strong>
+                <p>
+                 {profile.team_id
+                   ? `Team ID: ${profile.team_id}`
+                   : "Not assigned to a team"}
+                </p>
+             </div>
+          </div>
+       </div>
+
+       <div className="panel">
+         <p className="panel-title">Account Settings</p>
+         <ChangePassword token={token} />
+       </div>
+      </div>
+    )}
 
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>

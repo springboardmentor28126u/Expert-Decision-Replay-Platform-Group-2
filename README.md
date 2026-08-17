@@ -1,53 +1,197 @@
-# Expert Decision Replay Platform
+# Expert Decision Replay Platform (EDRP)
 
-Backend implementation for the **Expert Decision Replay Platform** developed during the **Infosys Springboard Virtual Internship**.
+A centralized platform for organizations to record, manage, review, and preserve important business decisions. The platform captures the complete decision-making lifecycle including problem statements, alternatives, discussions, approvals, supporting documents, and final outcomes, ensuring organizational knowledge is retained and past decisions can be revisited for future reference.
 
-The platform enables organizations to create, evaluate, compare, review, and manage business decisions through a role-based workflow.
+Developed as part of the **Infosys Springboard Virtual Internship**.
 
 ---
 
 # Tech Stack
 
+## Backend
+- Python
 - FastAPI
 - SQLAlchemy
-- PostgreSQL
 - Alembic
+- PostgreSQL
 - JWT Authentication
 - Passlib (Password Hashing)
 - Pydantic
 - Uvicorn
 
+## Frontend
+- React
+- Vite
+- Axios
+- React Router
+
+## Database
+- PostgreSQL (Neon Cloud)
+
+## File Storage
+- Backblaze B2 Cloud Storage
+
 ---
 
-# Features
+# Project Structure
 
-## Authentication & Authorization
+```text
+Expert-Decision-Replay-Platform-Group-2/
+│
+├── backend/
+│   ├── main.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── auth.py
+│   ├── database.py
+│   ├── uploads.py
+│   ├── b2_service.py
+│   ├── notifications.py
+│   ├── audit_helper.py
+│   ├── crud_discussion.py
+│   ├── discussion.py
+│   ├── alembic/
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── AppShell.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── Login.jsx
+│   │   ├── Register.jsx
+│   │   ├── DecisionsList.jsx
+│   │   ├── DecisionCard.jsx
+│   │   ├── DecisionDetails.jsx
+│   │   ├── ApprovalHistory.jsx
+│   │   ├── VersionHistory.jsx
+│   │   ├── ReportsPage.jsx
+│   │   ├── NotificationsPage.jsx
+│   │   └── ...
+│   └── package.json
+│
+├── README.md
+└── .gitignore
+```
+
+---
+
+# Setup Instructions
+
+## Backend
+
+```bash
+cd backend
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# Linux / macOS
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Create a `.env` file inside the **backend** folder.
+
+```env
+DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+SECRET_KEY=<your-secret-key>
+
+B2_KEY_ID=<your-backblaze-key-id>
+B2_APPLICATION_KEY=<your-backblaze-application-key>
+B2_BUCKET_NAME=<your-backblaze-bucket-name>
+```
+
+Run migrations
+
+```bash
+alembic upgrade head
+```
+
+Start the backend
+
+```bash
+uvicorn main:app --reload
+```
+
+Backend URL
+
+```
+http://127.0.0.1:8000
+```
+
+Swagger Documentation
+
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## Frontend
+
+```bash
+cd frontend
+
+npm install
+
+npm run dev
+```
+
+Frontend URL
+
+```
+http://localhost:5173
+```
+
+---
+
+# Features by Milestone
+
+---
+
+# Milestone 1 – Foundation
+
+### Authentication & Authorization
 
 - User Registration
 - User Login
 - JWT Authentication
-- Password Hashing
+- Password Hashing using bcrypt
 - Role-Based Access Control (RBAC)
 
-Supported Roles:
+Supported Roles
 
 - Employee
 - Reviewer
 - Manager
 - Admin
 
+Security Features
+
+- Passwords stored in hashed format
+- JWT Bearer Authentication
+- Roles cannot be self-assigned
+- Every new user is registered as Employee by default
+- Only Admins can promote user roles
+
 ---
+
+# Milestone 2 – Core Decision Management
 
 ## Decision Management
 
 - Create Decision
 - View Decision
-- List Decisions
-- Update Decision Status
+- Edit Decision
+- Archive Decision
+- Delete Decision
 - Decision Categories
 - Decision Lifecycle
 
-Decision Statuses:
+Decision Statuses
 
 - Draft
 - Under Review
@@ -57,20 +201,11 @@ Decision Statuses:
 
 ---
 
-## Alternative Comparison Module
+## Alternative Comparison
 
-Employees can evaluate multiple alternatives for a decision.
+Compare multiple alternatives for a decision.
 
-Features:
-
-- Create Alternative
-- View Alternative
-- Update Alternative
-- Delete Alternative
-- List Alternatives for a Decision
-- Compare Alternatives
-
-Alternative Attributes:
+Each alternative stores
 
 - Title
 - Description
@@ -80,64 +215,311 @@ Alternative Attributes:
 - Risk Level
 - Feasibility
 
+Features
+
+- Create Alternative
+- Update Alternative
+- Delete Alternative
+- Compare Alternatives
+
 ---
 
-## Dashboard Module
+## Discussion Module
 
-Role-based dashboards provide insights tailored to different users.
+- Threaded Discussions
+- Replies
+- Meeting Notes
+- Attachments
+- Decision Collaboration
 
-### Employee Dashboard
+---
+
+## File Upload
+
+- Upload supporting files
+- Backblaze B2 Cloud Storage
+- Download attachments
+- Secure file access
+
+---
+
+## Version Tracking
+
+Every modification to a decision creates a version snapshot.
+
+Features
+
+- Complete Version History
+- Restore Previous Versions
+- Track Decision Evolution
+
+---
+
+## Decision Export
+
+- Export Individual Decision as PDF
+
+---
+
+# Milestone 3 – Workflow & Reporting
+
+## Team Management
+
+- Create Teams
+- View Teams
+- Update Team Details
+- Delete Teams
+- Assign Users to Teams
+- Remove Users from Teams
+- Team Manager Assignment
+- Team-based Decision Reporting
+- Team Activity Reports
+
+## Multi-Level Approval Workflow
+
+- Reviewer Approval
+- Manager/Admin Final Approval
+- Approval History
+- Mandatory rejection comments
+- Decision resubmission after edits
+
+---
+
+## Reviewer Assignment
+
+- Admin assigns Reviewers
+- Category-based reviewer allocation
+- Automatic reviewer assignment
+
+---
+
+## Escalation Workflow
+
+- Identify overdue decisions
+- Escalation tracking
+- Configurable review duration
+
+---
+
+## Notifications
+
+Real-time notifications for
+
+- Decision Creation
+- Approval Updates
+- Review Assignment
+- Status Changes
+
+---
+
+## Audit Logging
+
+Tracks important activities
+
+- User Login
+- Decision Creation
+- Decision Updates
+- Approvals
+- Role Changes
+- Other significant actions
+
+---
+
+## Reports
+
+Professional reporting module including
+
+### Decision Reports
+
+- PDF Export
+- Excel Export
+- Executive Summary
+- Decision Statistics
+- Category Summary
+- Professional formatting
+
+### Approval Reports
+
+- PDF Export
+- Excel Export
+- Approval Statistics
+- Approval Level Summary
+- Executive Summary
+
+### Team Reports
+
+- Team Summary
+- Team Activity
+- Member Count
+- Decision Count
+- Pending Approvals
+- Approved Approvals
+- Rejected Approvals
+- Escalated Approvals
+- PDF Export
+- Excel Export
+
+### Audit Reports
+
+- PDF Export
+- Excel Export
+- Audit Summary
+- Action Statistics
+- User Activity
+- Recent Audit Events
+
+Reporting Features
+
+- Professional PDF Layout
+- Executive Summary
+- Generated Date & Time
+- Generated By
+- Styled Tables
+- Headers & Footers
+- Page Numbers
+- Multiple Excel Worksheets
+- Auto-sized Columns
+- Freeze Panes
+- Filters
+
+---
+
+## Dashboards
+
+Role-based dashboards
+
+### Employee
 
 - My Decisions
 - Draft Decisions
-- Under Review Decisions
-- Approved Decisions
-- Rejected Decisions
-- Archived Decisions
-- Recent Decisions
+- Under Review
+- Approved
+- Rejected
+- Archived
 
-### Reviewer Dashboard
+### Reviewer
 
-- Under Review Decisions
-- Approved Decisions
-- Rejected Decisions
-- Recent Under Review Decisions
+- Pending Reviews
+- Approved Reviews
+- Rejected Reviews
 
-### Manager Dashboard
+### Manager
 
-- Total Decisions
 - Decision Statistics
-- Recent Decisions
+- Pending Approvals
+- Team Activity
 
-### Admin Dashboard
+### Admin
 
-- Total Users
-- Active Users
-- User Role Statistics
-- Total Alternatives
+- User Statistics
+- Decision Analytics
+- Role Distribution
+- Audit Insights
+- Reports Dashboard
+
+Dashboard Features
+
+- Bar Charts
+- Line Charts
+- Donut Charts
 - Decision Statistics
-- Recent Decisions
+- Activity Trends
+
+---
+
+## Search & Filtering
+
+- Decision Search
+- User Search
+- Category Filter
+- Status Filter
+- Pagination
 
 ---
 
 # Database
 
-Current database entities:
+Current database entities include
 
 - Users
 - Decisions
 - Alternatives
+- Discussions
+- Approvals
+- Notifications
+- Audit Logs
+- Version History
+- Teams
 
-Relationships:
+Relationships
 
 - One User → Many Decisions
 - One Decision → Many Alternatives
+- One Decision → Many Discussions
+- One Decision → Many Versions
+- One User → Many Audit Logs
+- One Team → Many Users
+- One Team → Many Decisions
 
 ---
 
 # API Documentation
 
-Run the backend:
+Interactive Swagger Documentation
 
-```bash
-uvicorn main:app --reload
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+# Security Notes
+
+- JWT Authentication
+- Password Hashing using bcrypt
+- Role-Based Authorization
+- Secure API Access
+- Environment Variables stored in `.env`
+- `.env` excluded using `.gitignore`
+- Self-approval prevention
+- Secure attachment access
+
+---
+
+# Team
+
+Developed collaboratively by **Group 2** as part of the **Infosys Springboard Virtual Internship**.
+
+Major project modules include
+
+- Authentication & Authorization
+- Decision Management
+- Alternative Comparison
+- Discussion Module
+- File Upload
+- Version Tracking
+- Approval Workflow
+- Notifications
+- Audit Logging
+- Dashboards
+- Reporting Module
+
+---
+
+# Future Enhancements
+
+- Unit Testing using pytest
+- Enhanced Swagger Documentation
+- Performance Optimization
+- Advanced Approval Hierarchy
+- Frontend Escalation Dashboard
+- Email Notifications
+- Analytics Dashboard
+- Mobile Responsive Enhancements
+- Advanced Analytics
+
+---
+
+# License
+
+This project was developed for academic and internship purposes as part of the **Infosys Springboard Virtual Internship Program**.

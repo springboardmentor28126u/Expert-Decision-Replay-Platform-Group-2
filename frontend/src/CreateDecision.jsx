@@ -45,6 +45,29 @@ function CreateDecision({ token, onCreated }) {
     }
   };
 
+  const [generatingStatement, setGeneratingStatement] = useState(false);
+
+  const handleGenerateProblemStatement = async () => {
+   if (!title.trim()) {
+     alert("Enter a title first.");
+     return;
+   }
+  setGeneratingStatement(true);
+  try {
+    const token = localStorage.getItem("token");
+    const res = await axios.post(
+      "http://127.0.0.1:8000/ai/generate-problem-statement",
+      { title },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setProblemStatement(res.data.problem_statement);
+  } catch (err) {
+    alert("Couldn't generate a problem statement. Try writing it manually.");
+  } finally {
+    setGeneratingStatement(false);
+  }
+};
+
   return (
     <div className="dash-card" style={{ marginBottom: "20px" }}>
       <p className="dash-card-label" style={{ marginBottom: "12px" }}>Create a new decision</p>
@@ -59,25 +82,48 @@ function CreateDecision({ token, onCreated }) {
           />
         </div>
         <div className="auth-field">
-          <textarea
-            placeholder="Problem statement"
-            value={problemStatement}
-            onChange={(e) => setProblemStatement(e.target.value)}
-            rows={3}
-            required
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              background: "#12161D",
-              border: "1px solid #2E3646",
-              borderRadius: "6px",
-              color: "#F1F3F6",
-              fontSize: "14px",
-              fontFamily: "inherit",
-              resize: "vertical",
-            }}
-          />
-        </div>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+    <span style={{ fontSize: "12px", color: "#9CA3AF" }}>
+      Tip: type a title first, then click "Generate with AI" for a draft starting point.
+    </span>
+    <button
+      type="button"
+      onClick={handleGenerateProblemStatement}
+      disabled={generatingStatement}
+      style={{
+        background: "none",
+        border: "1px solid #4FD1B5",
+        color: "#4FD1B5",
+        borderRadius: "6px",
+        padding: "4px 10px",
+        fontSize: "12px",
+        cursor: generatingStatement ? "default" : "pointer",
+        whiteSpace: "nowrap",
+        marginLeft: "8px",
+      }}
+    >
+      {generatingStatement ? "Generating..." : "✨ Generate with AI"}
+    </button>
+  </div>
+  <textarea
+    placeholder="Problem statement"
+    value={problemStatement}
+    onChange={(e) => setProblemStatement(e.target.value)}
+    rows={3}
+    required
+    style={{
+      width: "100%",
+      padding: "10px 12px",
+      background: "#12161D",
+      border: "1px solid #2E3646",
+      borderRadius: "6px",
+      color: "#F1F3F6",
+      fontSize: "14px",
+      fontFamily: "inherit",
+      resize: "vertical",
+    }}
+  />
+</div>
         <div className="auth-field">
           <input
             type="text"

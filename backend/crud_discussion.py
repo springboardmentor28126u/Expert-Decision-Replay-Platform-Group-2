@@ -19,6 +19,7 @@ def log_discussion_activity(
         entity_type="discussion_message",
         entity_id=discussion_id,
         details=details,
+        log_type="activity",
     )
     db.add(audit_log)
     return audit_log
