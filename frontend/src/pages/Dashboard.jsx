@@ -16,6 +16,8 @@ import NotificationsPage from "./NotificationsPage";
 import ReportsPage from "./ReportsPage";
 import AnalyticsDashboard from "../components/AnalyticsDashboard";
 import AskBox from "../components/AskBox";
+import AIConversationPanel from "../components/AIConversationPanel";
+import AITaskRouting from "../components/AITaskRouting";
 import "../styles/dashboard.css";
 
 function Dashboard({ token, onLogout }) {
@@ -260,6 +262,12 @@ function Dashboard({ token, onLogout }) {
           />
 
           <AskBox token={token} />
+
+          <AIConversationPanel token={token} />
+
+          {(profile.role?.name === "manager" || profile.role?.name === "administrator") && (
+            <AITaskRouting token={token} onExecuted={() => setRefreshKey((k) => k + 1)} />
+          )}
 
           {adminStats && (
             <section className="view-section">

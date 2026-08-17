@@ -43,7 +43,7 @@ engine = create_async_engine(
     pool_size=settings.DB_POOL_SIZE,
     max_overflow=settings.DB_MAX_OVERFLOW,
     future=True,
-    connect_args={"ssl": "require"},
+    connect_args={"ssl": "require"} if settings.DB_SSL_REQUIRE else {},
 )
 
 # `expire_on_commit=False` is essential in async FastAPI apps: without

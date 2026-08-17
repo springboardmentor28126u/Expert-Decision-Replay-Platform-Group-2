@@ -17,4 +17,4 @@ class NLQueryResponse(BaseModel):
     intent: str
     answer: str
     data: Any
-    interpreted_by: Literal["gemini", "deterministic"]
+    interpreted_by: Literal["gemini", "groq", "deterministic"]

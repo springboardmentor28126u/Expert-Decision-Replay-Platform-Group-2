@@ -199,6 +199,7 @@ from app.routers import audit_log
 from app.routers import dashboard
 from app.routers import report
 from app.routers import nl_query
+from app.routers import ai
 
 # ---------------------------------------------------------------------
 # Health
@@ -338,4 +339,14 @@ app.include_router(
     nl_query.router,
     prefix=f"{settings.API_V1_PREFIX}/nl-query",
     tags=["NL Query"],
+)
+
+# ---------------------------------------------------------------------
+# AI draft assistance (not scoped to an existing decision_id)
+# ---------------------------------------------------------------------
+
+app.include_router(
+    ai.router,
+    prefix=f"{settings.API_V1_PREFIX}/ai",
+    tags=["AI"],
 )

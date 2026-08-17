@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from app.models.attachment import Attachment
     from app.models.notification import Notification
     from app.models.audit_log import AuditLog
+    from app.models.ai_conversation import AIConversation
 
 
 class User(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin):
@@ -75,6 +76,7 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin):
     notifications: Mapped[List["Notification"]] = relationship(back_populates="recipient")
     audit_logs: Mapped[List["AuditLog"]] = relationship(back_populates="actor")
     decision_versions: Mapped[List["DecisionVersion"]] = relationship(foreign_keys="DecisionVersion.changed_by_id")
+    ai_conversations: Mapped[List["AIConversation"]] = relationship(back_populates="user")
     
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"

@@ -22,24 +22,13 @@ from app.models.attachment import Attachment  # noqa: F401
 from app.models.notification import Notification  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.decision_version import DecisionVersion
-
-__all__ = [
-    "Base",
-    "Role",
-    "Team",
-    "User",
-    "Decision",
-    "Alternative",
-    "Comment",
-    "Approval",
-    "Attachment",
-    "Notification",
-    "AuditLog",
-]
+from app.models.ai_conversation import AIConversation  # noqa: F401
+from app.models.ai_message import AIMessage  # noqa: F401
 
 __all__ = [
     "Base", "Role", "Team", "User", "RefreshToken", "Decision",
     "Alternative", "Comment", "Approval", "Attachment",
-    "Notification", "AuditLog",
+    "Notification", "AuditLog", "DecisionVersion",
+    "AIConversation", "AIMessage",
 ]
 

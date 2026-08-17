@@ -166,10 +166,10 @@ class DecisionInsightService:
             "Answer clearly and concisely, in plain language:"
         )
 
-        answer = await llm_client.generate_text(prompt)
+        answer, provider = await llm_client.generate_text_with_provider(prompt)
 
-        if answer:
-            return answer, "gemini"
+        if answer and provider:
+            return answer, provider
 
         return (
             "AI-powered answers are temporarily unavailable. Please check "

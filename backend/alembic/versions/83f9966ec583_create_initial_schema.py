@@ -1,8 +1,31 @@
 """create initial schema
 
 Revision ID: 83f9966ec583
-Revises: 
+Revises:
 Create Date: 2026-07-24 21:24:53.361133
+
+This repo's original, self-contained UUID schema history — builds the
+full current-shape schema from an EMPTY database in one shot (already
+UUID PKs throughout; see the create_table calls below). This is the
+correct/only lineage to run against a fresh database that has never
+held the shared team DB's legacy pre-restructuring tables — e.g. a
+new local Postgres container. Use `alembic upgrade fresh_local@head`
+for that, not the bare `head` keyword (see
+75d3cf5246e8_stamp_shared_database_baseline.py for the other root:
+`shared_legacy`, which reconciles the actual pre-existing shared Neon
+DB instead, and is NOT usable to bootstrap an empty database — its own
+upgrade() is a deliberate no-op).
+
+branch_labels was added retroactively (originally None) once this was
+confirmed to be a real, permanent second root rather than an artifact
+of a migration-graph bug — see the two files removed alongside this
+change: 75d3cf5246e8_add_reviewer_assignments_table_and_.py (reused
+this repo's shared_legacy revision ID by mistake, targeting integer-PK
+columns from a pre-UUID-restructuring branch) and
+866dd26c47e7_add_notifications_table.py (its down_revision,
+7eae8694c004, didn't exist anywhere in this directory). Neither was
+part of either real lineage; both were deleted, not rewritten — this
+file's own upgrade()/downgrade() are unchanged.
 """
 from typing import Sequence, Union
 
@@ -13,7 +36,7 @@ from sqlalchemy.dialects import postgresql
 # revision identifiers, used by Alembic.
 revision: str = '83f9966ec583'
 down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
+branch_labels: Union[str, Sequence[str], None] = ('fresh_local',)
 depends_on: Union[str, Sequence[str], None] = None
 
 

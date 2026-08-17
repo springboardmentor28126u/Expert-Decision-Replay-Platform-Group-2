@@ -1,0 +1,13 @@
+# Defense in depth — the Dockerfile copies explicit paths rather than
+# `COPY . .`, so none of this can be baked into the image regardless,
+# but this stays in place in case that ever changes.
+venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+uploads/*
+!uploads/.gitkeep
+.pytest_cache/
+.git/

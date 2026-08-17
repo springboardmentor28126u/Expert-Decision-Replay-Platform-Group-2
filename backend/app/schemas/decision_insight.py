@@ -24,4 +24,4 @@ class AskDecisionResponse(BaseModel):
     decision_id: uuid.UUID
     question: str
     answer: str
-    generated_by: Literal["gemini", "unavailable"]
+    generated_by: Literal["gemini", "groq", "unavailable"]

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
+    # True by default so existing external Postgres (Neon) behavior is
+    # unchanged. Docker Compose overrides this to false for the local
+    # Postgres container, which doesn't speak TLS — see database.py.
+    DB_SSL_REQUIRE: bool = True
 
     # --- Security / JWT --------------------------------------------------
     SECRET_KEY: str = secrets.token_urlsafe(64)
@@ -60,6 +64,13 @@ class Settings(BaseSettings):
     # deterministic behavior when unset) ---------------------------------
     GOOGLE_API_KEY: str | None = None
     GEMINI_MODEL: str = "gemini-flash-lite-latest"
+
+    # Optional secondary provider — automatic fallback when Gemini is
+    # rate-limited, unconfigured, or fails. Leave GROQ_API_KEY blank to
+    # skip Groq entirely and keep today's Gemini-only behavior; see
+    # services/llm_client.py.
+    GROQ_API_KEY: str | None = None
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
     # --- Rate limiting -----------------------------------------------------
     RATE_LIMIT_REQUESTS: int = 60

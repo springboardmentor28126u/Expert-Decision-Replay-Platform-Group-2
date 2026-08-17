@@ -75,14 +75,14 @@ class NLQueryService:
         llm_result = await self._classify_with_llm(question)
 
         if llm_result is not None:
-            intent, keyword = llm_result
-            return intent, keyword, "gemini"
+            intent, keyword, provider = llm_result
+            return intent, keyword, provider
 
         intent, keyword = self._classify_with_keywords(question)
         return intent, keyword, "deterministic"
 
     @staticmethod
-    async def _classify_with_llm(question: str) -> tuple[str, str | None] | None:
+    async def _classify_with_llm(question: str) -> tuple[str, str | None, str] | None:
 
         prompt = (
             "Classify the question into exactly one intent from this fixed "
@@ -95,7 +95,7 @@ class NLQueryService:
             f'Question: "{question}"'
         )
 
-        raw = await llm_client.generate_text(prompt)
+        raw, provider = await llm_client.generate_text_with_provider(prompt)
 
         if raw is None:
             return None
@@ -113,7 +113,7 @@ class NLQueryService:
         if intent not in _INTENTS:
             return None
 
-        return intent, (keyword or None)
+        return intent, (keyword or None), provider
 
     @staticmethod
     def _classify_with_keywords(question: str) -> tuple[str, str | None]:

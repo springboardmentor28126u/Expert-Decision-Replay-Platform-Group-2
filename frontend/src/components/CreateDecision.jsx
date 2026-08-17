@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Sparkles } from "lucide-react";
 import apiClient, { authHeaders } from "../api/client";
 import Button from "./ui/Button";
 
@@ -11,6 +12,34 @@ function CreateDecision({ token, onCreated }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [showCustomCategory, setShowCustomCategory] = useState(false);
+
+  const [generatingStatement, setGeneratingStatement] = useState(false);
+  const [generateError, setGenerateError] = useState("");
+
+  // Draft assistance only — fills the textarea with a suggestion the
+  // user can still edit or discard; never submits/saves anything on
+  // its own.
+  const handleGenerateProblemStatement = async () => {
+    if (!title.trim()) {
+      setGenerateError("Enter a title first.");
+      return;
+    }
+    setGeneratingStatement(true);
+    setGenerateError("");
+    try {
+      const res = await apiClient.post(
+        "/api/v1/ai/generate-problem-statement",
+        { title },
+        authHeaders(token)
+      );
+      setProblemStatement(res.data.problem_statement);
+    } catch (err) {
+      console.error("Failed to generate problem statement", err);
+      setGenerateError(err?.response?.data?.detail || "Could not generate a problem statement.");
+    } finally {
+      setGeneratingStatement(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,6 +118,26 @@ function CreateDecision({ token, onCreated }) {
             onChange={(e) => setCategory(e.target.value)}
             style={{ marginBottom: "var(--space-3)" }}
           />
+        )}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleGenerateProblemStatement}
+            disabled={generatingStatement || !title.trim()}
+            title={!title.trim() ? "Enter a title first" : "Generate a draft problem statement with AI"}
+          >
+            <Sparkles size={13} strokeWidth={2} aria-hidden="true" />
+            {generatingStatement ? "Generating..." : "Generate with AI"}
+          </Button>
+        </div>
+
+        {generateError && (
+          <span className="inline-form-message error" role="status" style={{ display: "block", marginBottom: "8px" }}>
+            {generateError}
+          </span>
         )}
 
         <textarea

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ArrowLeft, Pencil, Download, Paperclip, MessageSquare, Trash2, Lock, ClipboardList } from "lucide-react";
+import { ArrowLeft, Pencil, Download, Paperclip, MessageSquare, Trash2, Lock, ClipboardList, Sparkles } from "lucide-react";
 import apiClient, { authHeaders, API_BASE_URL } from "../api/client";
 import VersionHistory from "../components/VersionHistory";
 import AlternativesPanel from "../components/AlternativesPanel";
@@ -50,6 +50,14 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const [askResult, setAskResult] = useState(null);
   const [askLoading, setAskLoading] = useState(false);
   const [askError, setAskError] = useState("");
+
+  const canSeeRecommendation = ["reviewer", "manager", "administrator"].includes(profile.role?.name);
+  const [recommendation, setRecommendation] = useState(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState("");
+
+  const [generatingStatement, setGeneratingStatement] = useState(false);
+  const [generateStatementError, setGenerateStatementError] = useState("");
 
   useEffect(() => {
     setEditTitle(decision.title);
@@ -172,6 +180,57 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
       fetchSimilar();
     }
   }, [activeTab, similar, similarLoading, fetchSimilar]);
+
+  // Read-only AI recommendation for reviewers/managers/admins — same
+  // on-demand pattern as summary/similar (LLM call, fetched only once
+  // the tab is opened, not on every decision load).
+  const fetchRecommendation = useCallback(async () => {
+    if (!decision?.id) return;
+    setRecommendationLoading(true);
+    setRecommendationError("");
+    try {
+      const res = await apiClient.get(
+        `/api/v1/decisions/${decision.id}/ai-recommendation`,
+        authHeaders(token)
+      );
+      setRecommendation(res.data);
+    } catch (err) {
+      console.error("Failed to load AI recommendation", err);
+      setRecommendationError(err?.response?.data?.detail || "Could not generate a recommendation.");
+    } finally {
+      setRecommendationLoading(false);
+    }
+  }, [decision?.id, token]);
+
+  useEffect(() => {
+    if (activeTab === "recommendation" && canSeeRecommendation && !recommendation && !recommendationLoading) {
+      fetchRecommendation();
+    }
+  }, [activeTab, canSeeRecommendation, recommendation, recommendationLoading, fetchRecommendation]);
+
+  // Draft assistance only — fills the edit textarea with a suggestion
+  // the user can still edit or discard; never saves the decision.
+  const handleGenerateProblemStatement = async () => {
+    if (!editTitle.trim()) {
+      setGenerateStatementError("Enter a title first.");
+      return;
+    }
+    setGeneratingStatement(true);
+    setGenerateStatementError("");
+    try {
+      const res = await apiClient.post(
+        "/api/v1/ai/generate-problem-statement",
+        { title: editTitle },
+        authHeaders(token)
+      );
+      setEditProblemStatement(res.data.problem_statement);
+    } catch (err) {
+      console.error("Failed to generate problem statement", err);
+      setGenerateStatementError(err?.response?.data?.detail || "Could not generate a problem statement.");
+    } finally {
+      setGeneratingStatement(false);
+    }
+  };
 
   const handleAsk = async (e) => {
     e.preventDefault();
@@ -549,6 +608,24 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
               />
             </div>
             <div className="auth-field">
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleGenerateProblemStatement}
+                  disabled={generatingStatement || !editTitle.trim()}
+                  title={!editTitle.trim() ? "Enter a title first" : "Generate a draft problem statement with AI"}
+                >
+                  <Sparkles size={13} strokeWidth={2} aria-hidden="true" />
+                  {generatingStatement ? "Generating..." : "Generate with AI"}
+                </Button>
+              </div>
+              {generateStatementError && (
+                <div className="auth-message error" style={{ marginBottom: "8px" }}>
+                  {generateStatementError}
+                </div>
+              )}
               <textarea
                 value={editProblemStatement}
                 onChange={(e) => setEditProblemStatement(e.target.value)}
@@ -723,6 +800,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
           { key: "attachments", label: "Attachments" },
           { key: "history", label: "Version History" },
           { key: "approvals", label: "Approval History" },
+          ...(canSeeRecommendation ? [{ key: "recommendation", label: "AI Recommendation" }] : []),
         ].map((tab) => (
           <button
             key={tab.key}
@@ -848,6 +926,53 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === "recommendation" && canSeeRecommendation && (
+        <div className="dash-card">
+          <p className="dash-card-label" style={{ marginBottom: 4 }}>AI Recommendation</p>
+          <p className="dash-card-note" style={{ marginBottom: 12 }}>
+            This is an AI-generated suggestion for your review only. It does not
+            approve or reject this decision — you still make the final call.
+          </p>
+
+          {recommendationLoading ? (
+            <p className="dash-card-note">Analyzing this decision...</p>
+          ) : recommendationError ? (
+            <div className="auth-message error">{recommendationError}</div>
+          ) : recommendation ? (
+            <>
+              <Badge
+                tone={
+                  recommendation.recommendation === "approve"
+                    ? "success"
+                    : recommendation.recommendation === "reject"
+                    ? "danger"
+                    : "warning"
+                }
+              >
+                {recommendation.recommendation.replace("_", " ")}
+              </Badge>
+
+              <p style={{ marginTop: 12, color: "var(--text-primary)", lineHeight: 1.6, whiteSpace: "pre-line" }}>
+                {recommendation.reasoning}
+              </p>
+
+              <div className="dash-card-note" style={{ marginTop: 12, fontStyle: "italic" }}>
+                Generated by{" "}
+                {recommendation.generated_by === "gemini"
+                  ? "Gemini AI"
+                  : recommendation.generated_by === "groq"
+                  ? "Groq AI (Gemini fallback)"
+                  : "deterministic fallback — AI was unavailable"}
+              </div>
+
+              <Button variant="secondary" size="sm" onClick={fetchRecommendation} style={{ marginTop: 12 }}>
+                Regenerate
+              </Button>
+            </>
+          ) : null}
         </div>
       )}
 

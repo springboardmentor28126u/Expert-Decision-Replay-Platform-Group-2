@@ -71,7 +71,7 @@ class DecisionSummaryService:
         )
 
         prompt = self._build_prompt(deterministic_summary, decision)
-        llm_summary = await llm_client.generate_text(prompt)
+        llm_summary, provider = await llm_client.generate_text_with_provider(prompt)
 
         return DecisionSummaryOut(
             decision_id=decision.id,
@@ -79,7 +79,7 @@ class DecisionSummaryService:
             status=decision.status.value,
             category=decision.category,
             summary=llm_summary or deterministic_summary,
-            generated_by="gemini" if llm_summary else "deterministic",
+            generated_by=provider or "deterministic",
             total_alternatives=len(active_alternatives),
             selected_alternative=selected.title if selected else None,
             approval_progress=approval_progress,

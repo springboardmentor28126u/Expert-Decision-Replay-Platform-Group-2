@@ -22,7 +22,7 @@ class DecisionSummaryOut(BaseModel):
     status: str
     category: Optional[str] = None
     summary: str
-    generated_by: Literal["gemini", "deterministic"]
+    generated_by: Literal["gemini", "groq", "deterministic"]
     total_alternatives: int
     selected_alternative: Optional[str] = None
     approval_progress: list[ApprovalProgressEntry]

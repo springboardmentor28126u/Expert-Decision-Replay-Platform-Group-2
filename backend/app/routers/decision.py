@@ -27,9 +27,11 @@ from app.schemas.decision_insight import (
     AskDecisionResponse,
     SimilarDecisionOut,
 )
+from app.schemas.approval_intelligence import ApprovalRecommendationOut
 from app.services.decision_service import DecisionService
 from app.services.decision_summary_service import DecisionSummaryService
 from app.services.decision_insight_service import DecisionInsightService
+from app.services.approval_intelligence_service import ApprovalIntelligenceService
 
 router = APIRouter()
 
@@ -50,6 +52,12 @@ def get_decision_insight_service(
     db: AsyncSession = Depends(get_db),
 ) -> DecisionInsightService:
     return DecisionInsightService(db)
+
+
+def get_approval_intelligence_service(
+    db: AsyncSession = Depends(get_db),
+) -> ApprovalIntelligenceService:
+    return ApprovalIntelligenceService(db)
 
 
 @router.get(
@@ -193,6 +201,24 @@ async def ask_about_decision(
         answer=answer,
         generated_by=generated_by,
     )
+
+
+@router.get(
+    "/{decision_id}/ai-recommendation",
+    response_model=ApprovalRecommendationOut,
+    dependencies=[Depends(require_role(RoleName.REVIEWER, RoleName.MANAGER, RoleName.ADMINISTRATOR))],
+)
+async def get_ai_recommendation(
+    decision_id: uuid.UUID,
+    service: ApprovalIntelligenceService = Depends(get_approval_intelligence_service),
+):
+    """
+    Read-only AI recommendation for a human reviewer/manager/admin to
+    consider — never approves, rejects, reassigns, or otherwise mutates
+    the decision or its approval records. See
+    services/approval_intelligence_service.py.
+    """
+    return await service.get_recommendation(decision_id)
 
 
 @router.delete(

@@ -12,6 +12,13 @@ email-validator
 
 python-jose[cryptography]
 passlib[bcrypt]
+# Pinned: passlib==1.7.4's bcrypt backend probes bcrypt.__about__.__version__
+# to detect its 72-byte limit, an attribute bcrypt removed in 4.1 — on
+# bcrypt>=4.1 that misdetection makes passlib reject even short passwords
+# with a misleading "password cannot be longer than 72 bytes" error.
+# Reproduced in Docker (which resolves bcrypt unpinned -> newest) but not
+# in the existing local venv, which already happened to have this version.
+bcrypt==4.0.1
 python-multipart
 
 python-dotenv
@@ -20,5 +27,6 @@ reportlab
 openpyxl
 
 httpx
+groq==1.6.0
 
 redis
