@@ -1,4 +1,4 @@
-# Expert-Decision-Replay-Platform-Group-2# Expert-Decision-Replay-Platform-Group-2
+# Expert-Decision-Replay-Platform-Group-2
 A centralized platform to record, discuss, approve, and archive organizational decisions — preserving institutional knowledge so teams understand why a decision was made and avoid repeating past mistakes.
 ![Login Page](screenshots/login.png)
 
