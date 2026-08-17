@@ -12,6 +12,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # Database
@@ -21,6 +22,10 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
+
+    # OpenAI
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-5.6"
 
     # App
     app_name: str = "Expert Decision Replay Platform"

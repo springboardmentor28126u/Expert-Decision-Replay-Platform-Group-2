@@ -14,18 +14,24 @@ class Approval(Base):
     decision_id = Column(
         Integer,
         ForeignKey("decisions.id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
     )
 
     reviewer_id = Column(
         Integer,
         ForeignKey("users.id"),
-        nullable=False
+        nullable=False,
+    )
+
+    assigned_by_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
     )
 
     status = Column(
         String(30),
-        default="Pending"
+        default="Pending",
     )
 
     comments = Column(Text, nullable=True)
@@ -34,16 +40,28 @@ class Approval(Base):
 
     created_at = Column(
         DateTime,
-        server_default=func.now()
+        server_default=func.now(),
     )
 
     # Relationships
     decision = relationship("Decision")
-    reviewer = relationship("User")
+
+    reviewer = relationship(
+        "User",
+        foreign_keys=[reviewer_id],
+    )
+
+    assigned_by = relationship(
+        "User",
+        foreign_keys=[assigned_by_id],
+    )
 
     def __repr__(self):
         return (
-            f"<Approval(id={self.id}, "
+            f"<Approval("
+            f"id={self.id}, "
             f"decision_id={self.decision_id}, "
+            f"reviewer_id={self.reviewer_id}, "
+            f"assigned_by_id={self.assigned_by_id}, "
             f"status='{self.status}')>"
         )

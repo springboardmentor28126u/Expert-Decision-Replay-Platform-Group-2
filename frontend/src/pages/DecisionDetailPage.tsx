@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usersApi } from "../api/users";
 import { approvalsApi } from "../api/approvals";
 import { decisionsApi } from '../api/decisions';
+import { aiApi } from '../api/ai';
 import { alternativesApi } from '../api/alternatives';
 import { discussionsApi } from '../api/discussions';
 import { filesApi } from '../api/files';
@@ -59,6 +60,9 @@ const DecisionDetailPage: React.FC = () => {
   const [altLoading, setAltLoading] = useState(false);
   const [commentLoading, setCommentLoading] = useState(false);
   const [fileLoading, setFileLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const loadAllData = async () => {
     setLoading(true);
@@ -245,6 +249,32 @@ const DecisionDetailPage: React.FC = () => {
       }
     }
   };
+  const handleGenerateAISummary = async () => {
+  if (!decisionId) {
+    setAiError('Invalid decision ID.');
+    return;
+  }
+
+  try {
+    setAiLoading(true);
+    setAiError('');
+
+    const result = await aiApi.generateDecisionSummary(decisionId);
+
+    setAiSummary(result.summary);
+  } catch (error: any) {
+    console.error('Failed to generate AI summary:', error);
+
+    const message =
+      error?.response?.data?.detail ||
+      error?.message ||
+      'Failed to generate AI summary.';
+
+    setAiError(message);
+  } finally {
+    setAiLoading(false);
+  }
+};
 
   return (
     <div className="section-spacing">
@@ -386,6 +416,51 @@ const DecisionDetailPage: React.FC = () => {
             </div>
 
             <div className="lg:col-span-4 space-y-8">
+              <Card className="border border-border/80 bg-surface-elevated/20">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h3 className="text-base font-bold text-text">
+          AI Decision Summary
+        </h3>
+
+        <p className="text-xs text-text-secondary mt-1">
+          Generate a concise summary of this decision using AI.
+        </p>
+      </div>
+
+      <Button
+        variant="primary"
+        size="sm"
+        onClick={handleGenerateAISummary}
+        disabled={aiLoading}
+      >
+        {aiLoading ? 'Generating...' : 'Generate AI Summary'}
+      </Button>
+    </div>
+
+    {aiError && (
+      <div className="mt-4 rounded-lg border border-error/40 bg-error/10 p-3">
+        <p className="text-sm text-error">
+          {aiError}
+        </p>
+      </div>
+    )}
+
+    {aiSummary && (
+      <div className="mt-5 rounded-lg border border-border/60 bg-surface p-4">
+        <div className="text-sm text-text-secondary whitespace-pre-line leading-relaxed">
+          {aiSummary}
+        </div>
+      </div>
+    )}
+
+    {!aiSummary && !aiLoading && !aiError && (
+      <div className="mt-5 text-sm text-text-muted">
+        Click "Generate AI Summary" to create a summary of this decision.
+      </div>
+    )}
+  </Card>
+
               <Card className="border border-border/80 bg-surface-elevated/20">
                 <h3 className="text-sm font-bold text-text mb-3">Attached Documents</h3>
                 <FileList files={files.slice(0, 3)} onDelete={handleDeleteFile} canDelete={!!user} />

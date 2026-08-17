@@ -14,6 +14,7 @@ from app.schemas.approval import (
 )
 from app.services.approval_service import ApprovalService
 
+
 router = APIRouter(
     prefix="/api/approvals",
     tags=["Approvals"],
@@ -31,39 +32,59 @@ def assign_reviewer(
     return service.assign_reviewer(
         decision_id=data.decision_id,
         reviewer_id=data.reviewer_id,
+        assigned_by_id=current_user.id,
         comments=data.comments,
     )
 
-@router.get("/my")
+
+@router.get("/my", response_model=List[ApprovalResponse])
 def my_approvals(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = ApprovalService(db)
-    return service.get_my_approvals(current_user.id)
+
+    return service.get_my_approvals(
+        current_user.id
+    )
 
 
-@router.get("/{decision_id}", response_model=List[ApprovalResponse])
+@router.get(
+    "/{decision_id}",
+    response_model=List[ApprovalResponse],
+)
 def get_approvals(
     decision_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = ApprovalService(db)
-    return service.get_by_decision(decision_id)
+
+    return service.get_by_decision(
+        decision_id
+    )
 
 
-@router.patch("/{approval_id}/approve", response_model=ApprovalResponse)
+@router.patch(
+    "/{approval_id}/approve",
+    response_model=ApprovalResponse,
+)
 def approve(
     approval_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = ApprovalService(db)
-    return service.approve(approval_id)
+
+    return service.approve(
+        approval_id
+    )
 
 
-@router.patch("/{approval_id}/reject", response_model=ApprovalResponse)
+@router.patch(
+    "/{approval_id}/reject",
+    response_model=ApprovalResponse,
+)
 def reject(
     approval_id: int,
     data: ApprovalUpdate,
@@ -71,6 +92,7 @@ def reject(
     db: Session = Depends(get_db),
 ):
     service = ApprovalService(db)
+
     return service.reject(
         approval_id,
         data.comments,
