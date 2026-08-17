@@ -9,6 +9,7 @@ from app.models.file_attachment import FileAttachment
 from app.models.replay import Replay
 from app.models.audit_log import AuditLog
 from app.models.approval import Approval
+from app.models.notification import Notification
 
 __all__ = [
     "User",
@@ -20,4 +21,6 @@ __all__ = [
     "Replay",
     "AuditLog",
     "Approval",
+    "Notification",
 ]
+
