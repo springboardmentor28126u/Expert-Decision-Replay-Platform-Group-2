@@ -31,9 +31,16 @@ export interface PasswordUpdate {
 }
 
 // ===== Auth Types =====
+export interface CaptchaResponse {
+  captcha_id: string;
+  captcha_image: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
+  captcha_id: string;
+  captcha_answer: string;
 }
 
 export interface RegisterRequest {
@@ -41,6 +48,8 @@ export interface RegisterRequest {
   email: string;
   password: string;
   role?: string;
+  captcha_id: string;
+  captcha_answer: string;
 }
 
 export interface TokenResponse {
@@ -51,6 +60,7 @@ export interface TokenResponse {
   email: string;
   role: string;
 }
+
 
 // ===== Decision Types =====
 export type DecisionStatus =

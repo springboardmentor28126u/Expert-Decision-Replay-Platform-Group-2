@@ -12,6 +12,7 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
 
 from app.services.audit_service import AuditService
+from app.services.captcha_service import CaptchaService
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,9 @@ class AuthService:
         self.audit_service = AuditService(db)
 
     def register(self, data: RegisterRequest) -> TokenResponse:
-        """Register a new user."""
+        """Register a new user after verifying CAPTCHA."""
+        CaptchaService.verify_captcha(data.captcha_id, data.captcha_answer)
+
         if self.user_repo.email_exists(data.email):
             raise ConflictException("Email already registered")
 
@@ -56,7 +59,9 @@ class AuthService:
         )
 
     def login(self, data: LoginRequest, ip_address: str = None) -> TokenResponse:
-        """Authenticate user with email and password."""
+        """Authenticate user with email, password, and CAPTCHA."""
+        CaptchaService.verify_captcha(data.captcha_id, data.captcha_answer)
+
         user = self.user_repo.get_by_email(data.email)
         if not user or not verify_password(data.password, user.password):
             self.audit_service.log_login_failed(email=data.email, ip_address=ip_address)
@@ -76,6 +81,7 @@ class AuthService:
             email=user.email,
             role=user.role or "Employee",
         )
+
 
     def login_oauth2(self, email: str, password: str) -> TokenResponse:
         """OAuth2 password flow login (form-based).

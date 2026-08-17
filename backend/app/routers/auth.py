@@ -6,9 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_current_user
 from app.models.user import User
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, CaptchaResponse
 from app.services.auth_service import AuthService
 from app.services.audit_service import AuditService
+from app.services.captcha_service import CaptchaService
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -20,6 +21,14 @@ def _get_client_ip(request: Request) -> str:
     if request.client:
         return request.client.host
     return "127.0.0.1"
+
+
+@router.get("/captcha", response_model=CaptchaResponse)
+def get_captcha():
+    """Generate a new visual CAPTCHA challenge."""
+    captcha_id, captcha_image = CaptchaService.generate_captcha()
+    return CaptchaResponse(captcha_id=captcha_id, captcha_image=captcha_image)
+
 
 
 @router.post("/register", response_model=TokenResponse)

@@ -1,7 +1,12 @@
 import client from './client';
-import { LoginRequest, RegisterRequest, TokenResponse } from '../types';
+import { LoginRequest, RegisterRequest, TokenResponse, CaptchaResponse } from '../types';
 
 export const authApi = {
+  getCaptcha: async (): Promise<CaptchaResponse> => {
+    const response = await client.get<CaptchaResponse>('/api/auth/captcha');
+    return response.data;
+  },
+
   login: async (data: LoginRequest): Promise<TokenResponse> => {
     const response = await client.post<TokenResponse>('/api/auth/login', data);
     return response.data;
@@ -16,3 +21,4 @@ export const authApi = {
     await client.post('/api/auth/logout');
   },
 };
+

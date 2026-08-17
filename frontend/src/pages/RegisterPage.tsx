@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
+import CaptchaWidget from '../components/common/CaptchaWidget';
 import { USER_ROLES } from '../utils/constants';
 
 const RegisterPage: React.FC = () => {
@@ -11,10 +12,13 @@ const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('Employee');
+  const [captchaId, setCaptchaId] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [errors, setErrors] = useState<{
     username?: string;
     email?: string;
     password?: string;
+    captcha?: string;
     general?: string;
   }>({});
   const [loading, setLoading] = useState(false);
@@ -29,6 +33,7 @@ const RegisterPage: React.FC = () => {
     if (!username.trim()) newErrors.username = 'Username is required';
     if (!email.trim()) newErrors.email = 'Email is required';
     if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    if (!captchaAnswer.trim()) newErrors.captcha = 'CAPTCHA answer is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -42,11 +47,16 @@ const RegisterPage: React.FC = () => {
         email: email.trim(),
         password,
         role,
+        captcha_id: captchaId,
+        captcha_answer: captchaAnswer.trim(),
       });
       navigate('/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.detail || 'Registration failed. Try a different email.';
       setErrors({ general: msg });
+      // Reset CAPTCHA on failure
+      setCaptchaId('');
+      setCaptchaAnswer('');
     } finally {
       setLoading(false);
     }
@@ -137,6 +147,17 @@ const RegisterPage: React.FC = () => {
             </select>
           </div>
 
+          <CaptchaWidget
+            captchaId={captchaId}
+            captchaAnswer={captchaAnswer}
+            onChange={(id, ans) => {
+              setCaptchaId(id);
+              setCaptchaAnswer(ans);
+              setErrors((prev) => ({ ...prev, captcha: undefined }));
+            }}
+            error={errors.captcha}
+          />
+
           <Button type="submit" variant="primary" className="w-full mt-6" loading={loading}>
             Create Account
           </Button>
@@ -154,3 +175,4 @@ const RegisterPage: React.FC = () => {
 };
 
 export default RegisterPage;
+
