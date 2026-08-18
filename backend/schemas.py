@@ -374,6 +374,8 @@ class TeamDetailResponse(BaseModel):
     description: str | None
     manager_id: int | None
     member_count: int 
+    manager: UserResponse | None = None
+    members: list[UserResponse] = []
 
     @classmethod
     def from_team(cls, team):
@@ -383,6 +385,8 @@ class TeamDetailResponse(BaseModel):
             description=team.description,
             manager_id=team.manager_id,
             member_count=len(team.members),
+            manager=UserResponse.model_validate(team.manager) if team.manager else None,
+            members=[UserResponse.model_validate(m) for m in team.members],
         )
 
     model_config = ConfigDict(from_attributes=True)

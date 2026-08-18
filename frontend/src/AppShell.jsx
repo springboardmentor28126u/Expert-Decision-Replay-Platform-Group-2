@@ -42,16 +42,22 @@ function AppShell({
     onNavigate(item.key);
   };
 
-  const navItems = [
+  const primaryNavItems = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { key: "decisions", label: "Decisions", icon: ClipboardList },
-    { key: "reports", label: "Reports", icon: BarChart3 },
-    { key: "my-team", label: "My Team", icon: Users },
     { key: "notifications", label: "Notifications", icon: Bell, badge: unreadCount },
   ];
 
+  const reportsNavItems = [
+    { key: "reports", label: "Reports", icon: BarChart3 },
+  ];
+
+  const teamNavItems = [
+    { key: "my-team", label: "My Team", icon: Users },
+  ];
+
   const adminNavItems = [
-    { key: "users", label: "User Management", icon: "UserCog" },
+    { key: "users", label: "User Management", icon: UserCog },
   ];
 
   return (
@@ -61,7 +67,7 @@ function AppShell({
           <span className="full-name">EDRP</span>
         </div>
         <nav className="shell-nav">
-          {navItems.map((item) => (
+          {primaryNavItems.map((item) => (
             <button
               key={item.key}
               className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
@@ -89,27 +95,56 @@ function AppShell({
             </button>
           ))}
 
+          <div className="shell-nav-divider" />
+          <div className="shell-nav-section-label">REPORTS</div>
+          {reportsNavItems.map((item) => (
+            <button
+              key={item.key}
+              className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
+              onClick={() => handleNavClick(item)}
+            >
+              <span className="shell-nav-icon">
+                <item.icon size={18} strokeWidth={1.8} />
+              </span>
+              <span className="label">{item.label}</span>
+            </button>
+          ))}
+
+          {!isAdmin && (
+            <>
+              <div className="shell-nav-divider" />
+              <div className="shell-nav-section-label">TEAM</div>
+              {teamNavItems.map((item) => (
+                <button
+                  key={item.key}
+                  className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
+                  onClick={() => handleNavClick(item)}
+                >
+                  <span className="shell-nav-icon">
+                    <item.icon size={18} strokeWidth={1.8} />
+                  </span>
+                  <span className="label">{item.label}</span>
+                </button>
+              ))}
+            </>
+          )}
+
           {isAdmin && (
             <>
               <div className="shell-nav-divider" />
-              <div className="shell-nav-section-label">Admin</div>
-              {adminNavItems.map((item) => {
-                // If it's a string, we might need a fallback or let Lucide handle it, but wait!
-                // The item.icon for user-management is "UserCog", so let's render it properly or fallback to UserCog icon
-                const IconComponent = UserCog;
-                return (
-                  <button
-                    key={item.key}
-                    className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
-                    onClick={() => onNavigate(item.key)}
-                  >
-                    <span className="shell-nav-icon"> 
-                      <IconComponent size={18} strokeWidth={1.8} />
-                    </span>
-                    <span className="label">{item.label}</span>
-                  </button>
-                );
-              })}
+              <div className="shell-nav-section-label">ADMIN</div>
+              {adminNavItems.map((item) => (
+                <button
+                  key={item.key}
+                  className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
+                  onClick={() => onNavigate(item.key)}
+                >
+                  <span className="shell-nav-icon"> 
+                    <item.icon size={18} strokeWidth={1.8} />
+                  </span>
+                  <span className="label">{item.label}</span>
+                </button>
+              ))}
             </>
           )}
         </nav>

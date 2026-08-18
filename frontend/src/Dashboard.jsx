@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Pencil, Trash2, ChevronDown, ChevronUp, Users, Plus, X } from "lucide-react";
 import axios from "axios";
 import AppShell from "./AppShell";
 import CreateDecision from "./CreateDecision";
@@ -334,7 +335,182 @@ function Dashboard({ token, onLogout }) {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // Teams State
+  const [userMgmtTab, setUserMgmtTab] = useState("users"); // "users" | "teams"
+  const [teams, setTeams] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [expandedTeams, setExpandedTeams] = useState({}); // teamId -> boolean
+  const [teamDetails, setTeamDetails] = useState({}); // teamId -> TeamDetailResponse
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const [showEditTeamModal, setShowEditTeamModal] = useState(false);
+  const [selectedTeamToEdit, setSelectedTeamToEdit] = useState(null);
+  const [createTeamName, setCreateTeamName] = useState("");
+  const [createTeamDesc, setCreateTeamDesc] = useState("");
+  const [createTeamManagerId, setCreateTeamManagerId] = useState("");
+  const [editTeamName, setEditTeamName] = useState("");
+  const [editTeamDesc, setEditTeamDesc] = useState("");
+  const [editTeamManagerId, setEditTeamManagerId] = useState("");
+  const [selectedMemberToAdd, setSelectedMemberToAdd] = useState({}); // teamId -> userId
+
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(token);
+
+  useEffect(() => {
+    const fetchTeamsData = async () => {
+      if (!profile || profile.role !== "admin") return;
+      try {
+        setLoadingTeams(true);
+        const res = await axios.get("http://127.0.0.1:8000/teams", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setTeams(res.data);
+      } catch (err) {
+        console.error("Failed to load teams", err);
+      } finally {
+        setLoadingTeams(false);
+      }
+    };
+    fetchTeamsData();
+  }, [profile, token, refreshKey]);
+
+  const toggleTeamExpand = async (teamId) => {
+    const isExpanded = !expandedTeams[teamId];
+    setExpandedTeams((prev) => ({ ...prev, [teamId]: isExpanded }));
+    
+    if (isExpanded) {
+      try {
+        const res = await axios.get(`http://127.0.0.1:8000/teams/${teamId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setTeamDetails((prev) => ({ ...prev, [teamId]: res.data }));
+      } catch (err) {
+        console.error("Failed to fetch team details", err);
+      }
+    }
+  };
+
+  const handleAddMember = async (teamId) => {
+    const userId = selectedMemberToAdd[teamId];
+    if (!userId) return;
+    try {
+      await axios.post(
+        `http://127.0.0.1:8000/teams/${teamId}/members`,
+        { user_id: parseInt(userId) },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Re-fetch team details to update member list
+      const res = await axios.get(`http://127.0.0.1:8000/teams/${teamId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeamDetails((prev) => ({ ...prev, [teamId]: res.data }));
+      
+      // Update team list count
+      setTeams((prev) =>
+        prev.map((t) => (t.id === teamId ? { ...t, member_count: res.data.member_count } : t))
+      );
+      
+      // Re-fetch users list to keep team assignments up-to-date
+      const usersRes = await axios.get("http://127.0.0.1:8000/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(usersRes.data);
+
+      // Clear selection
+      setSelectedMemberToAdd((prev) => ({ ...prev, [teamId]: "" }));
+    } catch (err) {
+      console.error("Failed to add member", err);
+      alert(err.response?.data?.detail || "Failed to add member");
+    }
+  };
+
+  const handleRemoveMember = async (teamId, userId) => {
+    try {
+      await axios.delete(
+        `http://127.0.0.1:8000/teams/${teamId}/members/${userId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Re-fetch team details to update member list
+      const res = await axios.get(`http://127.0.0.1:8000/teams/${teamId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeamDetails((prev) => ({ ...prev, [teamId]: res.data }));
+      
+      // Update team list count
+      setTeams((prev) =>
+        prev.map((t) => (t.id === teamId ? { ...t, member_count: res.data.member_count } : t))
+      );
+      
+      // Re-fetch users list to keep team assignments up-to-date
+      const usersRes = await axios.get("http://127.0.0.1:8000/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(usersRes.data);
+    } catch (err) {
+      console.error("Failed to remove member", err);
+      alert(err.response?.data?.detail || "Failed to remove member");
+    }
+  };
+
+  const handleCreateTeam = async (e) => {
+    e.preventDefault();
+    if (!createTeamName.trim()) return;
+    try {
+      await axios.post(
+        "http://127.0.0.1:8000/teams",
+        {
+          name: createTeamName,
+          description: createTeamDesc,
+          manager_id: createTeamManagerId ? parseInt(createTeamManagerId) : null,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCreateTeamName("");
+      setCreateTeamDesc("");
+      setCreateTeamManagerId("");
+      setShowCreateTeamModal(false);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error("Failed to create team", err);
+      alert(err.response?.data?.detail || "Failed to create team");
+    }
+  };
+
+  const handleEditTeam = async (e) => {
+    e.preventDefault();
+    if (!selectedTeamToEdit || !editTeamName.trim()) return;
+    try {
+      await axios.patch(
+        `http://127.0.0.1:8000/teams/${selectedTeamToEdit.id}`,
+        {
+          name: editTeamName,
+          description: editTeamDesc,
+          manager_id: editTeamManagerId ? parseInt(editTeamManagerId) : null,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setEditTeamName("");
+      setEditTeamDesc("");
+      setEditTeamManagerId("");
+      setSelectedTeamToEdit(null);
+      setShowEditTeamModal(false);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error("Failed to edit team", err);
+      alert(err.response?.data?.detail || "Failed to edit team");
+    }
+  };
+
+  const handleDeleteTeam = async (teamId) => {
+    if (!window.confirm("Are you sure you want to delete this team?")) return;
+    try {
+      await axios.delete(`http://127.0.0.1:8000/teams/${teamId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error("Failed to delete team", err);
+      alert(err.response?.data?.detail || "Failed to delete team");
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -845,143 +1021,351 @@ function Dashboard({ token, onLogout }) {
         return (
           <div className="panel">
             <p className="panel-title">User Management</p>
-            {users ? (
-              <>
-                <div style={{ marginBottom: "20px" }}>
-                  <input
-                    type="text"
-                    placeholder="🔍 Search users by name, email, or role..."
-                    value={userSearchQuery}
-                    onChange={(e) => {
-                      setUserSearchQuery(e.target.value);
-                      setCurrentUserPage(1);
-                    }}
-                    style={{
-                      padding: "10px 16px", background: "#12161D", border: "1px solid #2E3646",
-                      borderRadius: "8px", color: "#F1F3F6", fontSize: "14px", width: "100%",
-                      maxWidth: "400px", outline: "none"
-                    }}
-                  />
-                </div>
 
-                <table className="dash-table user-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "25%" }}>Name</th>
-                      <th style={{ width: "30%" }}>Email</th>
-                      <th style={{ width: "15%" }}>Role</th>
-                      <th style={{ width: "12%" }}>Team</th>
-                      <th style={{ width: "12%" }}>Status</th>
-                      <th style={{ width: "13%" }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedUsers.length > 0 ? (
-                      paginatedUsers.map((u) => (
-                        <tr key={u.id} className="dash-table-row">
-                          <td style={{ fontWeight: "600" }}>{u.full_name}</td>
-                          <td>{u.email}</td>
-                          <td>
-                            <select
-                              value={u.role}
-                              onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                              disabled={u.id === profile.id}
-                              style={{
-                                padding: "6px 10px", background: "#12161D", border: "1px solid #2E3646",
-                                borderRadius: "6px", color: "#F1F3F6", fontSize: "13px",
-                                cursor: u.id === profile.id ? "not-allowed" : "pointer", outline: "none"
-                              }}
-                            >
-                              <option value="employee">Employee</option>
-                              <option value="reviewer">Reviewer</option>
-                              <option value="manager">Manager</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          </td>
+            <div className="user-mgmt-tabs" style={{ display: "flex", background: "#0f1115", padding: "4px", borderRadius: "8px", width: "fit-content", marginBottom: "24px" }}>
+              <button 
+                className={`user-mgmt-tab-btn ${userMgmtTab === "users" ? "active" : ""}`}
+                onClick={() => setUserMgmtTab("users")}
+                style={{
+                  background: userMgmtTab === "users" ? "rgba(79, 209, 181, 0.12)" : "transparent",
+                  border: userMgmtTab === "users" ? "1px solid rgba(79, 209, 181, 0.2)" : "none",
+                  color: userMgmtTab === "users" ? "var(--accent)" : "var(--text-secondary)",
+                  fontSize: "14px", fontWeight: "600", padding: "8px 16px", cursor: "pointer", borderRadius: "6px", transition: "all 0.2s ease",
+                  outline: "none"
+                }}
+              >
+                Users
+              </button>
+              <button 
+                className={`user-mgmt-tab-btn ${userMgmtTab === "teams" ? "active" : ""}`}
+                onClick={() => setUserMgmtTab("teams")}
+                style={{
+                  background: userMgmtTab === "teams" ? "rgba(79, 209, 181, 0.12)" : "transparent",
+                  border: userMgmtTab === "teams" ? "1px solid rgba(79, 209, 181, 0.2)" : "none",
+                  color: userMgmtTab === "teams" ? "var(--accent)" : "var(--text-secondary)",
+                  fontSize: "14px", fontWeight: "600", padding: "8px 16px", cursor: "pointer", borderRadius: "6px", transition: "all 0.2s ease",
+                  outline: "none"
+                }}
+              >
+                Teams
+              </button>
+            </div>
 
-                          <td>
-                            {u.team_id ? `Team ${u.team_id}` : "Not assigned"}
-                          </td>
+            {userMgmtTab === "users" ? (
+              users ? (
+                <>
+                  <div style={{ marginBottom: "20px" }}>
+                    <input
+                      type="text"
+                      placeholder="🔍 Search users by name, email, or role..."
+                      value={userSearchQuery}
+                      onChange={(e) => {
+                        setUserSearchQuery(e.target.value);
+                        setCurrentUserPage(1);
+                      }}
+                      style={{
+                        padding: "10px 16px", background: "#12161D", border: "1px solid #2E3646",
+                        borderRadius: "8px", color: "#F1F3F6", fontSize: "14px", width: "100%",
+                        maxWidth: "400px", outline: "none"
+                      }}
+                    />
+                  </div>
 
-                          <td>
-                            <span
-                              style={{
-                                display: "inline-block", padding: "4px 8px", borderRadius: "12px",
-                                fontSize: "11px", fontWeight: "700",
-                                background: u.is_active ? "rgba(45, 212, 167, 0.12)" : "rgba(240, 85, 90, 0.12)",
-                                color: u.is_active ? "var(--success)" : "var(--danger)"
-                              }}
-                            >
-                              {u.is_active ? "Active" : "Inactive"}
-                            </span>
-                          </td>
-                          <td>
-                            <button
-                              onClick={() => handleDeleteUser(u.id)}
-                              disabled={u.id === profile.id}
-                              style={{
-                                padding: "6px 12px",
-                                background: u.id === profile.id ? "transparent" : "rgba(240, 85, 90, 0.08)",
-                                border: u.id === profile.id ? "1px solid var(--border)" : "1px solid var(--danger)",
-                                color: u.id === profile.id ? "var(--text-muted)" : "var(--danger)",
-                                borderRadius: "6px", fontSize: "12px",
-                                cursor: u.id === profile.id ? "not-allowed" : "pointer", transition: "all 0.2s"
-                              }}
-                            >
-                              Delete
-                            </button>
+                  <table className="dash-table user-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "25%" }}>Name</th>
+                        <th style={{ width: "30%" }}>Email</th>
+                        <th style={{ width: "15%" }}>Role</th>
+                        <th style={{ width: "12%" }}>Team</th>
+                        <th style={{ width: "12%" }}>Status</th>
+                        <th style={{ width: "13%" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedUsers.length > 0 ? (
+                        paginatedUsers.map((u) => {
+                          const userTeam = teams.find((t) => t.id === u.team_id);
+                          return (
+                            <tr key={u.id} className="dash-table-row">
+                              <td style={{ fontWeight: "600" }}>{u.full_name}</td>
+                              <td>{u.email}</td>
+                              <td>
+                                <select
+                                  value={u.role}
+                                  onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                                  disabled={u.id === profile.id}
+                                  style={{
+                                    padding: "6px 10px", background: "#12161D", border: "1px solid #2E3646",
+                                    borderRadius: "6px", color: "#F1F3F6", fontSize: "13px",
+                                    cursor: u.id === profile.id ? "not-allowed" : "pointer", outline: "none"
+                                  }}
+                                >
+                                  <option value="employee">Employee</option>
+                                  <option value="reviewer">Reviewer</option>
+                                  <option value="manager">Manager</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                              </td>
+
+                              <td>
+                                {userTeam ? userTeam.name : "Not assigned"}
+                              </td>
+
+                              <td>
+                                <span
+                                  style={{
+                                    display: "inline-block", padding: "4px 8px", borderRadius: "12px",
+                                    fontSize: "11px", fontWeight: "700",
+                                    background: u.is_active ? "rgba(45, 212, 167, 0.12)" : "rgba(240, 85, 90, 0.12)",
+                                    color: u.is_active ? "var(--success)" : "var(--danger)"
+                                  }}
+                                >
+                                  {u.is_active ? "Active" : "Inactive"}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  onClick={() => handleDeleteUser(u.id)}
+                                  disabled={u.id === profile.id}
+                                  style={{
+                                    padding: "6px 12px",
+                                    background: u.id === profile.id ? "transparent" : "rgba(240, 85, 90, 0.08)",
+                                    border: u.id === profile.id ? "1px solid var(--border)" : "1px solid var(--danger)",
+                                    color: u.id === profile.id ? "var(--text-muted)" : "var(--danger)",
+                                    borderRadius: "6px", fontSize: "12px",
+                                    cursor: u.id === profile.id ? "not-allowed" : "pointer", transition: "all 0.2s"
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: "center", color: "var(--text-secondary)", padding: "20px" }}>
+                            No users matched your search.
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: "center", color: "var(--text-secondary)", padding: "20px" }}>
-                          No users matched your search.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-                {totalUserPages > 1 && (
-                  <div
-                    className="pagination-controls"
+                      )}
+                    </tbody>
+                  </table>
+                  {totalUserPages > 1 && (
+                    <div
+                      className="pagination-controls"
+                      style={{
+                        display: "flex", justifyContent: "center", alignItems: "center", gap: "12px",
+                        marginTop: "24px", paddingTop: "16px", borderTop: "1px solid var(--border)"
+                      }}
+                    >
+                      <button
+                        onClick={() => setCurrentUserPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={currentUserPage === 1}
+                        style={{
+                          padding: "8px 16px", background: "var(--surface)", border: "1px solid var(--border)",
+                          color: currentUserPage === 1 ? "var(--text-muted)" : "var(--text-primary)",
+                          borderRadius: "6px", cursor: currentUserPage === 1 ? "not-allowed" : "pointer",
+                          fontSize: "13px", fontWeight: "600"
+                        }}
+                      >
+                        ← Previous
+                      </button>
+                      <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "500" }}>
+                        Page {currentUserPage} of {totalUserPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentUserPage((prev) => Math.min(prev + 1, totalUserPages))}
+                        disabled={currentUserPage === totalUserPages}
+                        style={{
+                          padding: "8px 16px", background: "var(--surface)", border: "1px solid var(--border)",
+                          color: currentUserPage === totalUserPages ? "var(--text-muted)" : "var(--text-primary)",
+                          borderRadius: "6px", cursor: currentUserPage === totalUserPages ? "not-allowed" : "pointer",
+                          fontSize: "13px", fontWeight: "600"
+                        }}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p>Loading users...</p>
+              )
+            ) : (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                    {teams.length} {teams.length === 1 ? "team" : "teams"}
+                  </span>
+                  <button 
+                    onClick={() => {
+                      setCreateTeamName("");
+                      setCreateTeamDesc("");
+                      setCreateTeamManagerId("");
+                      setShowCreateTeamModal(true);
+                    }}
                     style={{
-                      display: "flex", justifyContent: "center", alignItems: "center", gap: "12px",
-                      marginTop: "24px", paddingTop: "16px", borderTop: "1px solid var(--border)"
+                      display: "flex", alignItems: "center", gap: "6px",
+                      padding: "8px 16px", background: "var(--accent)", border: "none",
+                      color: "#0F1115", borderRadius: "6px", cursor: "pointer",
+                      fontSize: "14px", fontWeight: "600"
                     }}
                   >
-                    <button
-                      onClick={() => setCurrentUserPage((prev) => Math.max(prev - 1, 1))}
-                      disabled={currentUserPage === 1}
-                      style={{
-                        padding: "8px 16px", background: "var(--surface)", border: "1px solid var(--border)",
-                        color: currentUserPage === 1 ? "var(--text-muted)" : "var(--text-primary)",
-                        borderRadius: "6px", cursor: currentUserPage === 1 ? "not-allowed" : "pointer",
-                        fontSize: "13px", fontWeight: "600"
-                      }}
-                    >
-                      ← Previous
-                    </button>
-                    <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "500" }}>
-                      Page {currentUserPage} of {totalUserPages}
-                    </span>
-                    <button
-                      onClick={() => setCurrentUserPage((prev) => Math.min(prev + 1, totalUserPages))}
-                      disabled={currentUserPage === totalUserPages}
-                      style={{
-                        padding: "8px 16px", background: "var(--surface)", border: "1px solid var(--border)",
-                        color: currentUserPage === totalUserPages ? "var(--text-muted)" : "var(--text-primary)",
-                        borderRadius: "6px", cursor: currentUserPage === totalUserPages ? "not-allowed" : "pointer",
-                        fontSize: "13px", fontWeight: "600"
-                      }}
-                    >
-                      Next →
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <p>Loading users...</p>
+                    <Plus size={16} /> Create Team
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {loadingTeams && teams.length === 0 ? (
+                    <p>Loading teams...</p>
+                  ) : teams.length === 0 ? (
+                    <p style={{ color: "var(--text-secondary)" }}>No teams created yet.</p>
+                  ) : (
+                    teams.map((t) => {
+                      const isExpanded = !!expandedTeams[t.id];
+                      const detail = teamDetails[t.id];
+                      const managerUser = users?.find((u) => u.id === t.manager_id);
+                      const nonMembers = (users || []).filter((u) => u.team_id !== t.id && u.role !== "admin");
+
+                      return (
+                        <div key={t.id} style={{
+                          background: "#171A21", border: "1px solid #262B36", borderRadius: "8px", padding: "20px",
+                          display: "flex", flexDirection: "column", gap: "16px"
+                        }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "var(--text-primary)" }}>{t.name}</h3>
+                              <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "var(--text-secondary)" }}>
+                                Manager: <span style={{ fontWeight: "600", color: "var(--text-primary)" }}>{managerUser ? managerUser.full_name : "Not assigned"}</span>
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #262B36", paddingTop: "12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--text-secondary)", fontSize: "14px" }}>
+                              <Users size={16} />
+                              <span>{t.member_count ?? 0} {t.member_count === 1 ? "member" : "members"}</span>
+                            </div>
+                            <div style={{ display: "flex", gap: "10px" }}>
+                              <button
+                                onClick={() => toggleTeamExpand(t.id)}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: "6px",
+                                  padding: "6px 12px", background: "transparent", border: "1px solid #2E3646",
+                                  color: "var(--text-primary)", borderRadius: "6px", cursor: "pointer",
+                                  fontSize: "13px", fontWeight: "600", outline: "none"
+                                }}
+                              >
+                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                {isExpanded ? "Hide Members" : "View Members"}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedTeamToEdit(t);
+                                  setEditTeamName(t.name);
+                                  setEditTeamDesc(t.description || "");
+                                  setEditTeamManagerId(t.manager_id || "");
+                                  setShowEditTeamModal(true);
+                                }}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: "6px",
+                                  padding: "6px 12px", background: "transparent", border: "1px solid #2E3646",
+                                  color: "var(--text-primary)", borderRadius: "6px", cursor: "pointer",
+                                  fontSize: "13px", fontWeight: "600", outline: "none"
+                                }}
+                              >
+                                <Pencil size={14} /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTeam(t.id)}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: "6px",
+                                  padding: "6px 12px", background: "rgba(240, 85, 90, 0.08)", border: "1px solid var(--danger)",
+                                  color: "var(--danger)", borderRadius: "6px", cursor: "pointer",
+                                  fontSize: "13px", fontWeight: "600", outline: "none"
+                                }}
+                              >
+                                <Trash2 size={14} /> Delete
+                              </button>
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div style={{
+                              background: "#12161D", border: "1px solid #2E3646", borderRadius: "6px", padding: "16px",
+                              display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px"
+                            }}>
+                              <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "var(--text-primary)" }}>Team Members</h4>
+                              {!detail ? (
+                                <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>Loading members...</p>
+                              ) : detail.members && detail.members.length > 0 ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                  {detail.members.map((m) => (
+                                    <div key={m.id} style={{
+                                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                                      padding: "8px 12px", background: "rgba(255, 255, 255, 0.02)", borderRadius: "4px"
+                                    }}>
+                                      <div>
+                                        <div style={{ fontWeight: "600", color: "var(--text-primary)", fontSize: "13px" }}>{m.full_name}</div>
+                                        <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{m.email}</div>
+                                      </div>
+                                      <button
+                                        onClick={() => handleRemoveMember(t.id, m.id)}
+                                        style={{
+                                          background: "transparent", border: "none", color: "var(--text-muted)",
+                                          cursor: "pointer", display: "flex", alignItems: "center", padding: "4px"
+                                        }}
+                                        title="Remove from team"
+                                      >
+                                        <X size={14} />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>No members in this team.</p>
+                              )}
+
+                              <div style={{
+                                display: "flex", gap: "8px", marginTop: "8px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.05)"
+                              }}>
+                                <select
+                                  value={selectedMemberToAdd[t.id] || ""}
+                                  onChange={(e) => setSelectedMemberToAdd(prev => ({ ...prev, [t.id]: e.target.value }))}
+                                  style={{
+                                    flex: 1, padding: "8px 12px", background: "#12161D", border: "1px solid #2E3646",
+                                    borderRadius: "6px", color: "#F1F3F6", fontSize: "13px", outline: "none"
+                                  }}
+                                >
+                                  <option value="">Select user to add...</option>
+                                  {nonMembers.map((u) => (
+                                    <option key={u.id} value={u.id}>
+                                      {u.full_name} ({u.role})
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => handleAddMember(t.id)}
+                                  disabled={!selectedMemberToAdd[t.id]}
+                                  style={{
+                                    padding: "8px 16px", background: selectedMemberToAdd[t.id] ? "var(--accent)" : "rgba(79, 209, 181, 0.2)",
+                                    border: "none", color: "#0F1115", borderRadius: "6px", cursor: selectedMemberToAdd[t.id] ? "pointer" : "not-allowed",
+                                    fontSize: "13px", fontWeight: "600", outline: "none"
+                                  }}
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             )}
           </div>
         );
@@ -1039,6 +1423,138 @@ function Dashboard({ token, onLogout }) {
                 }}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateTeamModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateTeamModal(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ padding: "24px" }}>
+            <button className="modal-close-btn" onClick={() => setShowCreateTeamModal(false)}>&times;</button>
+            <h3 style={{ marginTop: 0, marginBottom: "20px" }}>Create New Team</h3>
+            <form onSubmit={handleCreateTeam} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)" }}>Team Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. AI & Automation"
+                  value={createTeamName}
+                  onChange={(e) => setCreateTeamName(e.target.value)}
+                  style={{
+                    padding: "10px 12px", background: "#12161D", border: "1px solid #2E3646",
+                    borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", outline: "none"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)" }}>Description</label>
+                <textarea
+                  placeholder="Describe the team's scope..."
+                  value={createTeamDesc}
+                  onChange={(e) => setCreateTeamDesc(e.target.value)}
+                  style={{
+                    padding: "10px 12px", background: "#12161D", border: "1px solid #2E3646",
+                    borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", outline: "none",
+                    minHeight: "80px", resize: "vertical", fontFamily: "inherit"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)" }}>Team Manager</label>
+                <select
+                  value={createTeamManagerId}
+                  onChange={(e) => setCreateTeamManagerId(e.target.value)}
+                  style={{
+                    padding: "10px 12px", background: "#12161D", border: "1px solid #2E3646",
+                    borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", outline: "none"
+                  }}
+                >
+                  <option value="">Select a manager (optional)...</option>
+                  {(users || []).filter((u) => u.role === "manager").map((u) => (
+                    <option key={u.id} value={u.id}>{u.full_name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                style={{
+                  marginTop: "8px", padding: "10px 16px", background: "var(--accent)", border: "none",
+                  color: "#0F1115", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "600"
+                }}
+              >
+                Create Team
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditTeamModal && (
+        <div className="modal-overlay" onClick={() => setShowEditTeamModal(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()} style={{ padding: "24px" }}>
+            <button className="modal-close-btn" onClick={() => setShowEditTeamModal(false)}>&times;</button>
+            <h3 style={{ marginTop: 0, marginBottom: "20px" }}>Edit Team</h3>
+            <form onSubmit={handleEditTeam} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)" }}>Team Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. AI & Automation"
+                  value={editTeamName}
+                  onChange={(e) => setEditTeamName(e.target.value)}
+                  style={{
+                    padding: "10px 12px", background: "#12161D", border: "1px solid #2E3646",
+                    borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", outline: "none"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)" }}>Description</label>
+                <textarea
+                  placeholder="Describe the team's scope..."
+                  value={editTeamDesc}
+                  onChange={(e) => setEditTeamDesc(e.target.value)}
+                  style={{
+                    padding: "10px 12px", background: "#12161D", border: "1px solid #2E3646",
+                    borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", outline: "none",
+                    minHeight: "80px", resize: "vertical", fontFamily: "inherit"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)" }}>Team Manager</label>
+                <select
+                  value={editTeamManagerId}
+                  onChange={(e) => setEditTeamManagerId(e.target.value)}
+                  style={{
+                    padding: "10px 12px", background: "#12161D", border: "1px solid #2E3646",
+                    borderRadius: "6px", color: "#F1F3F6", fontSize: "14px", outline: "none"
+                  }}
+                >
+                  <option value="">Select a manager (optional)...</option>
+                  {(users || []).filter((u) => u.role === "manager").map((u) => (
+                    <option key={u.id} value={u.id}>{u.full_name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                style={{
+                  marginTop: "8px", padding: "10px 16px", background: "var(--accent)", border: "none",
+                  color: "#0F1115", borderRadius: "6px", cursor: "pointer", fontSize: "14px", fontWeight: "600"
+                }}
+              >
+                Save Changes
+              </button>
+            </form>
           </div>
         </div>
       )}
