@@ -27,6 +27,7 @@ from app.routers import (
     audit,
     approvals,
     reports,
+    notifications,
     ai,  # NEW
 )
 
@@ -118,6 +119,8 @@ app.include_router(files.router)
 app.include_router(audit.router)
 app.include_router(approvals.router)
 app.include_router(reports.router)
+app.include_router(notifications.router)
+
 
 # AI router
 app.include_router(ai.router)

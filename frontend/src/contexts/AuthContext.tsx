@@ -21,6 +21,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    const handleUnauthorized = () => {
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
@@ -29,19 +38,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
         
-        // Optionally fetch fresh user info in the background
+        // Fetch fresh user info
         try {
           const freshUser = await usersApi.getMe();
           setUser(freshUser);
           localStorage.setItem('user', JSON.stringify(freshUser));
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to refresh user data', error);
+          if (error.response?.status === 401) {
+            handleUnauthorized();
+          }
         }
       }
       setLoading(false);
     };
 
     initializeAuth();
+
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
   }, []);
 
   const handleAuthResponse = (data: TokenResponse) => {

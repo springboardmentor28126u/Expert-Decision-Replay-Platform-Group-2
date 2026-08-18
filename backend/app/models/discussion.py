@@ -25,7 +25,7 @@ class Discussion(Base):
     # Self-referencing relationship
     parent = relationship(
         "Discussion",
-        remote_side=[id],
+        remote_side="Discussion.id",
         back_populates="replies",
     )
 

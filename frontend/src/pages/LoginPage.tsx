@@ -4,11 +4,14 @@ import { useAuth } from '../contexts/AuthContext';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
+import CaptchaWidget from '../components/common/CaptchaWidget';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
+  const [captchaId, setCaptchaId] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const [errors, setErrors] = useState<{ email?: string; password?: string; captcha?: string; general?: string }>({});
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -23,6 +26,7 @@ const LoginPage: React.FC = () => {
     const newErrors: typeof errors = {};
     if (!email.trim()) newErrors.email = 'Email is required';
     if (!password.trim()) newErrors.password = 'Password is required';
+    if (!captchaAnswer.trim()) newErrors.captcha = 'CAPTCHA answer is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -31,11 +35,14 @@ const LoginPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await login({ email: email.trim(), password });
+      await login({ email: email.trim(), password, captcha_id: captchaId, captcha_answer: captchaAnswer.trim() });
       navigate(from, { replace: true });
     } catch (err: any) {
       const msg = err.response?.data?.detail || 'Authentication failed. Please verify credentials.';
       setErrors({ general: msg });
+      // Reset CAPTCHA so user gets a fresh challenge on retry
+      setCaptchaId('');
+      setCaptchaAnswer('');
     } finally {
       setLoading(false);
     }
@@ -96,6 +103,17 @@ const LoginPage: React.FC = () => {
             autoComplete="current-password"
           />
 
+          <CaptchaWidget
+            captchaId={captchaId}
+            captchaAnswer={captchaAnswer}
+            onChange={(id, ans) => {
+              setCaptchaId(id);
+              setCaptchaAnswer(ans);
+              setErrors((prev) => ({ ...prev, captcha: undefined }));
+            }}
+            error={errors.captcha}
+          />
+
           <Button type="submit" variant="primary" className="w-full mt-6" loading={loading}>
             Sign In
           </Button>
@@ -113,3 +131,4 @@ const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
+

@@ -31,7 +31,10 @@ client.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.log("401 Unauthorized");
+      console.log("401 Unauthorized - clearing token and notifying AuthContext");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.dispatchEvent(new Event("auth:unauthorized"));
     }
     return Promise.reject(error);
   }

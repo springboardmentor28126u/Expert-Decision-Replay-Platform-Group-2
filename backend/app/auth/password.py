@@ -1,6 +1,9 @@
-"""Password hashing and verification using bcrypt via passlib."""
-
+import bcrypt
 from passlib.context import CryptContext
+
+# Fix passlib 1.7.4 compatibility with bcrypt 4.0+
+if not hasattr(bcrypt, "__about__"):
+    bcrypt.__about__ = type("about", (), {"__version__": getattr(bcrypt, "__version__", "4.2.0")})
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

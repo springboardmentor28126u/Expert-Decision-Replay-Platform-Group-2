@@ -15,6 +15,7 @@ from app.repositories.version_repository import VersionRepository
 from app.schemas.decision import DecisionCreate, DecisionUpdate, DecisionListResponse, DecisionResponse
 
 from app.services.audit_service import AuditService
+from app.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,9 @@ class DecisionService:
         self.decision_repo = DecisionRepository(db)
         self.version_repo = VersionRepository(db)
         self.audit_service = AuditService(db)
+        self.notification_service = NotificationService(db)
         self.db = db
+
 
     def create_decision(self, data: DecisionCreate, user: User) -> Decision:
         """Create a new decision."""
@@ -178,7 +181,28 @@ class DecisionService:
                 description=f"Decision status changed to: {status}",
             )
 
+        # Notify decision creator of status change
+        if decision and decision.created_by:
+            try:
+                type_map = {
+                    "Approved": "DECISION_APPROVED",
+                    "Rejected": "DECISION_REJECTED",
+                    "Under Review": "APPROVAL_REQUEST",
+                }
+                notif_type = type_map.get(status, "STATUS_CHANGED")
+                actor_name = user.username if hasattr(user, "username") else "A user"
+                self.notification_service.create_notification(
+                    user_id=decision.created_by,
+                    title=f"Decision Status Updated: {status}",
+                    message=f"Your decision '{decision.title or f'#{decision_id}'}' status was updated from '{old_status}' to '{status}' by {actor_name}.",
+                    type=notif_type,
+                    link_url=f"/dashboard/decisions/{decision_id}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send status update notification: {e}")
+
         return decision
+
 
     def delete_decision(self, decision_id: int, user: Optional[User] = None) -> None:
         """Delete a decision and all related data."""

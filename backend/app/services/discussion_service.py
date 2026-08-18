@@ -9,9 +9,10 @@ from app.exceptions.handlers import NotFoundException, ForbiddenException
 from app.models.discussion import Discussion
 from app.models.user import User
 from app.repositories.discussion_repository import DiscussionRepository
+from app.repositories.decision_repository import DecisionRepository
 from app.schemas.discussion import DiscussionCreate, DiscussionUpdate
-
 from app.services.audit_service import AuditService
+from app.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,11 @@ class DiscussionService:
     """Service handling discussion business logic."""
 
     def __init__(self, db: Session):
+        self.db = db
         self.disc_repo = DiscussionRepository(db)
+        self.decision_repo = DecisionRepository(db)
         self.audit_service = AuditService(db)
+        self.notification_service = NotificationService(db)
 
     def create_discussion(
         self, decision_id: int, data: DiscussionCreate, user: User
@@ -55,7 +59,22 @@ class DiscussionService:
                 user_id=user.id, decision_id=decision_id, discussion_type=data.type
             )
 
+        # Notify decision creator if someone else comments/posts
+        try:
+            decision = self.decision_repo.get_by_id(decision_id)
+            if decision and decision.created_by and decision.created_by != user.id:
+                self.notification_service.create_notification(
+                    user_id=decision.created_by,
+                    title="New Discussion Comment",
+                    message=f"{user.username} posted a new {data.type or 'comment'} on decision '{decision.title or f'#{decision_id}'}'.",
+                    type="NEW_COMMENT",
+                    link_url=f"/dashboard/decisions/{decision_id}"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to send discussion notification: {e}")
+
         return self.disc_repo.get_by_id_with_user(discussion.id) or discussion
+
 
     def get_discussions(
         self, decision_id: int, type_filter: Optional[str] = None

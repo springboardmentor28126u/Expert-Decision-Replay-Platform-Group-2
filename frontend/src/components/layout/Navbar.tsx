@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../common/Button';
+import NotificationBell from './NotificationBell';
 
 interface NavbarProps {
   onToggleSidebar: () => void;
@@ -38,6 +39,8 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
       <div className="flex items-center gap-4 ml-auto">
         {user && (
           <div className="flex items-center gap-3">
+            <NotificationBell />
+            <div className="h-6 w-px bg-border hidden sm:block" />
             <div className="hidden text-right md:block">
               <p className="text-sm font-semibold text-text leading-tight">{user.username}</p>
               <p className="text-xs text-text-secondary leading-none capitalize mt-0.5">{user.role}</p>
@@ -54,5 +57,6 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     </header>
   );
 };
+
 
 export default Navbar;

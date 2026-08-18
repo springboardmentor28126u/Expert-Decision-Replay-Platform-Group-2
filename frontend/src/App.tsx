@@ -25,6 +25,8 @@ import DecisionReportPage from "./pages/DecisionReportPage";
 import ApprovalReportPage from "./pages/ApprovalReportPage";
 import TeamReportPage from "./pages/TeamReportPage";
 import AuditReportPage from "./pages/AuditReportPage";
+import NotificationsPage from "./pages/NotificationsPage";
+
 const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -59,12 +61,14 @@ const App: React.FC = () => {
             <Route path="reports/team" element={<TeamReportPage />} />
             <Route path="reports/audit" element={<AuditReportPage />} />
 
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="profile" element={<ProfilePage />} />
 
             <Route
               path="my-approvals"
               element={<MyApprovalsPage />}
             />
+
 
             {/* Admin Only Routes */}
             <Route

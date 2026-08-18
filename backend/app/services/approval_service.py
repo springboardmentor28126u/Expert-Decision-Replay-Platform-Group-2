@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -10,6 +11,10 @@ from app.models.approval import Approval
 from app.models.user import User
 from app.repositories.approval_repository import ApprovalRepository
 from app.repositories.decision_repository import DecisionRepository
+from app.services.notification_service import NotificationService
+
+logger = logging.getLogger(__name__)
+
 
 
 class ApprovalService:
@@ -19,6 +24,7 @@ class ApprovalService:
         self.db = db
         self.approval_repo = ApprovalRepository(db)
         self.decision_repo = DecisionRepository(db)
+        self.notification_service = NotificationService(db)
 
     def assign_reviewer(
         self,
@@ -75,8 +81,22 @@ class ApprovalService:
             comments=comments,
         )
 
-        return self.approval_repo.create(approval)
+        created_approval = self.approval_repo.create(approval)
 
+        # Trigger notification to reviewer
+        try:
+            self.notification_service.create_notification(
+                user_id=reviewer_id,
+                title="Approval Requested",
+                message=f"You have been assigned to review decision '{decision.title or f'#{decision_id}'}'.",
+                type="APPROVAL_REQUEST",
+                link_url=f"/dashboard/decisions/{decision_id}"
+            )
+        except Exception:
+            pass
+
+        return created_approval
+        
     def approve(self, approval_id: int):
         approval = self.approval_repo.get_by_id(approval_id)
 
