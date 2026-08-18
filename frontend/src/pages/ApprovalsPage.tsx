@@ -2,26 +2,19 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { approvalsApi } from "../api/approvals";
 import { usersApi } from "../api/users";
-<<<<<<< HEAD
-import { User } from "../types";
-=======
 import { useAuth } from "../contexts/AuthContext";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import Modal from "../components/common/Modal";
->>>>>>> origin/nandhana
+import { User } from "../types";
 
 interface Approval {
   id: number;
   decision_id: number;
   reviewer_id: number;
-
   reviewer_name?: string | null;
-
   assigned_by_id?: number | null;
   assigned_by_name?: string | null;
-
   status: string;
   comments?: string | null;
   created_at: string;
@@ -43,31 +36,37 @@ const ApprovalsPage: React.FC = () => {
   // =========================================================
 
   const [approvals, setApprovals] = useState<Approval[]>([]);
-<<<<<<< HEAD
-
   const [reviewers, setReviewers] = useState<User[]>([]);
+  const [selectedReviewer, setSelectedReviewer] = useState<string>("");
 
-  const [selectedReviewer, setSelectedReviewer] =
-    useState<string>("");
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const [currentUser, setCurrentUser] =
-    useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [assigning, setAssigning] = useState<boolean>(false);
 
-  const [loadingUser, setLoadingUser] =
-    useState<boolean>(true);
-
-  const [loadingApprovals, setLoadingApprovals] =
-    useState<boolean>(false);
-
-  const [assigning, setAssigning] =
-    useState<boolean>(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState<boolean>(false);
+  const [rejectTarget, setRejectTarget] = useState<number | null>(null);
+  const [rejectComment, setRejectComment] = useState<string>("");
+  const [rejecting, setRejecting] = useState<boolean>(false);
 
   // AI SUMMARY
-  const [aiSummary, setAiSummary] =
-    useState<string>("");
-
+  const [aiSummary, setAiSummary] = useState<string>("");
   const [generatingSummary, setGeneratingSummary] =
     useState<boolean>(false);
+
+  // =========================================================
+  // CURRENT ROLE
+  // =========================================================
+
+  const currentRole = String(
+    currentUser?.role || user?.role || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const isAdmin = currentRole === "administrator";
+  const isManager = currentRole === "manager" || isAdmin;
 
   // =========================================================
   // LOAD CURRENT USER
@@ -77,21 +76,23 @@ const ApprovalsPage: React.FC = () => {
     loadCurrentUser();
   }, []);
 
+  const loadCurrentUser = async () => {
+    try {
+      const loadedUser = await usersApi.getMe();
+
+      console.log("Current user:", loadedUser);
+
+      setCurrentUser(loadedUser);
+    } catch (error) {
+      console.error("Failed to load current user:", error);
+    } finally {
+      setLoadingUser(false);
+    }
+  };
+
   // =========================================================
   // LOAD APPROVALS
   // =========================================================
-=======
-  const [reviewers, setReviewers] = useState<any[]>([]);
-  const [selectedReviewer, setSelectedReviewer] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [assigning, setAssigning] = useState(false);
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [rejectTarget, setRejectTarget] = useState<number | null>(null);
-  const [rejectComment, setRejectComment] = useState("");
-
-  const isAdmin = user?.role === "Administrator";
-  const isManager = user?.role === "Manager" || isAdmin;
->>>>>>> origin/nandhana
 
   useEffect(() => {
     if (decisionId) {
@@ -99,9 +100,31 @@ const ApprovalsPage: React.FC = () => {
     }
   }, [decisionId]);
 
-<<<<<<< HEAD
+  const loadApprovals = async () => {
+    if (!decisionId) {
+      setApprovals([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const data = await approvalsApi.list(decisionId);
+
+      console.log("Approvals received:", data);
+
+      setApprovals(data);
+    } catch (error) {
+      console.error("Failed to load approvals:", error);
+      setApprovals([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // =========================================================
-  // LOAD REVIEWERS FOR ADMIN / MANAGER
+  // LOAD REVIEWERS
   // =========================================================
 
   useEffect(() => {
@@ -113,95 +136,21 @@ const ApprovalsPage: React.FC = () => {
       .trim()
       .toLowerCase();
 
-    if (
-      role === "administrator" ||
-      role === "manager"
-    ) {
+    if (role === "administrator" || role === "manager") {
       loadReviewers();
     }
   }, [currentUser]);
 
-  // =========================================================
-  // CURRENT USER
-  // =========================================================
-
-  const loadCurrentUser = async () => {
-    try {
-      const user = await usersApi.getMe();
-
-      console.log("Current user:", user);
-
-      setCurrentUser(user);
-    } catch (error) {
-      console.error(
-        "Failed to load current user:",
-        error
-      );
-    } finally {
-      setLoadingUser(false);
-=======
-  const loadApprovals = async () => {
-    setLoading(true);
-    try {
-      const data = await approvalsApi.list(decisionId);
-      setApprovals(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
->>>>>>> origin/nandhana
-    }
-  };
-
-  // =========================================================
-  // APPROVALS
-  // =========================================================
-
-  const loadApprovals = async () => {
-    if (!decisionId) {
-      return;
-    }
-
-    try {
-      setLoadingApprovals(true);
-
-      const data = await approvalsApi.list(decisionId);
-
-      console.log("Approvals received:", data);
-
-      setApprovals(data);
-    } catch (error) {
-      console.error(
-        "Failed to load approvals:",
-        error
-      );
-    } finally {
-      setLoadingApprovals(false);
-    }
-  };
-
-  // =========================================================
-  // REVIEWERS
-  // =========================================================
-
   const loadReviewers = async () => {
     try {
       const data = await usersApi.getReviewers();
-<<<<<<< HEAD
 
-      console.log(
-        "Reviewers received:",
-        data
-      );
+      console.log("Reviewers received:", data);
 
-=======
->>>>>>> origin/nandhana
       setReviewers(data);
     } catch (error) {
-      console.error(
-        "Failed to load reviewers:",
-        error
-      );
+      console.error("Failed to load reviewers:", error);
+      setReviewers([]);
     }
   };
 
@@ -210,7 +159,6 @@ const ApprovalsPage: React.FC = () => {
   // =========================================================
 
   const assignReviewer = async () => {
-<<<<<<< HEAD
     if (!selectedReviewer) {
       alert("Please select a reviewer.");
       return;
@@ -220,19 +168,14 @@ const ApprovalsPage: React.FC = () => {
       alert("Invalid decision.");
       return;
     }
-=======
-    if (!selectedReviewer) return;
->>>>>>> origin/nandhana
 
-    setAssigning(true);
     try {
       setAssigning(true);
 
       await approvalsApi.assign(
         decisionId,
         Number(selectedReviewer),
-<<<<<<< HEAD
-        undefined
+        "Assigned for review"
       );
 
       alert("Reviewer assigned successfully.");
@@ -241,23 +184,12 @@ const ApprovalsPage: React.FC = () => {
 
       await loadApprovals();
     } catch (error: any) {
-      console.error(
-        "Assignment failed:",
-        error
-      );
+      console.error("Assignment failed:", error);
 
       alert(
         error?.response?.data?.detail ||
           "Failed to assign reviewer."
       );
-=======
-        "Assigned for review"
-      );
-      setSelectedReviewer("");
-      loadApprovals();
-    } catch (err: any) {
-      alert(err?.response?.data?.detail || "Assignment failed");
->>>>>>> origin/nandhana
     } finally {
       setAssigning(false);
     }
@@ -267,18 +199,13 @@ const ApprovalsPage: React.FC = () => {
   // APPROVE
   // =========================================================
 
-  const approve = async (
-    approvalId: number
-  ) => {
+  const approve = async (approvalId: number) => {
     try {
       await approvalsApi.approve(approvalId);
 
       await loadApprovals();
     } catch (error: any) {
-      console.error(
-        "Approval failed:",
-        error
-      );
+      console.error("Approval failed:", error);
 
       alert(
         error?.response?.data?.detail ||
@@ -287,49 +214,54 @@ const ApprovalsPage: React.FC = () => {
     }
   };
 
-<<<<<<< HEAD
   // =========================================================
   // REJECT
   // =========================================================
 
-  const reject = async (
-    approvalId: number
-  ) => {
-    const comments = prompt(
-      "Enter rejection comments"
-    );
-
-    if (comments === null) {
-      return;
-    }
-=======
   const openRejectModal = (approvalId: number) => {
     setRejectTarget(approvalId);
     setRejectComment("");
     setRejectModalOpen(true);
   };
->>>>>>> origin/nandhana
+
+  const closeRejectModal = () => {
+    if (rejecting) {
+      return;
+    }
+
+    setRejectModalOpen(false);
+    setRejectTarget(null);
+    setRejectComment("");
+  };
 
   const confirmReject = async () => {
-    if (rejectTarget === null) return;
+    if (rejectTarget === null) {
+      return;
+    }
+
     try {
-<<<<<<< HEAD
+      setRejecting(true);
+
       await approvalsApi.reject(
-        approvalId,
-        comments
+        rejectTarget,
+        rejectComment.trim()
       );
+
+      setRejectModalOpen(false);
+      setRejectTarget(null);
+      setRejectComment("");
 
       await loadApprovals();
     } catch (error: any) {
-      console.error(
-        "Rejection failed:",
-        error
-      );
+      console.error("Rejection failed:", error);
 
       alert(
         error?.response?.data?.detail ||
+          error?.message ||
           "Rejection failed."
       );
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -337,41 +269,34 @@ const ApprovalsPage: React.FC = () => {
   // GET REVIEWER NAME
   // =========================================================
 
-  const getReviewerName = (
-    approval: Approval
-  ): string => {
-    // Best option:
-    // backend returns reviewer_name
+  const getReviewerName = (reviewerId: number): string => {
+    const approval = approvals.find(
+      (item) => item.reviewer_id === reviewerId
+    );
+
     if (
-      approval.reviewer_name &&
+      approval?.reviewer_name &&
       approval.reviewer_name.trim()
     ) {
       return approval.reviewer_name;
     }
 
-    // Fallback:
-    // find reviewer in loaded reviewer list
     const reviewer = reviewers.find(
-      (user) =>
-        user.id === approval.reviewer_id
+      (reviewer) => reviewer.id === reviewerId
     );
 
     if (reviewer) {
       return reviewer.username;
     }
 
-    return `Reviewer #${approval.reviewer_id}`;
+    return `Reviewer #${reviewerId}`;
   };
 
   // =========================================================
   // GET ASSIGNED BY NAME
   // =========================================================
 
-  const getAssignedByName = (
-    approval: Approval
-  ): string => {
-    // Best option:
-    // backend returns assigned_by_name
+  const getAssignedByName = (approval: Approval): string => {
     if (
       approval.assigned_by_name &&
       approval.assigned_by_name.trim()
@@ -379,7 +304,6 @@ const ApprovalsPage: React.FC = () => {
       return approval.assigned_by_name;
     }
 
-    // If the current logged-in user assigned it
     if (
       approval.assigned_by_id &&
       currentUser &&
@@ -390,6 +314,42 @@ const ApprovalsPage: React.FC = () => {
 
     return "Unknown";
   };
+
+  // =========================================================
+  // STATUS STYLE
+  // =========================================================
+
+  const getStatusStyle = (status: string): string => {
+    switch (String(status).toLowerCase()) {
+      case "approved":
+        return "bg-success/10 text-success border border-success/20";
+
+      case "rejected":
+        return "bg-error/10 text-error border border-error/20";
+
+      case "pending":
+        return "bg-warning/10 text-warning border border-warning/20";
+
+      default:
+        return "bg-surface-elevated text-text-secondary border border-border";
+    }
+  };
+
+  // =========================================================
+  // STATUS COUNTS
+  // =========================================================
+
+  const pendingCount = approvals.filter(
+    (item) => String(item.status).toLowerCase() === "pending"
+  ).length;
+
+  const approvedCount = approvals.filter(
+    (item) => String(item.status).toLowerCase() === "approved"
+  ).length;
+
+  const rejectedCount = approvals.filter(
+    (item) => String(item.status).toLowerCase() === "rejected"
+  ).length;
 
   // =========================================================
   // GENERATE AI SUMMARY
@@ -405,18 +365,6 @@ const ApprovalsPage: React.FC = () => {
       setGeneratingSummary(true);
       setAiSummary("");
 
-      /*
-       * Backend endpoint:
-       *
-       * POST /api/approvals/{decision_id}/ai-summary
-       *
-       * Expected response:
-       *
-       * {
-       *   "summary": "AI generated summary..."
-       * }
-       */
-
       const response = await fetch(
         `/api/approvals/${decisionId}/ai-summary`,
         {
@@ -429,24 +377,19 @@ const ApprovalsPage: React.FC = () => {
       );
 
       if (!response.ok) {
-        let message =
-          "Failed to generate AI summary.";
+        let message = "Failed to generate AI summary.";
 
         try {
-          const errorData =
-            await response.json();
-
-          message =
-            errorData?.detail || message;
+          const errorData = await response.json();
+          message = errorData?.detail || message;
         } catch {
-          // Ignore JSON parsing error
+          // Ignore JSON parsing errors
         }
 
         throw new Error(message);
       }
 
-      const data: AISummaryResponse =
-        await response.json();
+      const data: AISummaryResponse = await response.json();
 
       setAiSummary(data.summary);
     } catch (error: any) {
@@ -463,24 +406,6 @@ const ApprovalsPage: React.FC = () => {
       setGeneratingSummary(false);
     }
   };
-
-  // =========================================================
-  // CURRENT ROLE
-  // =========================================================
-
-  const currentRole = String(
-    currentUser?.role || ""
-  )
-    .trim()
-    .toLowerCase();
-
-  // =========================================================
-  // ADMINISTRATOR + MANAGER ONLY
-  // =========================================================
-
-  const canAssignReviewer =
-    currentRole === "administrator" ||
-    currentRole === "manager";
 
   // =========================================================
   // LOADING
@@ -504,245 +429,16 @@ const ApprovalsPage: React.FC = () => {
   // =========================================================
 
   return (
-    <div
-      style={{
-        padding: "20px",
-        color: "white",
-      }}
-    >
-      {/* =====================================================
-          TITLE
-          ===================================================== */}
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <h2
-          style={{
-            margin: 0,
-          }}
-        >
-          Approvals
-        </h2>
-
-        {/* AI SUMMARY BUTTON */}
-
-        <button
-          onClick={generateAISummary}
-          disabled={
-            generatingSummary ||
-            approvals.length === 0
-          }
-          style={{
-            backgroundColor:
-              generatingSummary ||
-              approvals.length === 0
-                ? "#555"
-                : "#7c3aed",
-            color: "white",
-            border: "none",
-            padding: "11px 20px",
-            borderRadius: "6px",
-            cursor:
-              generatingSummary ||
-              approvals.length === 0
-                ? "not-allowed"
-                : "pointer",
-            fontWeight: "bold",
-            fontSize: "14px",
-          }}
-        >
-          {generatingSummary
-            ? "Generating AI Summary..."
-            : "Generate AI Summary"}
-        </button>
-      </div>
-
-      {/* =====================================================
-          AI SUMMARY
-          ===================================================== */}
-
-      {aiSummary && (
-        <div
-          style={{
-            backgroundColor: "#111827",
-            border: "1px solid #7c3aed",
-            borderRadius: "8px",
-            padding: "20px",
-            marginBottom: "25px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "10px",
-            }}
-          >
-            <h3
-              style={{
-                margin: 0,
-                color: "#c4b5fd",
-              }}
-            >
-              AI Decision Summary
-            </h3>
-
-            <button
-              onClick={() =>
-                setAiSummary("")
-              }
-              style={{
-                background: "transparent",
-                color: "#aaa",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "18px",
-              }}
-            >
-              ×
-            </button>
-          </div>
-
-          <p
-            style={{
-              margin: 0,
-              lineHeight: "1.7",
-              whiteSpace: "pre-wrap",
-              color: "#e5e7eb",
-            }}
-          >
-            {aiSummary}
-          </p>
-        </div>
-      )}
-
-      {/* =====================================================
-          ASSIGN REVIEWER
-          ADMINISTRATOR + MANAGER ONLY
-          ===================================================== */}
-
-      {canAssignReviewer && (
-        <div
-          style={{
-            marginTop: "20px",
-            marginBottom: "20px",
-            display: "flex",
-            gap: "15px",
-            alignItems: "center",
-          }}
-        >
-          <select
-            value={selectedReviewer}
-            onChange={(e) =>
-              setSelectedReviewer(
-                e.target.value
-              )
-            }
-            disabled={assigning}
-            style={{
-              padding: "10px",
-              minWidth: "320px",
-              backgroundColor: "#1f2937",
-              color: "white",
-              border: "1px solid #555",
-              borderRadius: "6px",
-              fontSize: "16px",
-            }}
-          >
-            <option value="">
-              Select Reviewer
-            </option>
-
-            {reviewers.map((reviewer) => (
-              <option
-                key={reviewer.id}
-                value={reviewer.id}
-              >
-                {reviewer.username}
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={assignReviewer}
-            disabled={assigning}
-            style={{
-              backgroundColor: assigning
-                ? "#666"
-                : "green",
-              color: "white",
-              border: "none",
-              padding: "10px 20px",
-              borderRadius: "6px",
-              cursor: assigning
-                ? "not-allowed"
-                : "pointer",
-              fontWeight: "bold",
-            }}
-          >
-            {assigning
-              ? "Assigning..."
-              : "Assign Reviewer"}
-          </button>
-        </div>
-      )}
-
-      {/* =====================================================
-          APPROVALS TABLE
-          ===================================================== */}
-
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          marginTop: "20px",
-=======
-      await approvalsApi.reject(rejectTarget, rejectComment);
-      setRejectModalOpen(false);
-      setRejectTarget(null);
-      setRejectComment("");
-      loadApprovals();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const getReviewerName = (reviewerId: number) => {
-    const reviewer = reviewers.find((r) => r.id === reviewerId);
-    return reviewer ? reviewer.username : "Unknown";
-  };
-
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "status-under-review";
-      case "Approved":
-        return "status-approved";
-      case "Rejected":
-        return "status-rejected";
-      default:
-        return "status-draft";
-    }
-  };
-
-  const pendingCount = approvals.filter((a) => a.status === "Pending").length;
-  const approvedCount = approvals.filter((a) => a.status === "Approved").length;
-  const rejectedCount = approvals.filter((a) => a.status === "Rejected").length;
-
-  return (
     <div className="section-spacing">
       {/* Header + Back */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
         <div className="space-y-1">
           <button
-            onClick={() => navigate(`/dashboard/decisions/${decisionId}`)}
+            onClick={() =>
+              navigate(
+                `/dashboard/decisions/${decisionId}`
+              )
+            }
             className="flex items-center gap-1.5 text-text-secondary hover:text-text font-semibold transition-colors text-sm mb-2"
           >
             <svg
@@ -753,15 +449,22 @@ const ApprovalsPage: React.FC = () => {
               stroke="currentColor"
               className="h-4 w-4"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+              />
             </svg>
             Back to Decision
           </button>
+
           <h1 className="text-3xl font-bold tracking-tight text-text">
             Approval Workflow
           </h1>
+
           <p className="text-sm text-text-secondary">
-            Manage reviewer assignments and track approval status for this decision.
+            Manage reviewer assignments and track approval
+            status for this decision.
           </p>
         </div>
       </div>
@@ -771,38 +474,88 @@ const ApprovalsPage: React.FC = () => {
         <Card className="border border-border/80 bg-surface-elevated/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Pending</p>
-              <p className="text-2xl font-bold text-text mt-1">{pendingCount}</p>
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                Pending
+              </p>
+              <p className="text-2xl font-bold text-text mt-1">
+                {pendingCount}
+              </p>
             </div>
+
             <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-warning">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-5 w-5 text-warning"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
               </svg>
             </div>
           </div>
         </Card>
+
         <Card className="border border-border/80 bg-surface-elevated/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Approved</p>
-              <p className="text-2xl font-bold text-text mt-1">{approvedCount}</p>
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                Approved
+              </p>
+              <p className="text-2xl font-bold text-text mt-1">
+                {approvedCount}
+              </p>
             </div>
+
             <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-success">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-5 w-5 text-success"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
               </svg>
             </div>
           </div>
         </Card>
+
         <Card className="border border-border/80 bg-surface-elevated/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Rejected</p>
-              <p className="text-2xl font-bold text-text mt-1">{rejectedCount}</p>
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                Rejected
+              </p>
+              <p className="text-2xl font-bold text-text mt-1">
+                {rejectedCount}
+              </p>
             </div>
+
             <div className="h-10 w-10 rounded-full bg-error/10 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-error">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="h-5 w-5 text-error"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
               </svg>
             </div>
           </div>
@@ -815,24 +568,35 @@ const ApprovalsPage: React.FC = () => {
           <h3 className="text-base font-bold text-text mb-4 border-b border-border/40 pb-2">
             Assign Reviewer
           </h3>
+
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1 w-full flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider select-none">
                 Select Reviewer
               </label>
+
               <select
                 value={selectedReviewer}
-                onChange={(e) => setSelectedReviewer(e.target.value)}
+                onChange={(e) =>
+                  setSelectedReviewer(e.target.value)
+                }
                 className="input-field"
               >
-                <option value="">Choose a reviewer...</option>
-                {reviewers.map((reviewer: any) => (
-                  <option key={reviewer.id} value={reviewer.id}>
+                <option value="">
+                  Choose a reviewer...
+                </option>
+
+                {reviewers.map((reviewer) => (
+                  <option
+                    key={reviewer.id}
+                    value={reviewer.id}
+                  >
                     {reviewer.username} ({reviewer.role})
                   </option>
                 ))}
               </select>
             </div>
+
             <Button
               variant="primary"
               onClick={assignReviewer}
@@ -846,6 +610,40 @@ const ApprovalsPage: React.FC = () => {
         </Card>
       )}
 
+      {/* AI Summary */}
+      <Card className="border border-border/80 bg-surface-elevated/20">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-text">
+                AI Approval Summary
+              </h3>
+
+              <p className="text-sm text-text-secondary mt-1">
+                Generate a summary of the current approval
+                workflow.
+              </p>
+            </div>
+
+            <Button
+              variant="primary"
+              onClick={generateAISummary}
+              loading={generatingSummary}
+            >
+              Generate Summary
+            </Button>
+          </div>
+
+          {aiSummary && (
+            <div className="rounded-lg border border-border/60 bg-surface-elevated/30 p-4">
+              <p className="text-sm text-text whitespace-pre-wrap">
+                {aiSummary}
+              </p>
+            </div>
+          )}
+        </div>
+      </Card>
+
       {/* Approvals List */}
       <div className="space-y-4">
         <h3 className="text-base font-bold text-text">
@@ -858,313 +656,172 @@ const ApprovalsPage: React.FC = () => {
           </div>
         ) : approvals.length > 0 ? (
           <div className="space-y-3">
-            {approvals.map((item) => (
-              <Card
-                key={item.id}
-                className="border border-border/80 bg-surface-elevated/20"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Reviewer Info */}
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary-light uppercase border border-primary/20 select-none shrink-0">
-                      {getReviewerName(item.reviewer_id).charAt(0)}
-                    </div>
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-semibold text-text">
-                        {getReviewerName(item.reviewer_id)}
-                      </p>
-                      <p className="text-xs text-text-muted">
-                        Assigned {new Date(item.created_at).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                        {item.approved_at && (
-                          <span>
-                            {" "}• Responded {new Date(item.approved_at).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
+            {approvals.map((item) => {
+              const reviewerName = getReviewerName(
+                item.reviewer_id
+              );
 
-                  {/* Status + Actions */}
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${getStatusStyle(
-                        item.status
-                      )}`}
-                    >
-                      {item.status}
-                    </span>
-
-                    {item.status === "Pending" && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => approve(item.id)}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => openRejectModal(item.id)}
-                        >
-                          Reject
-                        </Button>
+              return (
+                <Card
+                  key={item.id}
+                  className="border border-border/80 bg-surface-elevated/20"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    {/* Reviewer Info */}
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary-light uppercase border border-primary/20 select-none shrink-0">
+                        {reviewerName
+                          .charAt(0)
+                          .toUpperCase()}
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Rejection Comments */}
-                {item.status === "Rejected" && item.comments && (
-                  <div className="mt-3 pt-3 border-t border-border/40">
-                    <p className="text-xs text-error/80 bg-error/5 border border-error/10 rounded-lg px-3 py-2">
-                      <span className="font-semibold">Rejection reason:</span> {item.comments}
-                    </p>
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold text-text">
+                          {reviewerName}
+                        </p>
+
+                        <p className="text-xs text-text-muted">
+                          Assigned{" "}
+                          {new Date(
+                            item.created_at
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+
+                          {item.approved_at && (
+                            <span>
+                              {" "}
+                              • Responded{" "}
+                              {new Date(
+                                item.approved_at
+                              ).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }
+                              )}
+                            </span>
+                          )}
+                        </p>
+
+                        {item.assigned_by_id && (
+                          <p className="text-xs text-text-muted">
+                            Assigned by{" "}
+                            {getAssignedByName(item)}
+                          </p>
+                        )}
+
+                        {item.comments && (
+                          <p className="text-xs text-text-secondary mt-1">
+                            Comment: {item.comments}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status + Actions */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${getStatusStyle(
+                          item.status
+                        )}`}
+                      >
+                        {item.status}
+                      </span>
+
+                      {String(item.status).toLowerCase() ===
+                        "pending" && (
+                        <>
+                          <button
+                            onClick={() =>
+                              approve(item.id)
+                            }
+                            className="rounded-md bg-success px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                          >
+                            Approve
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              openRejectModal(item.id)
+                            }
+                            className="rounded-md bg-error px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                )}
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-border p-12 text-center text-text-secondary">
-            No reviewers have been assigned yet. Use the form above to assign one.
-          </div>
+          <Card className="border border-border/80 bg-surface-elevated/20">
+            <div className="text-center py-10">
+              <p className="text-sm text-text-secondary">
+                No approvals found
+              </p>
+            </div>
+          </Card>
         )}
       </div>
 
       {/* Reject Modal */}
-      <Modal
-        isOpen={rejectModalOpen}
-        onClose={() => {
-          setRejectModalOpen(false);
-          setRejectTarget(null);
-          setRejectComment("");
->>>>>>> origin/nandhana
-        }}
-        title="Reject Approval"
-      >
-<<<<<<< HEAD
-        <thead>
-          <tr>
-            <th
-              style={{
-                border: "1px solid white",
-                padding: "10px",
-              }}
-            >
-              Reviewer
-            </th>
+      {rejectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-surface p-6 shadow-xl">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-text">
+                Reject Approval
+              </h2>
 
-            <th
-              style={{
-                border: "1px solid white",
-                padding: "10px",
-              }}
-            >
-              Decision
-            </th>
+              <p className="text-sm text-text-secondary mt-1">
+                Please provide a reason for rejecting this
+                approval.
+              </p>
+            </div>
 
-            <th
-              style={{
-                border: "1px solid white",
-                padding: "10px",
-              }}
-            >
-              Assigned By
-            </th>
-
-            <th
-              style={{
-                border: "1px solid white",
-                padding: "10px",
-              }}
-            >
-              Status
-            </th>
-
-            <th
-              style={{
-                border: "1px solid white",
-                padding: "10px",
-              }}
-            >
-              Action
-            </th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {loadingApprovals ? (
-            <tr>
-              <td
-                colSpan={5}
-                style={{
-                  textAlign: "center",
-                  padding: "20px",
-                  border: "1px solid white",
-                }}
-              >
-                Loading approvals...
-              </td>
-            </tr>
-          ) : approvals.length > 0 ? (
-            approvals.map((item) => (
-              <tr key={item.id}>
-                {/* REVIEWER */}
-
-                <td
-                  style={{
-                    border: "1px solid white",
-                    padding: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  {getReviewerName(item)}
-                </td>
-
-                {/* DECISION */}
-
-                <td
-                  style={{
-                    border: "1px solid white",
-                    padding: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  {item.decision_id}
-                </td>
-
-                {/* ASSIGNED BY */}
-
-                <td
-                  style={{
-                    border: "1px solid white",
-                    padding: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  {getAssignedByName(item)}
-                </td>
-
-                {/* STATUS */}
-
-                <td
-                  style={{
-                    border: "1px solid white",
-                    padding: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  {item.status}
-                </td>
-
-                {/* ACTION */}
-
-                <td
-                  style={{
-                    border: "1px solid white",
-                    padding: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  <button
-                    onClick={() =>
-                      approve(item.id)
-                    }
-                    style={{
-                      backgroundColor:
-                        "#22c55e",
-                      color: "white",
-                      border: "none",
-                      padding: "8px 15px",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Approve
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      reject(item.id)
-                    }
-                    style={{
-                      backgroundColor:
-                        "#ef4444",
-                      color: "white",
-                      border: "none",
-                      padding: "8px 15px",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      fontWeight: "bold",
-                      marginLeft: "10px",
-                    }}
-                  >
-                    Reject
-                  </button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td
-                colSpan={5}
-                style={{
-                  textAlign: "center",
-                  padding: "20px",
-                  border: "1px solid white",
-                }}
-              >
-                No approvals found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-=======
-        <div className="space-y-4">
-          <p className="text-sm text-text-secondary">
-            Please provide a reason for rejecting this approval request.
-          </p>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider select-none">
-              Rejection Comments
-            </label>
             <textarea
               value={rejectComment}
-              onChange={(e) => setRejectComment(e.target.value)}
+              onChange={(e) =>
+                setRejectComment(e.target.value)
+              }
+              placeholder="Enter rejection reason..."
               rows={4}
-              placeholder="Enter your reason for rejection..."
-              className="input-field resize-none"
+              className="input-field w-full resize-none"
+              disabled={rejecting}
             />
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setRejectModalOpen(false);
-                setRejectTarget(null);
-                setRejectComment("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={confirmReject}>
-              Confirm Rejection
-            </Button>
+
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                type="button"
+                onClick={closeRejectModal}
+                disabled={rejecting}
+                className="rounded-md border border-border px-4 py-2 text-sm font-semibold text-text-secondary hover:text-text transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmReject}
+                disabled={rejecting}
+                className="rounded-md bg-error px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {rejecting
+                  ? "Rejecting..."
+                  : "Confirm Reject"}
+              </button>
+            </div>
           </div>
         </div>
-      </Modal>
->>>>>>> origin/nandhana
+      )}
     </div>
   );
 };
