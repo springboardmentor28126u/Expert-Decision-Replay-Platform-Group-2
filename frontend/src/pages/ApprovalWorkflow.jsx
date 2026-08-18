@@ -25,7 +25,7 @@ function ApprovalWorkflow() {
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [remarks, setRemarks] = useState("");
 
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
   const isManager = user && ["Manager", "Administrator"].includes(user.role);
 

@@ -17,7 +17,7 @@ function EditDecision() {
 
   const fetchDecision = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const res = await api.get(`/decisions/${id}`, {
         headers: {
@@ -38,7 +38,7 @@ function EditDecision() {
     e.preventDefault();
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.put(
         `/decisions/${id}`,

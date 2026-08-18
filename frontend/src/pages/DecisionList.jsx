@@ -18,7 +18,7 @@ function DecisionList() {
 
   const fetchDecisions = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.get("/decisions/", {
         headers: {

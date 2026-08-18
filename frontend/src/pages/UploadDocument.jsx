@@ -15,7 +15,7 @@ function UploadDocument() {
     }
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const formData = new FormData();
       formData.append("file", file);

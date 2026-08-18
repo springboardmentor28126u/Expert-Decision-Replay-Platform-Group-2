@@ -1,11 +1,24 @@
 import json
-from openai import OpenAI
 from app.core.config import settings
 
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=settings.OPENROUTER_API_KEY,
-)
+
+def _get_client():
+    """Lazily create and return an OpenAI client if an API key is configured.
+
+    Returns None when no API key is present so callers can handle that case
+    without import-time failures.
+    """
+    key = getattr(settings, "OPENROUTER_API_KEY", None) or getattr(settings, "OPENAI_API_KEY", None)
+    if not key:
+        return None
+    try:
+        from openai import OpenAI
+    except Exception as e:
+        # Explicit runtime error so callers get a clear message instead of an
+        # import-time stack trace.
+        raise RuntimeError("OpenAI client package not installed: install 'openai'") from e
+
+    return OpenAI(base_url="https://openrouter.ai/api/v1", api_key=key)
 
 PROMPT_TEMPLATE = """You are an assistant helping a reviewer check an organizational decision record for completeness.
 You are NOT approving or rejecting anything — you only flag what's missing or weak so the human reviewer can look closer.
@@ -43,6 +56,10 @@ def run_ai_review(decision, doc_count: int) -> dict:
         description=decision.description,
         doc_count=doc_count,
     )
+
+    client = _get_client()
+    if client is None:
+        raise RuntimeError("AI key not configured. Set OPENROUTER_API_KEY or OPENAI_API_KEY in your environment to enable AI reviews.")
 
     try:
         response = client.chat.completions.create(

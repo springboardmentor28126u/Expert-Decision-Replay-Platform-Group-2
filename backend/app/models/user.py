@@ -19,12 +19,6 @@ class User(Base):
         server_default=func.now(),
         default=func.now()
     )
-
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now()
-    )
     # No explicit relationship attributes here to avoid import-time
     # mapper initialization ordering issues. Other models reference
     # `User` via relationships declared on their side.

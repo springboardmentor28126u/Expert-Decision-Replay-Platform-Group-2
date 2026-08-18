@@ -24,7 +24,7 @@ function Alternatives() {
 
   const fetchAlternatives = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.get(
         `/alternatives/${decisionId}`,
@@ -46,7 +46,7 @@ function Alternatives() {
     e.preventDefault();
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.post(
         `/alternatives/${decisionId}`,

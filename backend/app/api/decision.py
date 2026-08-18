@@ -9,6 +9,8 @@ from app.schemas.decision import (
     DecisionResponse,
     DecisionUpdate
 )
+from app.schemas.ai_review import AIReviewOut
+from app.models.ai_review import AIReviewResult
 from app.services.email_service import send_email
 import os
 

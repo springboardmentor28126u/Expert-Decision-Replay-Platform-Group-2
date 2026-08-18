@@ -30,7 +30,7 @@ function Login() {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
 
-      localStorage.setItem("token", response.data.access_token);
+      sessionStorage.setItem("token", response.data.access_token);
       navigate("/dashboard");
     } catch (err) {
       console.log(err);

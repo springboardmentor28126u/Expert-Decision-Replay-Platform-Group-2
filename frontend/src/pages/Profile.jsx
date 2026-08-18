@@ -11,7 +11,7 @@ function Profile() {
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.get("/me", {
         headers: {

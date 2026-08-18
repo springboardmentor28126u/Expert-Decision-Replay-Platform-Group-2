@@ -14,7 +14,7 @@ function Users() {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.get("/users/", {
         headers: {
@@ -42,7 +42,7 @@ function Users() {
     if (!newRole) return;
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.put(`/users/${userId}/role`, null, {
         headers: {
@@ -63,7 +63,7 @@ function Users() {
 
   const handleToggleStatus = async (userId) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.put(
         `/users/${userId}/toggle-status`,

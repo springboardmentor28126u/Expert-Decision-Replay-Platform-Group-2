@@ -24,7 +24,7 @@ export default function Navbar() {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.get("/me", {
         headers: {
@@ -40,7 +40,7 @@ export default function Navbar() {
 
   const fetchNotifications = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.get("/notifications/", {
         headers: {

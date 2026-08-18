@@ -8,24 +8,67 @@ import {
   FaBalanceScale,
   FaComments,
   FaFileAlt,
-  
+  FaHistory,
+  FaRobot,
+  FaFile,
+  FaFilePdf,
+  FaFileWord,
+  FaUpload,
+  FaTimes,
+} from "react-icons/fa";
+
+export default function DecisionDetails() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [decision, setDecision] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [alternatives, setAlternatives] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [user, setUser] = useState(null);
+  const [aiReviews, setAiReviews] = useState([]);
+
+  const [activeTab, setActiveTab] = useState("overview");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const [optionName, setOptionName] = useState("");
+  const [pros, setPros] = useState("");
+  const [cons, setCons] = useState("");
+  const [estimatedCost, setEstimatedCost] = useState("");
+  const [feasibility, setFeasibility] = useState("");
+  const [riskLevel, setRiskLevel] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const [newComment, setNewComment] = useState("");
+  const [sendingComment, setSendingComment] = useState(false);
+
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const token = sessionStorage.getItem("token");
+
+      const headers = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
+
+      const decisionRes = await api.get(`/decisions/${id}`, { headers });
+      setDecision(decisionRes.data);
+
       const commentRes = await api.get(`/comments/${id}`, { headers });
       setComments(commentRes.data);
 
-      const alternativeRes = await api.get(`/alternatives/${id}`, {
-        headers,
-      });
+      const alternativeRes = await api.get(`/alternatives/${id}`, { headers });
       setAlternatives(alternativeRes.data);
 
-      const documentRes = await api.get(`/decisions/${id}/documents`, {
-        headers,
-      });
+      const documentRes = await api.get(`/decisions/${id}/documents`, { headers });
       setDocuments(documentRes.data);
 
-      const historyRes = await api.get(
-        `/decisions/${id}/history`,
-        { headers }
-      );
+      const historyRes = await api.get(`/decisions/${id}/history`, { headers });
       setHistory(historyRes.data);
 
       const userRes = await api.get("/me", { headers });
@@ -39,6 +82,10 @@ import {
     }
   };
 
+  useEffect(() => {
+    if (id) loadData();
+  }, [id]);
+
   const deleteDecision = async () => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this decision?"
@@ -47,7 +94,7 @@ import {
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.delete(`/decisions/${id}`, {
         headers: {
@@ -65,7 +112,7 @@ import {
 
   const approveDecision = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.post(
         `/approvals/${id}?status=Approved`,
@@ -87,7 +134,7 @@ import {
 
   const rejectDecision = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.post(
         `/approvals/${id}?status=Rejected`,
@@ -111,7 +158,7 @@ import {
     setAiLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.post(
         `/decisions/${id}/ai-review`,
@@ -153,7 +200,7 @@ import {
     setSaving(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.post(
         `/alternatives/${id}`,
@@ -206,7 +253,7 @@ import {
     setSendingComment(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await api.post(
         `/comments/${id}`,
@@ -254,7 +301,7 @@ import {
     setUploading(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const formData = new FormData();
       formData.append("file", file);
@@ -312,14 +359,20 @@ import {
     boxShadow: "0 8px 25px rgba(0,0,0,.08)",
   };
 
-  const tabs = [
+  const baseTabs = [
     { key: "overview", label: "Overview", icon: <FaInfoCircle className="me-2" /> },
     { key: "alternatives", label: "Alternatives", icon: <FaBalanceScale className="me-2" /> },
     { key: "discussion", label: "Discussion", icon: <FaComments className="me-2" /> },
     { key: "documents", label: "Documents", icon: <FaFileAlt className="me-2" /> },
     { key: "history", label: "Version History", icon: <FaHistory className="me-2" /> },
-    { key: "aireview", label: "AI Review", icon: <FaRobot className="me-2" /> },
   ];
+
+  // Show AI Review tab only to users with the Reviewer role
+  const allowedRolesForAI = ["Reviewer"];
+  const tabs = [...baseTabs];
+  if (user && allowedRolesForAI.includes(user.role)) {
+    tabs.push({ key: "aireview", label: "AI Review", icon: <FaRobot className="me-2" /> });
+  }
 
   return (
     <Layout>
@@ -1112,4 +1165,5 @@ import {
   );
 }
 
-export default DecisionDetails;
+ 
+

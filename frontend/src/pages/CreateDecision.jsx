@@ -11,7 +11,7 @@ function CreateDecision() {
     e.preventDefault();
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.post(
         "/decisions/",

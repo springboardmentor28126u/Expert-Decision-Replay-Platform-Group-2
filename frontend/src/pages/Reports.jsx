@@ -18,7 +18,7 @@ function Reports() {
 
   const loadReport = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.get("/reports/summary", {
         headers: {
@@ -34,7 +34,7 @@ function Reports() {
 
 const downloadPDF = async () => {
   try {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     const response = await api.get("/reports/pdf", {
       headers: {
@@ -63,7 +63,7 @@ const downloadPDF = async () => {
 
 const downloadExcel = async () => {
   try {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     const response = await api.get("/reports/excel", {
       headers: {

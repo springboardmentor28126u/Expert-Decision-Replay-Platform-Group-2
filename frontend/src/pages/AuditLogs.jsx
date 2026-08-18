@@ -18,7 +18,7 @@ function AuditLogs() {
 
   const fetchLogs = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await api.get("/audit/", {
         headers: {

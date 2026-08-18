@@ -8,7 +8,7 @@ function Comments() {
   const [comments, setComments] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
 
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {

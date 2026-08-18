@@ -42,7 +42,7 @@ function Dashboard() {
 
   const loadDashboard = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const headers = {
         Authorization: `Bearer ${token}`,
@@ -66,7 +66,7 @@ function Dashboard() {
 
 const downloadPDF = async () => {
   try {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     const response = await api.get("/reports/pdf", {
       headers: {
@@ -95,7 +95,7 @@ const downloadPDF = async () => {
 
 const downloadExcel = async () => {
   try {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
 
     const response = await api.get("/reports/excel", {
       headers: {
