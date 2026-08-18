@@ -25,6 +25,14 @@ function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, page
         if (userId) {
           params.append("user_id", userId);
         }
+
+        if (statusFilter && statusFilter !== "all") {
+          params.append("status", statusFilter);
+        }
+
+        if (ownerFilter && ownerFilter !== "all") {
+          params.append("owner", ownerFilter);
+        }
     
         const res = await axios.get(`http://127.0.0.1:8000/decisions?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -38,7 +46,7 @@ function DecisionsList({ token, refreshKey, role, userId, onSelectDecision, page
       }
     };
     fetchDecisions();
-  }, [token, refreshKey, userId, currentPage, pageSize, searchQuery]);
+  }, [token, refreshKey, userId, currentPage, pageSize, searchQuery, statusFilter, ownerFilter]);
 
   // Reset page when filter or search changes
   useEffect(() => {

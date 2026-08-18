@@ -1,7 +1,21 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Settings, LogOut } from "lucide-react";
 
-function ProfileMenu({ profile }) {
+function ProfileMenu({ profile, onNavigate, onLogout }) {
   const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const initials = profile.full_name
     .split(" ")
@@ -12,11 +26,13 @@ function ProfileMenu({ profile }) {
 
   return (
     <div
+      ref={menuRef}
       style={{ position: "relative" }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+      <div 
+        onClick={() => setOpen(!open)}
+        style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", userSelect: "none" }}
+      >
         <div style={{ position: "relative" }}>
           <div
             style={{
@@ -61,23 +77,80 @@ function ProfileMenu({ profile }) {
         <div
           style={{
             position: "absolute",
-            top: "44px",
+            top: "46px",
             right: 0,
             background: "var(--surface)",
             border: "1px solid var(--border)",
             borderRadius: "10px",
-            padding: "14px 16px",
+            padding: "12px",
             width: "220px",
             boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
             zIndex: 30,
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
           }}
         >
-          <p style={{ fontSize: "10.5px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 6px" }}>
-            Signed in as
-          </p>
-          <p style={{ fontSize: "13px", color: "var(--text-primary)", margin: 0, wordBreak: "break-all" }}>
-            {profile.email}
-          </p>
+          <div style={{ padding: "4px 8px 8px 8px", borderBottom: "1px solid var(--border)", marginBottom: "4px" }}>
+            <p style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px" }}>
+              Signed in as
+            </p>
+            <p style={{ fontSize: "12.5px", fontWeight: "600", color: "var(--text-primary)", margin: 0, wordBreak: "break-all" }}>
+              {profile.email}
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              setOpen(false);
+              onNavigate("account");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              width: "100%",
+              padding: "8px 10px",
+              background: "none",
+              border: "none",
+              borderRadius: "6px",
+              color: "var(--text-primary)",
+              fontSize: "13px",
+              cursor: "pointer",
+              textAlign: "left",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+          >
+            <Settings size={15} strokeWidth={2} /> <span style={{ marginLeft: "4px" }}>Account Settings</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              width: "100%",
+              padding: "8px 10px",
+              background: "none",
+              border: "none",
+              borderRadius: "6px",
+              color: "#F0555A",
+              fontSize: "13px",
+              cursor: "pointer",
+              textAlign: "left",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(240, 85, 90, 0.08)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+          >
+            <LogOut size={15} strokeWidth={2} /> <span style={{ marginLeft: "4px" }}>Log Out</span>
+          </button>
         </div>
       )}
     </div>

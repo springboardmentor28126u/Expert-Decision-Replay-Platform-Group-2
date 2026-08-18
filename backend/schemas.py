@@ -197,15 +197,19 @@ class EmployeeDashboardResponse(BaseModel):
     approved_decisions: int
     rejected_decisions: int
     archived_decisions: int
-
     recent_decisions: list[RecentDecisionResponse]
+    category_counts: dict[str, int]
     
 class ReviewerDashboardResponse(BaseModel):
+    total_decisions: int
+    draft_decisions: int
     under_review_decisions: int
     approved_decisions: int
     rejected_decisions: int
-
+    archived_decisions: int
+    my_decisions: int
     recent_under_review: list[RecentDecisionResponse]
+    category_counts: dict[str, int]
     
 class ManagerDashboardResponse(BaseModel):
     total_decisions: int
@@ -214,8 +218,8 @@ class ManagerDashboardResponse(BaseModel):
     approved_decisions: int
     rejected_decisions: int
     archived_decisions: int
-
     recent_decisions: list[RecentDecisionResponse]
+    category_counts: dict[str, int]
     
 class AdminDashboardResponse(BaseModel):
     total_users: int
@@ -236,6 +240,7 @@ class AdminDashboardResponse(BaseModel):
     archived_decisions: int
 
     recent_decisions: list[RecentDecisionResponse]
+    category_counts: dict[str, int]
 
 class ReportStatusCount(BaseModel):
     status: str

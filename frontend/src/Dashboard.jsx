@@ -8,6 +8,7 @@ import ChangePassword from "./ChangePassword";
 import ReportsPage from "./ReportsPage";
 import MyTeam from "./MyTeam";
 import useNotifications from "./useNotifications";
+import NotificationsPage from "./NotificationsPage";
 import {
   getEmployeeDashboard,
   getReviewerDashboard,
@@ -199,7 +200,7 @@ function LineChart({ data, title }) {
 }
 
 // --- Notification bell shown in the top bar ---
-function NotificationBell({ notifications, unreadCount, markAsRead, markAllAsRead }) {
+function NotificationBell({ notifications, unreadCount, markAsRead, markAllAsRead, onNotificationClick, onViewAll }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -272,23 +273,42 @@ function NotificationBell({ notifications, unreadCount, markAsRead, markAllAsRea
               )}
             </div>
             {notifications.length === 0 ? (
-              <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>No notifications yet.</p>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0, padding: "8px 0" }}>No notifications yet.</p>
             ) : (
-              notifications.slice(0, 15).map((n) => (
-                <div
-                  key={n.id}
-                  onClick={() => markAsRead(n.id)}
-                  style={{
-                    padding: "8px",
-                    borderBottom: "1px solid var(--border)",
-                    cursor: "pointer",
-                    opacity: n.is_read ? 0.6 : 1,
-                  }}
-                >
-                  <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px" }}>{n.title}</p>
-                  <p style={{ fontSize: "11px", color: "var(--text-secondary)", margin: 0 }}>{n.message}</p>
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  {notifications.slice(0, 15).map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => {
+                        if (!n.is_read) markAsRead(n.id);
+                        setOpen(false);
+                        if (onNotificationClick) onNotificationClick(n);
+                      }}
+                      style={{
+                        padding: "8px",
+                        borderBottom: "1px solid var(--border)",
+                        cursor: "pointer",
+                        opacity: n.is_read ? 0.6 : 1,
+                      }}
+                    >
+                      <p style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px" }}>{n.title}</p>
+                      <p style={{ fontSize: "11px", color: "var(--text-secondary)", margin: 0 }}>{n.message}</p>
+                    </div>
+                  ))}
                 </div>
-              ))
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", marginTop: "8px", textAlign: "center" }}>
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      if (onViewAll) onViewAll();
+                    }}
+                    style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "11.5px", fontWeight: "600", cursor: "pointer", width: "100%" }}
+                  >
+                    View all notifications
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </>
@@ -302,7 +322,7 @@ function Dashboard({ token, onLogout }) {
   const [users, setUsers] = useState(null);
   const [decisions, setDecisions] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeView, setActiveView] = useState("home");
+  const [activeView, setActiveView] = useState("dashboard");
   const [selectedDecision, setSelectedDecision] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -311,6 +331,8 @@ function Dashboard({ token, onLogout }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [auditReport, setAuditReport] = useState(null);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(token);
 
@@ -328,6 +350,31 @@ function Dashboard({ token, onLogout }) {
     };
     fetchProfile();
   }, [token, onLogout]);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      if (!profile) return;
+      setStatsLoading(true);
+      try {
+        let data;
+        if (profile.role === "admin") {
+          data = await getAdminDashboard(token);
+        } else if (profile.role === "manager") {
+          data = await getManagerDashboard(token);
+        } else if (profile.role === "reviewer") {
+          data = await getReviewerDashboard(token);
+        } else if (profile.role === "employee") {
+          data = await getEmployeeDashboard(token);
+        }
+        setDashboardStats(data);
+      } catch (err) {
+        console.error("Failed to load dashboard stats", err);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    fetchDashboardStats();
+  }, [profile, token, refreshKey]);
 
   useEffect(() => {
     const fetchDecisions = async () => {
@@ -383,24 +430,27 @@ function Dashboard({ token, onLogout }) {
   const isManager = profile.role === "manager";
   const isAdmin = profile.role === "admin";
 
-  const statusCounts = ["draft", "under_review", "approved", "rejected", "archived"].reduce(
-    (acc, status) => {
-      acc[status] = decisions.filter((d) => d.status === status).length;
-      return acc;
-    },
-    {}
-  );
+  const statusCounts = {
+    draft: dashboardStats?.draft_decisions || 0,
+    under_review: dashboardStats?.under_review_decisions || 0,
+    approved: dashboardStats?.approved_decisions || 0,
+    rejected: dashboardStats?.rejected_decisions || 0,
+    archived: dashboardStats?.archived_decisions || 0,
+  };
 
-  const myDecisions = decisions.filter((d) => d.created_by === profile.id);
-  const myDecisionsCount = myDecisions.length;
+  const myDecisionsCount = profile.role === "employee" 
+    ? (dashboardStats?.my_decisions || 0)
+    : (profile.role === "reviewer" 
+        ? (dashboardStats?.my_decisions || 0)
+        : 0);
 
-  const myStatusCounts = ["draft", "under_review", "approved", "rejected", "archived"].reduce(
-    (acc, status) => {
-      acc[status] = myDecisions.filter((d) => d.status === status).length;
-      return acc;
-    },
-    {}
-  );
+  const myStatusCounts = {
+    draft: dashboardStats?.draft_decisions || 0,
+    under_review: dashboardStats?.under_review_decisions || 0,
+    approved: dashboardStats?.approved_decisions || 0,
+    rejected: dashboardStats?.rejected_decisions || 0,
+    archived: dashboardStats?.archived_decisions || 0,
+  };
 
   const targetStatusCounts = isEmployee ? myStatusCounts : statusCounts;
   const statusChartData = [
@@ -411,13 +461,7 @@ function Dashboard({ token, onLogout }) {
     { label: "Archived", value: targetStatusCounts.archived || 0, color: "#6366F1" },
   ];
 
-  const categoryCounts = {};
-  const targetDecisions = isEmployee ? myDecisions : decisions;
-  targetDecisions.forEach((d) => {
-    const cat = d.category || "Uncategorized";
-    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-  });
-  const categoryChartData = Object.entries(categoryCounts)
+  const categoryChartData = Object.entries(dashboardStats?.category_counts || {})
     .map(([label, value]) => ({ label, value, color: "var(--accent)" }))
     .sort((a, b) => b.value - a.value);
 
@@ -505,30 +549,31 @@ function Dashboard({ token, onLogout }) {
           unreadCount={unreadCount}
           markAsRead={markAsRead}
           markAllAsRead={markAllAsRead}
+          onViewAll={() => handleNavigate("notifications")}
+          onNotificationClick={(n) => {
+            if (n.link) {
+              const match = n.link.match(/\/decisions\/(\d+)/);
+              if (match) {
+                const decisionId = Number(match[1]);
+                const decision = decisions.find(d => d.id === decisionId);
+                if (decision) {
+                  handleSelectDecision(decision);
+                } else {
+                  axios.get(`http://127.0.0.1:8000/decisions/${decisionId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                  }).then(res => {
+                    handleSelectDecision(res.data);
+                  }).catch(err => {
+                    console.error("Failed to fetch decision for navigation:", err);
+                    handleNavigate("decisions");
+                  });
+                }
+              }
+            }
+          }}
         />
       }
     >
-      {activeView === "home" && (
-        <>
-          <div className="panel">
-            <p className="panel-title">Welcome back, {profile.full_name.split(" ")[0]}</p>
-            <CreateDecision token={token} onCreated={() => setRefreshKey((k) => k + 1)} />
-          </div>
-
-          <div className="panel">
-            <p className="panel-title">Recent Decisions</p>
-            <DecisionsList
-              token={token}
-              refreshKey={refreshKey}
-              role={profile.role}
-              userId={profile.id}
-              onSelectDecision={handleSelectDecision}
-              pageSize={3}
-              statusFilter="all"
-            />
-          </div>
-        </>
-      )}
 
       {activeView === "dashboard" && (
         <>
@@ -542,7 +587,7 @@ function Dashboard({ token, onLogout }) {
                 </div>
                 <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleNavigate("decisions")}>
                   <p className="stat-metric-title">Total Decisions</p>
-                  <p className="stat-metric-num">{decisions.length}</p>
+                  <p className="stat-metric-num">{dashboardStats?.total_decisions || 0}</p>
                   <p className="stat-metric-desc">Decisions across all teams</p>
                 </div>
                 <div className="stat-metric-card">
@@ -562,7 +607,7 @@ function Dashboard({ token, onLogout }) {
               <>
                 <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleNavigate("decisions")}>
                   <p className="stat-metric-title">Total Decisions</p>
-                  <p className="stat-metric-num">{decisions.length}</p>
+                  <p className="stat-metric-num">{dashboardStats?.total_decisions || 0}</p>
                   <p className="stat-metric-desc">Global platform decisions</p>
                 </div>
                 <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("under_review")}>
@@ -587,7 +632,7 @@ function Dashboard({ token, onLogout }) {
               <>
                 <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleNavigate("decisions")}>
                   <p className="stat-metric-title">Total Decisions</p>
-                  <p className="stat-metric-num">{decisions.length}</p>
+                  <p className="stat-metric-num">{dashboardStats?.total_decisions || 0}</p>
                   <p className="stat-metric-desc">Global platform decisions</p>
                 </div>
                 <div className="stat-metric-card" style={{ cursor: "pointer" }} onClick={() => handleStatCardClick("under_review")}>
@@ -747,6 +792,29 @@ function Dashboard({ token, onLogout }) {
       )}
 
       {activeView === "reports" && <ReportsPage token={token} />}
+      {activeView === "notifications" && (
+        <NotificationsPage
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+          onNavigateToDecision={(decisionId) => {
+            const decision = decisions.find(d => d.id === decisionId);
+            if (decision) {
+              handleSelectDecision(decision);
+            } else {
+              axios.get(`http://127.0.0.1:8000/decisions/${decisionId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              }).then(res => {
+                handleSelectDecision(res.data);
+              }).catch(err => {
+                console.error("Failed to fetch decision for navigation:", err);
+                handleNavigate("decisions");
+              });
+            }
+          }}
+        />
+      )}
       {activeView === "my-team" && (
          <MyTeam token={token} profile={profile} />
       )}

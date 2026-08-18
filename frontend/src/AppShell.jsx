@@ -6,7 +6,7 @@ import AIAssistantButton from "./AIAssistantButton";
 import AIAssistantPanel from "./AIAssistantPanel";
 
 import {
-  Home,
+  Bell,
   LayoutDashboard,
   ClipboardList,
   BarChart3,
@@ -43,11 +43,11 @@ function AppShell({
   };
 
   const navItems = [
-    { key: "home", label: "Home", icon: Home },
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { key: "decisions", label: "Decisions", icon: ClipboardList },
     { key: "reports", label: "Reports", icon: BarChart3 },
     { key: "my-team", label: "My Team", icon: Users },
+    { key: "notifications", label: "Notifications", icon: Bell, badge: unreadCount },
   ];
 
   const adminNavItems = [
@@ -70,7 +70,22 @@ function AppShell({
               <span className="shell-nav-icon">
                 <item.icon size={18} strokeWidth={1.8} />
               </span>
-              <span className="label">{item.label}</span>
+              <span className="label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                <span>{item.label}</span>
+                {item.badge > 0 && (
+                  <span className="nav-badge" style={{
+                    background: "var(--danger)",
+                    color: "white",
+                    borderRadius: "10px",
+                    padding: "2px 6px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    marginLeft: "auto",
+                  }}>
+                    {item.badge}
+                  </span>
+                )}
+              </span>
             </button>
           ))}
 
@@ -78,53 +93,36 @@ function AppShell({
             <>
               <div className="shell-nav-divider" />
               <div className="shell-nav-section-label">Admin</div>
-              {adminNavItems.map((item) => (
-                <button
-                  key={item.key}
-                  className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
-                  onClick={() => onNavigate(item.key)}
-                >
-                  <span className="shell-nav-icon"> 
-                    <item.icon size={18} strokeWidth={1.8} />
-                  </span>
-                  <span className="label">{item.label}</span>
-                </button>
-              ))}
+              {adminNavItems.map((item) => {
+                // If it's a string, we might need a fallback or let Lucide handle it, but wait!
+                // The item.icon for user-management is "UserCog", so let's render it properly or fallback to UserCog icon
+                const IconComponent = UserCog;
+                return (
+                  <button
+                    key={item.key}
+                    className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
+                    onClick={() => onNavigate(item.key)}
+                  >
+                    <span className="shell-nav-icon"> 
+                      <IconComponent size={18} strokeWidth={1.8} />
+                    </span>
+                    <span className="label">{item.label}</span>
+                  </button>
+                );
+              })}
             </>
           )}
         </nav>
-
-        <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "4px" }}>
-          <button
-            className={`shell-nav-item ${activeView === "account" ? "active" : ""}`}
-            onClick={() => onNavigate("account")}
-          >
-            <span className="shell-nav-icon">
-              <Settings size={18} strokeWidth={1.8} />
-            </span>
-            <span className="label">Account Settings</span>
-          </button>
-          <button
-            className="shell-nav-item"
-            onClick={onLogout}
-            style={{ color: "#F0555A" }}
-          >
-            <span className="shell-nav-icon">
-              <LogOut size={18} strokeWidth={1.8} />
-            </span>
-            <span className="label">Log Out</span>
-          </button>
-        </div>
       </aside>
 
       <div className="shell-main">
         <header className="shell-topbar">
           <h1 className="shell-topbar-title">
-            {activeView === "home" && "Home"}
             {activeView === "dashboard" && "Dashboard"}
             {activeView === "decisions" && "Decisions"}
             {activeView === "reports" && "Reports"}
             {activeView === "my-team" && "My Team"}
+            {activeView === "notifications" && "Notifications"}
             {activeView === "users" && "User Management"}
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}
@@ -132,7 +130,7 @@ function AppShell({
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {topbarExtra}
-            <ProfileMenu profile={profile} />
+            <ProfileMenu profile={profile} onNavigate={onNavigate} onLogout={onLogout} />
           </div>
         </header>
 

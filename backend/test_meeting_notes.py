@@ -12,6 +12,17 @@ def test_meeting_notes():
             "email": "employee.test@example.com",
             "password": "test1234"
         })
+        if login_response.status_code == 401 or (login_response.status_code != 200 and "invalid" in login_response.text.lower()):
+            # Try to register the test user
+            requests.post(f"{BASE_URL}/register", json={
+                "full_name": "Test Employee",
+                "email": "employee.test@example.com",
+                "password": "test1234"
+            })
+            login_response = requests.post(f"{BASE_URL}/login", json={
+                "email": "employee.test@example.com",
+                "password": "test1234"
+            })
         if login_response.status_code != 200:
             print(f"FAILED: Login failed: {login_response.status_code} {login_response.text}")
             sys.exit(1)

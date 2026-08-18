@@ -617,7 +617,7 @@ def serialize_decision(d: Decision) -> dict:
         "category": d.category,
         "status": d.status.value if hasattr(d.status, "value") else d.status,
         "created_by": d.created_by,
-        "creator_name": d.creator_name or (d.creator.full_name if d.creator else None),
+        "creator_name": getattr(d, "creator_name", None) or (d.creator.full_name if d.creator else None),
         "attachment_url": d.attachment_url,
         "created_at": d.created_at.isoformat() if hasattr(d.created_at, "isoformat") else str(d.created_at),
         "updated_at": d.updated_at.isoformat() if d.updated_at and hasattr(d.updated_at, "isoformat") else (str(d.updated_at) if d.updated_at else None),
@@ -650,6 +650,16 @@ def create_decision(
     )
     new_decision.creator_name = new_decision.creator.full_name
     
+    # Broadcast notification to other users
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="New Decision Created",
+        message=f"A new decision '{new_decision.title}' has been created by {current_user.full_name}.",
+        type="DECISION_CREATED",
+        link=f"/decisions/{new_decision.id}"
+    )
+
     # Invalidate decisions and dashboard caches
     invalidate_decisions_cache()
 
@@ -678,6 +688,8 @@ def list_decisions(
     page: int = 1,
     limit: int = 10,
     search: str | None = None,
+    status: str | None = None,
+    owner: str | None = None,
 ):
     if user_id is not None and current_user.role != UserRole.admin and current_user.id != user_id:
         raise HTTPException(
@@ -690,11 +702,13 @@ def list_decisions(
     limit = min(max(limit, 1), 100)
 
     search_key = search.strip().lower() if search else "all"
+    status_key = status if status else "all"
+    owner_key = owner if owner else "all"
 
     cache_key = (
-        f"db_cache:decisions:all:search:{search_key}:page{page}:limit{limit}"
+        f"db_cache:decisions:all:search:{search_key}:status:{status_key}:owner:{owner_key}:page{page}:limit{limit}"
         if user_id is None
-        else f"db_cache:decisions:user:{user_id}:search:{search_key}:page{page}:limit{limit}"
+        else f"db_cache:decisions:user:{user_id}:search:{search_key}:status:{status_key}:owner:{owner_key}:page{page}:limit{limit}"
     )
     cached_data = get_cached_data(cache_key)
     if cached_data is not None:
@@ -704,6 +718,11 @@ def list_decisions(
 
     if user_id is not None:
         query = query.where(Decision.created_by == user_id)
+    elif owner == "mine":
+        query = query.where(Decision.created_by == current_user.id)
+
+    if status and status != "all":
+        query = query.where(Decision.status == status)
 
     if search:
         search_term = f"%{search.strip()}%"
@@ -1321,6 +1340,15 @@ def approve_decision(
     new_approval.reviewer_name = current_user.full_name
     invalidate_decisions_cache(decision_id)
 
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="Decision Approved" if next_stage == 2 else "Decision Review Approved (Stage 1)",
+        message=f"Decision '{decision.title}' has been approved by {current_user.full_name} (Stage {next_stage}).",
+        type="DECISION_APPROVED",
+        link=f"/decisions/{decision.id}"
+    )
+
     if decision.creator and decision.creator.email:
         heading = "Your decision was approved" if next_stage == 2 else "Your decision passed stage 1 review"
         queue_email(
@@ -1396,6 +1424,15 @@ def reject_decision(
     new_approval.reviewer_name = current_user.full_name
     invalidate_decisions_cache(decision_id)
 
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="Decision Rejected",
+        message=f"Decision '{decision.title}' has been rejected by {current_user.full_name}.",
+        type="DECISION_REJECTED",
+        link=f"/decisions/{decision.id}"
+    )
+
     if decision.creator and decision.creator.email:
         queue_email(
             background_tasks,
@@ -1461,6 +1498,16 @@ def resubmit_decision(
     db.commit()
     db.refresh(decision)
     invalidate_decisions_cache(decision_id)
+
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="Decision Resubmitted",
+        message=f"Decision '{decision.title}' has been resubmitted for review by {current_user.full_name}.",
+        type="DECISION_CREATED",
+        link=f"/decisions/{decision.id}"
+    )
+
     return decision
 
 @app.get("/decisions/{decision_id}/approvals", response_model=ListType[ApprovalResponse], tags=["Approval Workflow"])
@@ -1901,13 +1948,23 @@ async def add_discussion_comment(
         raise HTTPException(status_code=404, detail="Decision not found")
 
     attachment_url = _save_discussion_attachment(attachment) or discussion.attachment_url
-    return add_comment(
+    new_comment = add_comment(
         db,
         decision_id=discussion.decision_id,
         user_id=current_user.id,
         message=discussion.message,
         attachment_url=attachment_url,
     )
+    decision = get_decision_or_none(db, discussion.decision_id)
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="New Discussion Comment",
+        message=f"New comment on '{decision.title}' by {current_user.full_name}.",
+        type="NEW_DISCUSSION",
+        link=f"/decisions/{decision.id}"
+    )
+    return new_comment
 
 
 @app.post(
@@ -1959,13 +2016,23 @@ async def add_discussion_meeting_note(
         raise HTTPException(status_code=404, detail="Decision not found")
 
     saved_attachment_url = _save_discussion_attachment(attachment) or attachment_url
-    return add_meeting_note(
+    new_note = add_meeting_note(
         db,
         decision_id=decision_id,
         user_id=current_user.id,
         message=message,
         attachment_url=saved_attachment_url,
     )
+    decision = get_decision_or_none(db, decision_id)
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="New Discussion Meeting Note",
+        message=f"New meeting note on '{decision.title}' by {current_user.full_name}.",
+        type="NEW_DISCUSSION",
+        link=f"/decisions/{decision.id}"
+    )
+    return new_note
 
 
 @app.post(
@@ -2022,13 +2089,23 @@ async def reply_to_discussion_comment(
         raise HTTPException(status_code=404, detail="Decision not found")
 
     attachment_url = _save_discussion_attachment(attachment) or discussion_reply.attachment_url
-    return reply_to_comment(
+    new_reply = reply_to_comment(
         db,
         parent=parent,
         user_id=current_user.id,
         message=discussion_reply.message,
         attachment_url=attachment_url,
     )
+    decision = get_decision_or_none(db, parent.decision_id)
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="New Reply in Discussion",
+        message=f"New reply on '{decision.title}' by {current_user.full_name}.",
+        type="NEW_DISCUSSION",
+        link=f"/decisions/{decision.id}"
+    )
+    return new_reply
 
 
 @app.get("/discussion/decision/{decision_id}", response_model=ListType[DiscussionResponse], tags=["Discussion Module"])
@@ -2160,9 +2237,23 @@ def get_dashboard_stats(
         ).all()
     )
 
+    # Category Counts
+    category_counts = {}
+    for cat, count in db.execute(
+        select(
+            Decision.category,
+            func.count(Decision.id)
+        )
+        .where(*filters)
+        .group_by(Decision.category)
+    ).all():
+        label = cat.strip().title() if cat and cat.strip() else "Uncategorized"
+        category_counts[label] = category_counts.get(label, 0) + count
+
     # Recent Decisions
     recent_decisions = db.execute(
         select(Decision)
+        .options(selectinload(Decision.creator))
         .where(*filters)
         .order_by(Decision.created_at.desc())
         .limit(5)
@@ -2183,6 +2274,7 @@ def get_dashboard_stats(
         "archived_decisions": status_counts.get(
             DecisionStatus.archived, 0
         ),
+        "category_counts": category_counts,
         "recent_decisions": recent_decisions,
     }
     
@@ -2214,6 +2306,7 @@ def employee_dashboard(
         "rejected_decisions": stats["rejected_decisions"],
         "archived_decisions": stats["archived_decisions"],
         "recent_decisions": recent_serialized,
+        "category_counts": stats["category_counts"],
     }
     set_cached_data(cache_key, response_data, expire=300)
     return response_data
@@ -2238,25 +2331,11 @@ def reviewer_dashboard(
     if cached_data is not None:
         return cached_data
 
-    under_review_decisions = db.execute(
-        select(func.count(Decision.id))
-        .where(
-            Decision.status == DecisionStatus.under_review
-        )
-    ).scalar_one()
+    stats = get_dashboard_stats(db)
 
-    approved_decisions = db.execute(
+    my_decisions = db.execute(
         select(func.count(Decision.id))
-        .where(
-            Decision.status == DecisionStatus.approved
-        )
-    ).scalar_one()
-
-    rejected_decisions = db.execute(
-        select(func.count(Decision.id))
-        .where(
-            Decision.status == DecisionStatus.rejected
-        )
+        .where(Decision.created_by == current_user.id)
     ).scalar_one()
 
     recent_under_review = db.execute(
@@ -2270,10 +2349,15 @@ def reviewer_dashboard(
 
     recent_serialized = [serialize_decision(d) for d in recent_under_review]
     response_data = {
-        "under_review_decisions": under_review_decisions,
-        "approved_decisions": approved_decisions,
-        "rejected_decisions": rejected_decisions,
+        "total_decisions": stats["total_decisions"],
+        "draft_decisions": stats["draft_decisions"],
+        "under_review_decisions": stats["under_review_decisions"],
+        "approved_decisions": stats["approved_decisions"],
+        "rejected_decisions": stats["rejected_decisions"],
+        "archived_decisions": stats["archived_decisions"],
+        "my_decisions": my_decisions,
         "recent_under_review": recent_serialized,
+        "category_counts": stats["category_counts"],
     }
     set_cached_data(cache_key, response_data, expire=300)
     return response_data
@@ -2309,6 +2393,7 @@ def manager_dashboard(
         "rejected_decisions": stats["rejected_decisions"],
         "archived_decisions": stats["archived_decisions"],
         "recent_decisions": recent_serialized,
+        "category_counts": stats["category_counts"],
     }
     set_cached_data(cache_key, response_data, expire=300)
     return response_data
@@ -2379,6 +2464,7 @@ def admin_dashboard(
         "rejected_decisions": stats["rejected_decisions"],
         "archived_decisions": stats["archived_decisions"],
         "recent_decisions": recent_serialized,
+        "category_counts": stats["category_counts"],
     }
     set_cached_data(cache_key, response_data, expire=300)
     return response_data
