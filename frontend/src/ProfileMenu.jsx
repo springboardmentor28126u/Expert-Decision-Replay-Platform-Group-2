@@ -99,58 +99,6 @@ function ProfileMenu({ profile, onNavigate, onLogout }) {
               {profile.email}
             </p>
           </div>
-
-          <button
-            onClick={() => {
-              setOpen(false);
-              onNavigate("account");
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              width: "100%",
-              padding: "8px 10px",
-              background: "none",
-              border: "none",
-              borderRadius: "6px",
-              color: "var(--text-primary)",
-              fontSize: "13px",
-              cursor: "pointer",
-              textAlign: "left",
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg)"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-          >
-            <Settings size={15} strokeWidth={2} /> <span style={{ marginLeft: "4px" }}>Account Settings</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setOpen(false);
-              onLogout();
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              width: "100%",
-              padding: "8px 10px",
-              background: "none",
-              border: "none",
-              borderRadius: "6px",
-              color: "#F0555A",
-              fontSize: "13px",
-              cursor: "pointer",
-              textAlign: "left",
-              transition: "background 0.15s",
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(240, 85, 90, 0.08)"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "none"}
-          >
-            <LogOut size={15} strokeWidth={2} /> <span style={{ marginLeft: "4px" }}>Log Out</span>
-          </button>
         </div>
       )}
     </div>

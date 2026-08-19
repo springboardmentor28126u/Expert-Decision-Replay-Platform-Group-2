@@ -148,6 +148,27 @@ function AppShell({
             </>
           )}
         </nav>
+                <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "4px" }}>
+          <button
+            className={`shell-nav-item ${activeView === "account" ? "active" : ""}`}
+            onClick={() => onNavigate("account")}
+          >
+            <span className="shell-nav-icon">
+              <Settings size={18} strokeWidth={1.8} />
+            </span>
+            <span className="label">Account Settings</span>
+          </button>
+          <button
+            className="shell-nav-item"
+            onClick={onLogout}
+            style={{ color: "var(--danger, #F0555A)" }}
+          >
+            <span className="shell-nav-icon">
+              <LogOut size={18} strokeWidth={1.8} />
+            </span>
+            <span className="label">Log Out</span>
+          </button>
+        </div>
       </aside>
 
       <div className="shell-main">
@@ -173,7 +194,7 @@ function AppShell({
       </div>
 
       <AIAssistantButton onClick={() => setIsAIAssistantOpen(true)} />
-      <AIAssistantPanel isOpen={isAIAssistantOpen} onClose={() => setIsAIAssistantOpen(false)} 
+      <AIAssistantPanel  
         isOpen={isAIAssistantOpen}
         onClose={() => setIsAIAssistantOpen(false)}
         decisionId={selectedDecisionId} />
