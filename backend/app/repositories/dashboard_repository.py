@@ -55,12 +55,19 @@ def _module_for_action(action: str) -> str:
     return "System"
 
 
+import time
+_DASHBOARD_CACHE = {}  # {user_id: (data, timestamp)}
+
 class DashboardRepository:
 
     @staticmethod
     def get_dashboard(db: Session, user_id: int):
-
         import hashlib
+
+        now = time.time()
+        cached = _DASHBOARD_CACHE.get(user_id)
+        if cached and (now - cached[1] < 8):  # 8-second fast in-memory cache
+            return cached[0]
 
         user = (
             db.query(User)
@@ -361,7 +368,7 @@ class DashboardRepository:
                     "icon": "activity"
                 }
             ]
-        elif role_name in ("Manager", "Lead", "Team Lead", "Reviewer"):
+        elif role_name in ("Manager", "Lead", "Team Lead"):
             decision_trends = None
             department_comparison = None
             monthly_activity = None
@@ -374,29 +381,13 @@ class DashboardRepository:
             if not team_users:
                 team_users = [user_id]
 
-            if role_name == "Reviewer":
-                total_decisions = db.query(Review).filter(Review.reviewer_id == user_id).count()
-                pending_reviews = db.query(Review).filter(Review.reviewer_id == user_id, Review.status == "Pending").count()
-                approved_decisions = db.query(Review).filter(Review.reviewer_id == user_id, Review.status == "Approved").count()
-                rejected_decisions = db.query(Review).filter(Review.reviewer_id == user_id, Review.status == "Rejected").count()
-                draft_decisions = 0
-                total_replays = db.query(Replay).filter(Replay.performed_by == user_id).count()
-            else:
-                total_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users)).count()
-                pending_reviews = db.query(Review).filter(Review.reviewer_id == user_id, Review.status == "Pending").count()
-                total_replays = db.query(Replay).filter(Replay.performed_by.in_(team_users)).count()
-                approved_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users), Decision.status == "Approved").count()
-                rejected_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users), Decision.status == "Rejected").count()
-                draft_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users), Decision.status == "Draft").count()
+            total_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users)).count()
+            pending_reviews = db.query(Review).filter(Review.reviewer_id == user_id, Review.status == "Pending").count()
+            total_replays = db.query(Replay).filter(Replay.performed_by.in_(team_users)).count()
+            approved_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users), Decision.status == "Approved").count()
+            rejected_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users), Decision.status == "Rejected").count()
+            draft_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users), Decision.status == "Draft").count()
 
-                if total_decisions == 0:
-                    total_decisions = db.query(Decision).count()
-                    pending_reviews = db.query(Decision).filter(Decision.status.in_(["Pending", "In Review"])).count()
-                    total_replays = db.query(Replay).count()
-                    approved_decisions = db.query(Decision).filter(Decision.status == "Approved").count()
-                    rejected_decisions = db.query(Decision).filter(Decision.status == "Rejected").count()
-                    draft_decisions = db.query(Decision).filter(Decision.status == "Draft").count()
-                    
             raw_decisions = db.query(Decision).filter(Decision.created_by.in_(team_users)).order_by(Decision.id.desc()).limit(10).all()
             if not raw_decisions:
                 raw_decisions = db.query(Decision).order_by(Decision.id.desc()).limit(10).all()
@@ -441,7 +432,6 @@ class DashboardRepository:
                         "id": r.id,
                         "decision_id": r.decision_id,
                         "decision_title": d.title,
-                        "status": r.status, 
                         "author_name": author_name,
                         "author_initials": author_initials,
                         "department": department,
@@ -452,10 +442,10 @@ class DashboardRepository:
             
             total_t = max(total_decisions, 1)
             approval_flow = [
-                {"stage": "Submitted / Pending", "count": pending_reviews, "pct": int(pending_reviews / total_t * 100), "color": "#F59E0B"},
-                {"stage": "Approved", "count": approved_decisions, "pct": int(approved_decisions / total_t * 100), "color": "#10B981"},
-                {"stage": "Rejected", "count": rejected_decisions, "pct": int(rejected_decisions / total_t * 100), "color": "#EF4444"},
-                {"stage": "Draft", "count": draft_decisions, "pct": int(draft_decisions / total_t * 100), "color": "#6366F1"}
+                {"label": "Submitted / Pending", "count": pending_reviews, "percentage": int(pending_reviews / total_t * 100), "color": "#F59E0B"},
+                {"label": "Approved", "count": approved_decisions, "percentage": int(approved_decisions / total_t * 100), "color": "#10B981"},
+                {"label": "Rejected", "count": rejected_decisions, "percentage": int(rejected_decisions / total_t * 100), "color": "#EF4444"},
+                {"label": "Draft", "count": draft_decisions, "percentage": int(draft_decisions / total_t * 100), "color": "#6366F1"}
             ]
 
             logs_raw = db.query(ActivityLog).filter(ActivityLog.user_id.in_(team_users)).order_by(ActivityLog.id.desc()).limit(6).all()
@@ -490,6 +480,75 @@ class DashboardRepository:
                     })
             except Exception as ex:
                 print(f"[REPOSITORY] Error fetching discussions: {ex}")
+
+        elif role_name in ("Reviewer",):
+            reviewed_decision_ids = db.query(Review.decision_id).filter(Review.reviewer_id == user_id)
+
+            total_decisions = db.query(Decision).filter(Decision.id.in_(reviewed_decision_ids)).count()
+            pending_reviews = db.query(Review).filter(Review.reviewer_id == user_id, Review.status == "Pending").count()
+            total_replays = db.query(Replay).filter(Replay.performed_by == user_id).count()
+            approved_decisions = db.query(Review).filter(Review.reviewer_id == user_id, Review.status == "Approved").count()
+            rejected_decisions = db.query(Review).filter(Review.reviewer_id == user_id, Review.status == "Rejected").count()
+            draft_decisions = 0
+
+            raw_reviews = (
+                db.query(Review)
+                .filter(Review.reviewer_id == user_id)
+                .order_by(Review.id.desc())
+                .limit(5)
+                .all()
+            )
+            recent_decisions = []
+            for r in raw_reviews:
+                d = db.query(Decision).filter(Decision.id == r.decision_id).first()
+                if d:
+                    recent_decisions.append({
+                        "id": d.id,
+                        "title": d.title,
+                        "status": r.status,
+                        "department": d.department or (d.category.name if d.category else "—"),
+                        "priority": d.priority_level or "Medium",
+                        "approver_name": "You",
+                        "created_at_str": _time_ago(r.reviewed_at) if r.reviewed_at else "—"
+                    })
+
+            recent_reviews = []
+            pending_review_rows = (
+                db.query(Review)
+                .filter(Review.reviewer_id == user_id, Review.status == "Pending")
+                .order_by(Review.id.desc())
+                .limit(6)
+                .all()
+            )
+            for r in pending_review_rows:
+                d = db.query(Decision).filter(Decision.id == r.decision_id).first()
+                if d:
+                    recent_reviews.append({
+                        "id": r.id,
+                        "decision_id": r.decision_id,
+                        "decision_title": d.title,
+                        "status": r.status,
+                        "task_type": "REVIEW REQUEST",
+                        "is_owner": False,
+                        "comments": r.comments or "Pending your review",
+                        "time_ago": _time_ago(r.reviewed_at) if r.reviewed_at else "—"
+                    })
+
+            recent_replays = db.query(Replay).filter(Replay.performed_by == user_id).order_by(Replay.id.desc()).limit(5).all()
+
+            logs_raw = db.query(ActivityLog).filter(ActivityLog.user_id == user_id).order_by(ActivityLog.id.desc()).limit(6).all()
+            for log in logs_raw:
+                log_user = db.query(User).filter(User.id == log.user_id).first()
+                u_name = "You" if log.user_id == user_id else (log_user.full_name if log_user else "System Admin")
+                recent_audit_raw.append({
+                    "user_name": u_name,
+                    "action": log.action,
+                    "module": _module_for_action(log.action),
+                    "time_ago": _time_ago(log.created_at),
+                    "created_at_str": log.created_at.strftime("%b %d, %Y %I:%M %p") if log.created_at else "",
+                    "severity": _severity_for_action(log.action),
+                })
+            approval_flow = []
 
         else:  # Employee
             total_decisions = db.query(Decision).filter(Decision.created_by == user_id).count()
@@ -587,7 +646,7 @@ class DashboardRepository:
                 "time_ago": _time_ago(n.created_at)
             })
 
-        return {
+        result = {
             "user": display_user,
             "role": role_name,
             "team": team.team_name if team else "",
@@ -619,3 +678,5 @@ class DashboardRepository:
             "security_events": security_events,
             "admin_tasks": admin_tasks,
         }
+        _DASHBOARD_CACHE[user_id] = (result, time.time())
+        return result

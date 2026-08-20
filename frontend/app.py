@@ -7,9 +7,30 @@ from flask import (
     session,
     flash,
     make_response,
+    jsonify,
 )
+import os
+import sys
 import requests
+import time
 from datetime import timedelta
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+import importlib.util
+
+def _load_ai_support_generator():
+    try:
+        service_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend", "app", "services", "ai_support_service.py"))
+        spec = importlib.util.spec_from_file_location("ai_support_service_module", service_file)
+        ai_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ai_module)
+        return ai_module.generate_ai_response
+    except Exception as e:
+        print(f"AI loader note: {e}")
+        return None
+
+generate_ai_response = _load_ai_support_generator()
 
 app = Flask(__name__)
 
@@ -19,6 +40,12 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=72)
 # Maximum upload size set to 200 MB
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
 
+# Reusable high-performance HTTP session with connection pooling
+http_session = requests.Session()
+adapter = HTTPAdapter(pool_connections=30, pool_maxsize=30, max_retries=Retry(total=2, backoff_factor=0.05))
+http_session.mount("http://", adapter)
+http_session.mount("https://", adapter)
+
 @app.after_request
 def disable_client_caching(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
@@ -26,21 +53,31 @@ def disable_client_caching(response):
     response.headers["Expires"] = "0"
     return response
 
-# FastAPI Backend URL
-API_URL = "http://127.0.0.1:8000"
+# FastAPI Backend URL (Server-side Flask to FastAPI communication)
+def _resolve_backend_url():
+    env_url = os.getenv("BACKEND_URL", os.getenv("API_URL", "http://127.0.0.1:8000")).rstrip("/")
+    if "://backend" in env_url:
+        import socket
+        try:
+            socket.gethostbyname("backend")
+        except Exception:
+            return "http://127.0.0.1:8000"
+    return env_url
+
+API_URL = _resolve_backend_url()
 
 def make_backend_request(method, path, **kwargs):
     """
-    Sends an HTTP request to the FastAPI backend with automatic retry and host fallback.
+    Sends an HTTP request to the FastAPI backend with automatic retry and connection pooling.
     """
     if "timeout" not in kwargs:
-        kwargs["timeout"] = 10
+        kwargs["timeout"] = 5
 
     urls = [API_URL, "http://127.0.0.1:8000", "http://localhost:8000"]
     seen = set()
     unique_urls = []
     for u in urls:
-        if u not in seen:
+        if u and u not in seen:
             seen.add(u)
             unique_urls.append(u)
 
@@ -48,7 +85,7 @@ def make_backend_request(method, path, **kwargs):
     for base in unique_urls:
         full_url = f"{base}{path}" if path.startswith("/") else f"{base}/{path}"
         try:
-            res = requests.request(method, full_url, **kwargs)
+            res = http_session.request(method, full_url, **kwargs)
             return res
         except requests.exceptions.RequestException as e:
             last_exception = e
@@ -65,6 +102,8 @@ CONTACT_CONFIG = {
     "location": "Enterprise Tech Tower, Suite 500, New York, NY 10001"
 }
 
+_GLOBAL_STATS_CACHE = {}
+
 @app.context_processor
 def inject_global_stats():
     base_data = {
@@ -75,20 +114,31 @@ def inject_global_stats():
     if not session.get("logged_in"):
         return base_data
     
+    user_id = session.get("user_id")
+    token = session.get("token")
+    if not user_id or not token:
+        return base_data
+
+    now = time.time()
+    cached = _GLOBAL_STATS_CACHE.get(user_id)
+    if cached and (now - cached["ts"] < 25):
+        base_data.update(cached["data"])
+        return base_data
+        
     try:
-        user_id = session.get("user_id")
-        token = session.get("token")
-        if not user_id or not token:
-            return base_data
-            
         headers = {"Authorization": f"Bearer {token}"}
-        response = requests.get(f"{API_URL}/dashboard/{user_id}", headers=headers, timeout=2.0)
-        if response.status_code == 200:
+        response = make_backend_request("GET", f"/dashboard/{user_id}", headers=headers, timeout=0.6)
+        if response is not None and response.status_code == 200:
             data = response.json()
-            base_data["unread_notifications_count"] = data.get("unread_notifications_count", 0)
-            base_data["pending_reviews"] = data.get("pending_reviews", 0)
+            fresh = {
+                "unread_notifications_count": data.get("unread_notifications_count", 0),
+                "pending_reviews": data.get("pending_reviews", 0)
+            }
+            _GLOBAL_STATS_CACHE[user_id] = {"data": fresh, "ts": now}
+            base_data.update(fresh)
     except Exception:
-        pass
+        if cached:
+            base_data.update(cached["data"])
     
     return base_data
 
@@ -155,7 +205,7 @@ def login():
             session["initials"] = (parts[0][0] + (parts[-1][0] if len(parts) > 1 else "")).upper()
 
             try:
-                requests.post(f"{API_URL}/audit/log", json={
+                make_backend_request("POST", "/audit/log", json={
                     "user_id": token["user_id"],
                     "action": f"User login successful: {full_name}",
                     "details": f"Role: {session['role_name']}"
@@ -339,8 +389,8 @@ def pending_approvals():
         return redirect(url_for("dashboard"))
 
     try:
-        response = requests.get(f"{API_URL}/users/pending", timeout=5)
-        pending_users = response.json() if response.status_code == 200 else []
+        response = make_backend_request("GET", "/users/pending", timeout=5)
+        pending_users = response.json() if (response is not None and response.status_code == 200) else []
     except Exception:
         pending_users = []
 
@@ -351,8 +401,10 @@ def pending_approvals():
 def api_check_employee_id():
     data = request.json
     try:
-        response = requests.post(f"{API_URL}/users/check-employee-id", json=data, timeout=5)
-        return jsonify(response.json()), response.status_code
+        response = make_backend_request("POST", "/users/check-employee-id", json=data, timeout=5)
+        if response is not None:
+            return jsonify(response.json()), response.status_code
+        return jsonify({"detail": "Error checking Employee ID"}), 500
     except Exception:
         return jsonify({"detail": "Error checking Employee ID"}), 500
 
@@ -367,8 +419,16 @@ def api_delete_user(user_id):
         return jsonify({"detail": "Access Denied: Only Administrators can delete accounts."}), 403
 
     try:
-        response = requests.delete(f"{API_URL}/users/{user_id}", timeout=30)
-        return jsonify(response.json()), response.status_code
+        headers = {}
+        if "token" in session:
+            headers["Authorization"] = f"Bearer {session['token']}"
+        response = make_backend_request("DELETE", f"/users/{user_id}", headers=headers, timeout=30)
+        if response is not None:
+            try:
+                return jsonify(response.json()), response.status_code
+            except Exception:
+                return jsonify({"detail": response.text or "Deleted"}), response.status_code
+        return jsonify({"detail": "Backend connection error. Ensure FastAPI server is running."}), 500
     except Exception as e:
         return jsonify({"detail": f"Error deleting user: {e}"}), 500
 
@@ -383,12 +443,242 @@ def api_delete_support_ticket(ticket_id):
         return jsonify({"detail": "Access Denied: Only Administrators can delete support tickets."}), 403
 
     try:
-        response = requests.delete(f"{API_URL}/support/{ticket_id}", timeout=5)
-        if response.status_code == 404:
-            response = requests.delete(f"{API_URL}/support/delete/{ticket_id}", timeout=5)
-        return jsonify(response.json()), response.status_code
+        headers = {"Authorization": f"Bearer {session['token']}"}
+        response = make_backend_request("DELETE", f"/support/{ticket_id}", headers=headers, timeout=5)
+        if response is not None and response.status_code == 404:
+            response = make_backend_request("DELETE", f"/support/delete/{ticket_id}", headers=headers, timeout=5)
+        if response is not None:
+            return jsonify(response.json()), response.status_code
+        return jsonify({"detail": "Error deleting support ticket"}), 500
     except Exception as e:
         return jsonify({"detail": f"Error deleting support ticket: {e}"}), 500
+
+
+@app.route("/api/support/ai-chat", methods=["POST"])
+def api_support_ai_chat():
+    data = request.json or {}
+    user_id = session.get("user_id")
+    user_name = session.get("full_name") or "User"
+    if user_id and not data.get("user_id"):
+        data["user_id"] = user_id
+    if user_name and not data.get("user_name"):
+        data["user_name"] = user_name
+
+    # 1. Primary: Forward to FastAPI backend (which runs live Groq LLM with hot reload)
+    try:
+        response = make_backend_request("POST", "/support/ai-chat", json=data, timeout=15)
+        if response is not None and response.status_code == 200:
+            return jsonify(response.json()), 200
+    except Exception as e:
+        print(f"AI chat backend forward note: {e}")
+
+    # 2. Dynamic direct execution fallback
+    try:
+        fn = _load_ai_support_generator()
+        if fn:
+            res_dict = fn(
+                user_message=data.get("message", ""),
+                user_name=user_name,
+                user_id=data.get("user_id") or user_id,
+                conversation_history=data.get("conversation_history")
+            )
+            return jsonify(res_dict), 200
+    except Exception as ai_err:
+        print(f"Direct AI service fallback note: {ai_err}")
+
+    return jsonify({
+        "reply": f"Hello {user_name}! In EDRP, decisions follow a structured lifecycle: Draft → In Review → Approved / Rejected. You can create decisions from the sidebar, evaluate alternatives, track reviewer approval chains, or inspect audit diffs.",
+        "suggested_actions": ["How do I create a new decision?", "Explain the approval workflow", "How does Decision Replay work?"],
+        "source": "EDRP AI Assistant"
+    }), 200
+
+
+@app.route("/api/users/", methods=["GET"])
+@app.route("/users/", methods=["GET"])
+def proxy_get_users():
+    try:
+        resp = make_backend_request("GET", "/users/", timeout=8)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/upload/", methods=["POST"])
+@app.route("/api/upload/", methods=["POST"])
+def proxy_upload_file():
+    try:
+        files = {}
+        for key in request.files:
+            file_obj = request.files[key]
+            files[key] = (file_obj.filename, file_obj.read(), file_obj.content_type or 'application/octet-stream')
+        data = request.form.to_dict()
+        if "user_id" not in data or not data["user_id"]:
+            data["user_id"] = str(session.get("user_id", 1))
+        
+        resp = make_backend_request("POST", "/upload/", files=files, data=data, timeout=30)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"detail": f"Upload error: {e}"}), 500
+
+
+@app.route("/upload/<int:attachment_id>", methods=["GET"])
+@app.route("/api/upload/<int:attachment_id>", methods=["GET"])
+def proxy_get_upload(attachment_id):
+    try:
+        user_id = session.get("user_id", 1)
+        resp = make_backend_request("GET", f"/upload/{attachment_id}?user_id={user_id}", timeout=15)
+        headers = {}
+        if "Content-Type" in resp.headers:
+            headers["Content-Type"] = resp.headers["Content-Type"]
+        if "Content-Disposition" in resp.headers:
+            headers["Content-Disposition"] = resp.headers["Content-Disposition"]
+        return make_response(resp.content, resp.status_code, headers)
+    except Exception as e:
+        return jsonify({"detail": f"File fetch error: {e}"}), 500
+
+
+@app.route("/api/decisions", methods=["GET"])
+@app.route("/api/decisions/", methods=["GET"])
+def proxy_get_all_decisions():
+    try:
+        user_id = request.args.get("user_id") or session.get("user_id", "")
+        role_name = request.args.get("role_name") or session.get("role_name", "")
+        params = []
+        if user_id:
+            params.append(f"user_id={user_id}")
+        if role_name:
+            params.append(f"role_name={role_name}")
+        query_str = f"?{'&'.join(params)}" if params else ""
+        resp = make_backend_request("GET", f"/decisions/{query_str}", timeout=15)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"detail": f"Decisions fetch error: {e}"}), 500
+
+
+@app.route("/api/decisions/full", methods=["POST"])
+@app.route("/decisions/full", methods=["POST"])
+def proxy_create_decision_full():
+    try:
+        data = request.json or {}
+        if not data.get("created_by"):
+            data["created_by"] = session.get("user_id", 1)
+        resp = make_backend_request("POST", "/decisions/full", json=data, timeout=30)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"detail": f"Decision creation error: {e}"}), 500
+
+
+@app.route("/api/decisions/<int:decision_id>/full", methods=["PUT"])
+@app.route("/decisions/<int:decision_id>/full", methods=["PUT"])
+def proxy_update_decision_full(decision_id):
+    try:
+        data = request.json or {}
+        resp = make_backend_request("PUT", f"/decisions/{decision_id}/full", json=data, timeout=30)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"detail": f"Decision update error: {e}"}), 500
+
+
+@app.route("/api/decisions/<int:decision_id>", methods=["GET"])
+def proxy_get_decision_details(decision_id):
+    try:
+        user_id = request.args.get("user_id") or session.get("user_id", 1)
+        resp = make_backend_request("GET", f"/decisions/{decision_id}?user_id={user_id}", timeout=15)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"detail": f"Fetch error: {e}"}), 500
+
+
+@app.route("/api/decisions/<int:decision_id>", methods=["DELETE"])
+@app.route("/decisions/<int:decision_id>", methods=["DELETE"])
+def proxy_delete_decision(decision_id):
+    try:
+        user_id = request.args.get("user_id") or session.get("user_id", "")
+        role_name = request.args.get("role_name") or session.get("role_name", "")
+        params = []
+        if user_id:
+            params.append(f"user_id={user_id}")
+        if role_name:
+            params.append(f"role_name={role_name}")
+        query_str = f"?{'&'.join(params)}" if params else ""
+        resp = make_backend_request("DELETE", f"/decisions/{decision_id}{query_str}", timeout=15)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"detail": f"Decision delete error: {e}"}), 500
+
+
+@app.route("/api/decisions/<int:decision_id>/status", methods=["PATCH"])
+@app.route("/decisions/<int:decision_id>/status", methods=["PATCH"])
+def proxy_update_decision_status(decision_id):
+    try:
+        user_id = session.get("user_id", 1)
+        data = request.json or {}
+        resp = make_backend_request("PATCH", f"/decisions/{decision_id}/status?user_id={user_id}", json=data, timeout=15)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"detail": f"Decision status update error: {e}"}), 500
+
+
+@app.route("/api/decisions/<int:decision_id>/send_reminder", methods=["POST"])
+@app.route("/decisions/<int:decision_id>/send_reminder", methods=["POST"])
+def proxy_send_decision_reminder(decision_id):
+    try:
+        user_id = session.get("user_id", 1)
+        resp = make_backend_request("POST", f"/decisions/{decision_id}/send_reminder?user_id={user_id}", timeout=15)
+        return make_response(resp.content, resp.status_code, {"Content-Type": resp.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"detail": f"Decision reminder error: {e}"}), 500
+
+
+@app.route("/api/<path:endpoint>", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+def universal_api_proxy(endpoint):
+    try:
+        method = request.method
+        url_path = f"/{endpoint}"
+        query_string = request.query_string.decode("utf-8")
+        if query_string:
+            url_path = f"{url_path}?{query_string}"
+
+        headers = {k: v for k, v in request.headers if k.lower() not in ["host", "content-length"]}
+        
+        json_data = None
+        form_data = None
+        files = None
+
+        if request.is_json:
+            json_data = request.get_json(silent=True)
+        elif request.files:
+            files = {}
+            for key in request.files:
+                f = request.files[key]
+                files[key] = (f.filename, f.read(), f.content_type or "application/octet-stream")
+            form_data = request.form.to_dict()
+        elif request.form:
+            form_data = request.form.to_dict()
+
+        resp = make_backend_request(
+            method,
+            url_path,
+            json=json_data,
+            data=form_data,
+            files=files,
+            headers=headers,
+            timeout=30
+        )
+
+        out_headers = {}
+        if "Content-Type" in resp.headers:
+            out_headers["Content-Type"] = resp.headers["Content-Type"]
+        if "Content-Disposition" in resp.headers:
+            out_headers["Content-Disposition"] = resp.headers["Content-Disposition"]
+
+        return make_response(resp.content, resp.status_code, out_headers)
+    except Exception as e:
+        return jsonify({"detail": f"Proxy error on /{endpoint}: {e}"}), 500
+
+
 
 
 @app.route("/api/pending-approvals/action", methods=["POST"])
@@ -400,13 +690,18 @@ def api_pending_approval_action():
     if role not in ("Administrator", "Admin"):
         return jsonify({"detail": "Forbidden: Admin access required"}), 403
 
-    data = request.json
+    data = request.json or {}
     data["actor_name"] = session.get("full_name", "Administrator")
-    endpoint = f"{API_URL}/users/{data.get('action')}"
+    action = data.get('action')
     
     try:
-        response = requests.post(endpoint, json=data, timeout=5)
-        return jsonify(response.json()), response.status_code
+        headers = {}
+        if "token" in session:
+            headers["Authorization"] = f"Bearer {session['token']}"
+        response = make_backend_request("POST", f"/users/{action}", json=data, headers=headers, timeout=10)
+        if response is not None:
+            return jsonify(response.json()), response.status_code
+        return jsonify({"detail": "Error processing approval action"}), 500
     except Exception:
         return jsonify({"detail": "Error processing approval action"}), 500
 
@@ -466,15 +761,16 @@ def admin_create_user_proxy():
         return jsonify({"detail": "Unauthorized. Please log in as Admin."}), 401
     data = request.json
     try:
-        response = requests.post(
-            f"{API_URL}/users/admin_create",
-            json=data,
-            timeout=10
-        )
-        try:
-            return jsonify(response.json()), response.status_code
-        except Exception:
-            return jsonify({"detail": response.text or "Error creating user"}), response.status_code
+        headers = {}
+        if "token" in session:
+            headers["Authorization"] = f"Bearer {session['token']}"
+        response = make_backend_request("POST", "/users/admin_create", json=data, headers=headers, timeout=10)
+        if response is not None:
+            try:
+                return jsonify(response.json()), response.status_code
+            except Exception:
+                return jsonify({"detail": response.text or "Error creating user"}), response.status_code
+        return jsonify({"detail": "Backend connection error. Ensure the FastAPI backend is running."}), 500
     except requests.exceptions.RequestException as e:
         return jsonify({"detail": "Backend connection error. Ensure the FastAPI backend is running."}), 500
     except ValueError:
@@ -499,17 +795,26 @@ def api_dashboard():
 
 @app.route("/api/decisions", methods=["GET"])
 def api_decisions():
-    if not session.get("logged_in"):
-        return jsonify({"detail": "Unauthorized"}), 401
-    user_id = session.get("user_id")
-    role_name = session.get("role_name", "Employee")
     try:
-        response = make_backend_request("GET", f"/decisions/?user_id={user_id}&role_name={role_name}", timeout=5)
+        params = {}
+        user_id = request.args.get("user_id") or session.get("user_id")
+        role_name = request.args.get("role_name") or session.get("role_name") or "Employee"
+        if user_id:
+            params["user_id"] = user_id
+        if role_name:
+            params["role_name"] = role_name
+
+        headers = {}
+        if "token" in session:
+            headers["Authorization"] = f"Bearer {session['token']}"
+
+        response = make_backend_request("GET", "/decisions/", params=params, headers=headers, timeout=5)
         if response is not None and response.status_code == 200:
             return jsonify(response.json()), 200
-        return jsonify([]), 200
-    except Exception:
-        return jsonify([]), 200
+        return jsonify([]), response.status_code if response is not None else 500
+    except Exception as e:
+        print(f"Error fetching decisions in frontend proxy: {e}")
+        return jsonify([]), 500
 
 # ===========================
 # NOTIFICATIONS PROXIES
@@ -521,8 +826,10 @@ def get_notifications(user_id):
         return jsonify({"detail": "Unauthorized"}), 401
     headers = {"Authorization": f"Bearer {session['token']}"}
     try:
-        response = requests.get(f"{API_URL}/notifications/{user_id}", headers=headers, timeout=5)
-        return jsonify(response.json()), response.status_code
+        response = make_backend_request("GET", f"/notifications/{user_id}", headers=headers, timeout=5)
+        if response is not None:
+            return jsonify(response.json()), response.status_code
+        return jsonify([]), 200
     except Exception as e:
         return jsonify([]), 200
 
@@ -532,8 +839,10 @@ def mark_all_read(user_id):
         return jsonify({"detail": "Unauthorized"}), 401
     headers = {"Authorization": f"Bearer {session['token']}"}
     try:
-        response = requests.put(f"{API_URL}/notifications/{user_id}/mark-all-read", headers=headers, timeout=5)
-        return jsonify(response.json()), response.status_code
+        response = make_backend_request("PUT", f"/notifications/{user_id}/mark-all-read", headers=headers, timeout=5)
+        if response is not None:
+            return jsonify(response.json()), response.status_code
+        return jsonify({"detail": "Error"}), 500
     except Exception as e:
         return jsonify({"detail": "Error"}), 500
 
@@ -543,30 +852,12 @@ def clear_all_notifications(user_id):
         return jsonify({"detail": "Unauthorized"}), 401
     headers = {"Authorization": f"Bearer {session['token']}"}
     try:
-        response = requests.delete(f"{API_URL}/notifications/{user_id}/clear-all", headers=headers, timeout=5)
-        return jsonify(response.json()), response.status_code
+        response = make_backend_request("DELETE", f"/notifications/{user_id}/clear-all", headers=headers, timeout=5)
+        if response is not None:
+            return jsonify(response.json()), response.status_code
+        return jsonify({"detail": "Error"}), 500
     except Exception as e:
         return jsonify({"detail": "Error"}), 500
-
-@app.route("/api/decisions")
-def api_get_decisions():
-    if not session.get("logged_in") and "token" not in session:
-        return jsonify([]), 401
-    try:
-        params = {}
-        user_id = request.args.get("user_id") or session.get("user_id")
-        role_name = request.args.get("role_name") or session.get("role_name")
-        if user_id:
-            params["user_id"] = user_id
-        if role_name:
-            params["role_name"] = role_name
-        response = requests.get(f"{API_URL}/decisions/", params=params, timeout=5)
-        if response.status_code == 200:
-            return jsonify(response.json()), 200
-        return jsonify([]), response.status_code
-    except Exception as e:
-        print(f"Error fetching decisions in frontend proxy: {e}")
-        return jsonify([]), 500
 
 @app.route("/api/dashboard")
 def api_get_dashboard():
@@ -575,10 +866,10 @@ def api_get_dashboard():
     headers = {"Authorization": f"Bearer {session['token']}"}
     user_id = session["user_id"]
     try:
-        response = requests.get(f"{API_URL}/dashboard/{user_id}", headers=headers, timeout=5)
-        if response.status_code == 200:
+        response = make_backend_request("GET", f"/dashboard/{user_id}", headers=headers, timeout=5)
+        if response is not None and response.status_code == 200:
             return jsonify(response.json()), 200
-        return jsonify({}), response.status_code
+        return jsonify({}), response.status_code if response is not None else 500
     except Exception:
         return jsonify({}), 500
 
@@ -598,15 +889,16 @@ def dashboard():
 
     user_id = session.get("user_id", 2)
 
-    response = requests.get(
-        f"{API_URL}/dashboard/{user_id}",
-        headers=headers
-    )
-
     dashboard = {}
-
-    if response.status_code == 200:
-        dashboard = response.json()
+    try:
+        response = make_backend_request("GET", f"/dashboard/{user_id}", headers=headers, timeout=5)
+        if response is not None and response.status_code == 200:
+            dashboard = response.json()
+        else:
+            flash("Backend service returned an error. Showing offline dashboard view.", "warning")
+    except Exception as e:
+        print(f"[FRONTEND DASHBOARD REQ ERR] {e}")
+        flash("Backend server is unreachable. Please ensure the backend is running.", "warning")
 
     role = (session.get("role_name") or "Employee").strip()
     role_lower = role.lower()
@@ -861,18 +1153,22 @@ def profile():
         return redirect(url_for("login"))
 
     current_user_id = session.get("user_id")
-    response = requests.get(
-        f"{API_URL}/profile/{current_user_id}",
-        params={"current_user_id": current_user_id}
-    )
-
-    if response.status_code != 200:
-
-        flash("Unable to load profile.", "danger")
-
+    profile = {}
+    try:
+        response = make_backend_request(
+            "GET",
+            f"/profile/{current_user_id}",
+            params={"current_user_id": current_user_id},
+            timeout=5
+        )
+        if response is None or response.status_code != 200:
+            flash("Unable to load profile.", "danger")
+            return redirect(url_for("dashboard"))
+        profile = response.json()
+    except Exception as e:
+        print(f"[FRONTEND PROFILE REQ ERR] {e}")
+        flash("Backend connection error. Please ensure the backend service is running.", "danger")
         return redirect(url_for("dashboard"))
-
-    profile = response.json()
 
     return render_template(
         "profile.html",
@@ -897,21 +1193,20 @@ def update_profile():
 
     }
 
-    response = requests.put(
-
-        f"{API_URL}/profile/{session['user_id']}",
-
-        json=payload
-
-    )
-
-    if response.status_code == 200:
-
-        flash("Profile Updated Successfully", "success")
-
-    else:
-
-        flash("Unable to update profile", "danger")
+    try:
+        response = make_backend_request(
+            "PUT",
+            f"/profile/{session['user_id']}",
+            json=payload,
+            timeout=5
+        )
+        if response is not None and response.status_code == 200:
+            flash("Profile Updated Successfully", "success")
+        else:
+            flash("Unable to update profile", "danger")
+    except Exception as e:
+        print(f"[FRONTEND PROFILE UPDATE REQ ERR] {e}")
+        flash("Backend connection error. Unable to save profile changes.", "danger")
 
     return redirect(url_for("profile"))
 
@@ -991,6 +1286,17 @@ def logout():
     res.headers["Expires"] = "0"
     return res
 
+@app.route("/account-deleted")
+def account_deleted():
+    session.clear()
+    session.permanent = False
+    flash("Your account and all associated data have been permanently deleted.", "warning")
+    res = make_response(redirect(url_for("login")))
+    res.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    res.headers["Pragma"] = "no-cache"
+    res.headers["Expires"] = "0"
+    return res
+
 
 # ===========================
 # ERROR HANDLERS
@@ -1009,4 +1315,7 @@ def page_not_found(e):
 # ===========================
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 5000))
+    debug = os.getenv("FLASK_DEBUG", "True").lower() in ("true", "1")
+    app.run(host=host, port=port, debug=debug)

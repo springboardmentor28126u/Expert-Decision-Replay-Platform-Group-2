@@ -1,3 +1,4 @@
+import threading
 from sqlalchemy.orm import Session
 from app.models.notification import Notification
 from app.models.user import User
@@ -6,51 +7,87 @@ from app.models.decision import Decision
 from app.models.review import Review
 from typing import List, Optional
 from datetime import datetime, timezone
+from app.services.email_service import send_notification_email, send_decision_outcome_email, get_recipient_email
 
 class NotificationService:
 
     @staticmethod
     def create_notification(db: Session, user_id: int, message: str, notification_type: str) -> Optional[Notification]:
-        # Check system settings switches
+        # 1. Fetch system settings switches
+        allow_inapp = True
+        allow_email = True
+
         try:
             from app.models.system_setting import SystemSetting
             setting = db.query(SystemSetting).first()
             if setting:
-                if not setting.enable_inapp_notifications:
-                    print(f"[IN-APP NOTIF DISABLED VIA SETTINGS] Skipping for User #{user_id}")
-                    return None
-                
-                # Check granular notification flags
+                # Master in-app & email switches
+                allow_inapp = bool(setting.enable_inapp_notifications)
+                allow_email = bool(setting.enable_email_notifications)
+
+                # Check granular event switches
                 ntype_lower = notification_type.lower()
-                if "decision" in ntype_lower or "status" in ntype_lower or "update" in ntype_lower:
+                if "decision" in ntype_lower or "status" in ntype_lower or "update" in ntype_lower or "system update" in ntype_lower:
                     if not setting.enable_decision_updates:
-                        print(f"[DECISION UPDATES NOTIF DISABLED] Skipping type: {notification_type}")
-                        return None
+                        allow_inapp = False
+                        allow_email = False
                 elif "review" in ntype_lower or "approval" in ntype_lower:
                     if not setting.enable_approval_requests:
-                        print(f"[APPROVAL REQUESTS NOTIF DISABLED] Skipping type: {notification_type}")
-                        return None
+                        allow_inapp = False
+                        allow_email = False
                 elif "discussion" in ntype_lower or "reply" in ntype_lower or "comment" in ntype_lower:
                     if not setting.enable_discussion_replies:
-                        print(f"[DISCUSSION REPLIES NOTIF DISABLED] Skipping type: {notification_type}")
-                        return None
+                        allow_inapp = False
+                        allow_email = False
                 elif "repo" in ntype_lower or "document" in ntype_lower or "knowledge" in ntype_lower:
                     if not setting.enable_repo_updates:
-                        print(f"[REPO UPDATES NOTIF DISABLED] Skipping type: {notification_type}")
-                        return None
+                        allow_inapp = False
+                        allow_email = False
         except Exception as err:
-            print(f"Notification setting check note: {err}")
+            print(f"Notification settings check note: {err}")
 
-        notif = Notification(
-            user_id=user_id,
-            message=message,
-            notification_type=notification_type,
-            is_read=False,
-            created_at=datetime.now(timezone.utc)
-        )
-        db.add(notif)
-        db.commit()
-        db.refresh(notif)
+        # 2. Dispatch In-App Notification if enabled
+        notif = None
+        if allow_inapp:
+            try:
+                notif = Notification(
+                    user_id=user_id,
+                    message=message,
+                    notification_type=notification_type,
+                    is_read=False,
+                    created_at=datetime.now(timezone.utc)
+                )
+                db.add(notif)
+                db.commit()
+                db.refresh(notif)
+            except Exception as e:
+                db.rollback()
+                print(f"Failed to create in-app notification: {e}")
+
+        # 3. Dispatch Real-Time Email Notification to Gmail if enabled
+        if allow_email:
+            try:
+                recipient = db.query(User).filter(User.id == user_id).first()
+                target_email = get_recipient_email(recipient)
+                if target_email:
+                    recipient_name = recipient.full_name or "User"
+                    
+                    def _async_email():
+                        try:
+                            send_notification_email(
+                                to_email=target_email,
+                                recipient_name=recipient_name,
+                                subject=f"{notification_type} Alert",
+                                message=message,
+                                notification_type=notification_type
+                            )
+                        except Exception as em_err:
+                            print(f"Async email notification error: {em_err}")
+
+                    threading.Thread(target=_async_email, daemon=True).start()
+            except Exception as mail_err:
+                print(f"Notification email lookup note: {mail_err}")
+
         return notif
 
     @staticmethod
@@ -119,14 +156,36 @@ class NotificationService:
         
         status_text = status.capitalize()
         
-        # 1. Creator Notification
+        # 1. Creator Notification & Direct Gmail Outcome Email
         if decision.created_by != reviewer_id:
+            creator = db.query(User).filter(User.id == decision.created_by).first()
+            creator_email = get_recipient_email(creator)
+            creator_name = creator.full_name if creator else "Decision Owner"
+
             NotificationService.create_notification(
                 db,
                 user_id=decision.created_by,
                 message=f"Your decision 'DEC-{decision.id}: {decision.title}' was marked as {status_text} by {reviewer_name}.",
                 notification_type="Decision Status"
             )
+
+            # Send rich Decision Outcome email (Accepted / Rejected) to creator's Gmail
+            if creator_email:
+                def _async_decision_email():
+                    try:
+                        send_decision_outcome_email(
+                            to_email=creator_email,
+                            recipient_name=creator_name,
+                            decision_id=decision.id,
+                            decision_title=decision.title or f"DEC-{decision.id}",
+                            status=status,
+                            reviewer_name=reviewer_name,
+                            comments=comments
+                        )
+                    except Exception as e:
+                        print(f"Async decision outcome email note: {e}")
+
+                threading.Thread(target=_async_decision_email, daemon=True).start()
             
         # 2. Managers & Admins Notification
         manager_admin_roles = db.query(Role).filter(Role.role_name.in_(["Manager", "Admin", "Administrator"])).all()
