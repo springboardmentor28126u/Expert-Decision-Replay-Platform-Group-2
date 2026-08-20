@@ -326,6 +326,7 @@ function Dashboard({ token, onLogout }) {
   const [activeView, setActiveView] = useState("dashboard");
   const [selectedDecision, setSelectedDecision] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [reportTab, setReportTab] = useState("decision");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [decisionSearchQuery, setDecisionSearchQuery] = useState("");
@@ -351,7 +352,7 @@ function Dashboard({ token, onLogout }) {
   const [editTeamDesc, setEditTeamDesc] = useState("");
   const [editTeamManagerId, setEditTeamManagerId] = useState("");
   const [selectedMemberToAdd, setSelectedMemberToAdd] = useState({}); // teamId -> userId
-
+  
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(token);
 
   useEffect(() => {
@@ -671,9 +672,10 @@ function Dashboard({ token, onLogout }) {
   })) || [];
   console.log(auditChartData);
 
-  const handleNavigate = (view) => {
+  const handleNavigate = (view, filter) => {
     setSelectedDecision(null);
-    if (view === "decisions") setStatusFilter("all");
+    if (view === "decisions") setStatusFilter(filter || "all");
+    if (view === "reports") setReportTab(filter || "decision");
     setActiveView(view);
   };
 
@@ -967,7 +969,7 @@ function Dashboard({ token, onLogout }) {
         </div>
       )}
 
-      {activeView === "reports" && <ReportsPage token={token} />}
+      {activeView === "reports" && <ReportsPage token={token} initialTab={reportTab} />}
       {activeView === "notifications" && (
         <NotificationsPage
           notifications={notifications}

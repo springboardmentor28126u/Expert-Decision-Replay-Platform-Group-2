@@ -14,6 +14,9 @@ import {
   UserCog,
   Settings,
   LogOut,
+  CheckCircle,
+  FileSearch,
+  Menu,
 } from "lucide-react";
 
 function AppShell({
@@ -30,7 +33,8 @@ function AppShell({
   const isManagerOrAdmin = profile.role === "manager" || profile.role === "admin";
   const isAdmin = profile.role === "admin";
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
-  
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   const dashboardPaths = {
     employee: "/dashboard/employee",
     reviewer: "/dashboard/reviewer",
@@ -39,12 +43,19 @@ function AppShell({
   };
 
   const handleNavClick = (item) => {
-    onNavigate(item.key);
+    if (item.key === "approved-decisions") {
+      onNavigate("decisions", "approved");
+    } else if (item.key === "audit-log") {
+      onNavigate("reports", "audit");
+    } else {
+      onNavigate(item.key);
+    }
   };
 
   const primaryNavItems = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { key: "decisions", label: "Decisions", icon: ClipboardList },
+    { key: "approved-decisions", label: "Approved Decisions", icon: CheckCircle },
     { key: "notifications", label: "Notifications", icon: Bell, badge: unreadCount },
   ];
 
@@ -58,11 +69,12 @@ function AppShell({
 
   const adminNavItems = [
     { key: "users", label: "User Management", icon: UserCog },
+    { key: "audit-log", label: "Audit Log", icon: FileSearch },
   ];
 
   return (
     <div className="shell-wrapper">
-      <aside className="shell-sidebar" style={{ display: "flex", flexDirection: "column" }}>
+      <aside className="shell-sidebar" style={{ display: sidebarOpen ? "flex" : "none", flexDirection: "column" }}>
         <div className="shell-logo">
           <span className="full-name">EDRP</span>
         </div>
@@ -94,7 +106,9 @@ function AppShell({
               </span>
             </button>
           ))}
-
+         
+        {isManagerOrAdmin && (
+          <>
           <div className="shell-nav-divider" />
           <div className="shell-nav-section-label">REPORTS</div>
           {reportsNavItems.map((item) => (
@@ -109,6 +123,8 @@ function AppShell({
               <span className="label">{item.label}</span>
             </button>
           ))}
+         </>
+        )} 
 
           {!isAdmin && (
             <>
@@ -172,7 +188,16 @@ function AppShell({
       </aside>
 
       <div className="shell-main">
-        <header className="shell-topbar">
+      <header className="shell-topbar">
+       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+            aria-label="Toggle sidebar"
+            title="Toggle sidebar"
+          >
+            <Menu size={20} color="var(--text-primary)" />
+          </button>
           <h1 className="shell-topbar-title">
             {activeView === "dashboard" && "Dashboard"}
             {activeView === "decisions" && "Decisions"}
@@ -182,8 +207,10 @@ function AppShell({
             {activeView === "users" && "User Management"}
             {activeView === "account" && "Account Settings"}
             {activeView === "decision-details" && "Decision Details"}
+            {activeView === "approved-decisions" && "Approved Decisions"} 
+            {activeView === "audit-log" && "Audit Log"}
           </h1>
-
+        </div>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {topbarExtra}
             <ProfileMenu profile={profile} onNavigate={onNavigate} onLogout={onLogout} />

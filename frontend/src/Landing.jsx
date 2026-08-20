@@ -119,6 +119,29 @@ const LIFECYCLE_STEPS = [
   },
 ];
 
+const ROLE_PREVIEWS = [
+  {
+    icon: FileText,
+    role: "Employee",
+    description: "Create decisions, track their status, and get AI-powered insights on your own work.",
+  },
+  {
+    icon: ClipboardCheck,
+    role: "Reviewer",
+    description: "Review assigned decisions, approve or reject with reasoning, backed by AI recommendations.",
+  },
+  {
+    icon: BarChart3,
+    role: "Manager",
+    description: "Final approvals, team-wide reports, and organization-level decision search.",
+  },
+  {
+    icon: History,
+    role: "Admin",
+    description: "Full system oversight — user management, audit logs, and every decision across the org.",
+  },
+];
+
 function Landing({ onLogin, onSignup }) {
   return (
     <div className="landing-wrapper">
@@ -280,6 +303,30 @@ function Landing({ onLogin, onSignup }) {
           })}
         </div>
       </section>
+      
+      <section className="landing-section">
+  <div className="landing-section-header">
+    <p className="landing-section-eyebrow">Built for Every Role</p>
+    <h2 className="landing-section-title">
+      One platform, tailored to what each person needs
+    </h2>
+  </div>
+
+  <div className="landing-capabilities-grid">
+    {ROLE_PREVIEWS.map((item) => {
+      const Icon = item.icon;
+      return (
+        <div className="landing-capability-card" key={item.role}>
+          <div className="landing-capability-icon">
+            <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+          </div>
+          <h3>{item.role}</h3>
+          <p>{item.description}</p>
+        </div>
+      );
+    })}
+  </div>
+</section>
 
       <section className="landing-section landing-lifecycle">
         <div className="landing-section-header">

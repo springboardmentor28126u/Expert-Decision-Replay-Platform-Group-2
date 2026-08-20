@@ -38,8 +38,8 @@ function formatDate(isoString) {
 // whatever the corresponding /api/v1/reports/* endpoint returns ΓÇö no
 // aggregation happens here, only formatting into the existing
 // stat-card/dash-table patterns already used elsewhere in the Dashboard.
-function ReportsPage({ token }) {
-  const [activeReport, setActiveReport] = useState("decision");
+function ReportsPage({ token, initialTab }) {
+  const [activeReport, setActiveReport] = useState(initialTab || "decision");
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -333,10 +333,12 @@ function ApprovalReportView({ data }) {
 }
 
 function TeamReportView({ data }) {
+  const teams = data.teams || [];
+
   return (
     <>
       <div className="stat-grid">
-        <StatCard label="Total Teams" value={data.total_teams} />
+        <StatCard label="Total Teams" value={data.total_teams ?? 0} />
       </div>
 
       <ReportSection title="Team Activity">
@@ -348,10 +350,10 @@ function TeamReportView({ data }) {
             </tr>
           </thead>
           <tbody>
-            {data.teams.length === 0 ? (
+            {teams.length === 0 ? (
               <EmptyRow colSpan={7} />
             ) : (
-              data.teams.map((t) => (
+              teams.map((t) => (
                 <tr key={t.team_id} className="dash-table-row">
                   <td style={{ fontWeight: 600 }}>{t.team_name}</td>
                   <td>{t.member_count}</td>
