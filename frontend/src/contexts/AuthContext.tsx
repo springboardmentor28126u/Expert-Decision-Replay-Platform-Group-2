@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           isLoading: false,
           error: null,
         });
-      } catch (error) {
+      } catch {
         setAccessToken(null);
         setState({
           ...initialState,

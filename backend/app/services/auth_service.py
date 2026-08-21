@@ -93,6 +93,7 @@ class AuthService:
                 full_name=sanitize_input(user_data.full_name),
                 email=sanitized_email,
                 password_hash=hash_password(user_data.password),
+                role=user_data.role if user_data.role else "employee"
             )
             db.add(new_user)
             db.flush()  # Get new_user.id without committing
@@ -168,16 +169,17 @@ class AuthService:
         # Validate login_context against user's role
         if login_data.login_context:
             user_role = (user.role or "").lower()
-            if login_data.login_context == "admin" and user_role != "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="This account does not have admin privileges.",
-                )
-            if login_data.login_context == "employee" and user_role == "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Please use the Admin Login tab.",
-                )
+            if login_data.login_context != user_role:
+                if login_data.login_context == "admin":
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Access denied\n\nThis account does not have Admin privileges.\n\nYour account is registered as:\n{user_role.capitalize()}\n\n[ Change Role ]",
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"You selected {login_data.login_context.capitalize()},\nbut this account is registered as {user_role.capitalize()}.\n\n[ Change Role ]",
+                    )
 
         # Generate tokens (lightweight payload — sub: user_id)
         token_data = {"sub": str(user.id)}

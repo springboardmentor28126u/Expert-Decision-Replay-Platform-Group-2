@@ -30,7 +30,7 @@ export const authService = {
     try {
       const response = await api.post('/auth/logout');
       return response.data;
-    } catch (e) {
+    } catch {
       return { message: 'Already logged out or error' };
     }
   },

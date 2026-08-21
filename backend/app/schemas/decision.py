@@ -19,7 +19,9 @@ class DecisionCreate(BaseModel):
     problem_statement: str = Field(..., min_length=10)
     category_id: UUID
     group_id: UUID
-    impact_level: str = Field(default="medium")  # low, medium, high
+    impact_level: str = Field(default="medium")  # low, medium, high, critical
+    financial_impact: Optional[float] = Field(None, ge=0)
+    risk_score: Optional[int] = Field(None, ge=1, le=10)
     target_date: Optional[date] = None
     stakeholder_ids: Optional[List[UUID]] = Field(default_factory=list)
 
@@ -31,6 +33,8 @@ class DecisionUpdate(BaseModel):
     category_id: Optional[UUID] = None
     group_id: Optional[UUID] = None
     impact_level: Optional[str] = None
+    financial_impact: Optional[float] = Field(None, ge=0)
+    risk_score: Optional[int] = Field(None, ge=1, le=10)
     target_date: Optional[date] = None
     stakeholder_ids: Optional[List[UUID]] = None
 
@@ -56,6 +60,8 @@ class DecisionResponse(BaseModel):
     category: Optional[DecisionCategoryResponse] = None
     status: str
     impact_level: str
+    financial_impact: Optional[float] = None
+    risk_score: Optional[int] = None
     created_by: UUID
     creator: Optional[CreatorSummary] = None
     current_version: int
@@ -86,6 +92,8 @@ class DecisionListItem(BaseModel):
     title: str
     status: str
     impact_level: str
+    financial_impact: Optional[float] = None
+    risk_score: Optional[int] = None
     category: Optional[DecisionCategoryResponse] = None
     creator: Optional[CreatorSummary] = None
     alternative_count: int = 0

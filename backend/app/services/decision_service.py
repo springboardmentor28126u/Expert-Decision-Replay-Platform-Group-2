@@ -1,4 +1,4 @@
-"""
+﻿"""
 Expert Decision Replay Platform - Decision Service
 
 Business logic for decision management CRUD and lifecycle.
@@ -9,7 +9,7 @@ from uuid import UUID
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, select
 
 from app.models.decision import Decision, DecisionStatus, ImpactLevel
 from app.models.decision_category import DecisionCategory
@@ -197,7 +197,7 @@ class DecisionService:
                 )
                 .subquery()
             )
-            query = query.filter(Decision.group_id.in_(user_group_ids))
+            query = query.filter(Decision.group_id.in_(select(user_group_ids)))
 
         if pending_for_me:
             query = query.filter(
@@ -447,69 +447,113 @@ class DecisionService:
                 detail="At least one alternative must be marked as recommended",
             )
 
-        # Generate approvals from ApprovalChainConfig
-        chain_config = db.query(ApprovalChainConfig).filter(
-            ApprovalChainConfig.category_id == decision.category_id
-        ).first()
+        # Generate approvals from ApprovalChainConfig (with fallback strategy)
+        from app.services.approval_chain_service import ApprovalChainService
+        from app.services.approval_routing_service import ApprovalRoutingService
+        from app.services.notification_service import NotificationService
+        from app.models.decision_category import DecisionCategory
 
-        if not chain_config or not chain_config.roles:
+        # Resolve category name for lookup
+        category_obj = db.query(DecisionCategory).filter(
+            DecisionCategory.id == decision.category_id
+        ).first()
+        category_name = category_obj.name if category_obj else "unknown"
+
+        chain_config = ApprovalChainService.find_chain_for_submission(
+            db, decision.company_id, decision.group_id, category_name,
+        )
+
+        if not chain_config or not chain_config.levels:
+            # Build a specific, debuggable error message
+            group = db.query(Group).filter(Group.id == decision.group_id).first()
+            group_name = group.name if group else str(decision.group_id)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No approval chain configured for this category."
+                detail=(
+                    f"No approval chain configured for category '{category_name}' "
+                    f"in group '{group_name}'. Please ask your company administrator "
+                    f"to configure an approval chain for this category."
+                ),
             )
 
-        # Build map of existing approvals by level — merge manual assignments with chain
+        # Apply routing rules to resolve the final approval chain
+        resolved_levels = ApprovalRoutingService.resolve_approval_chain(
+            db, decision, chain_config.levels, category_name,
+        )
+
+        # Extract roles from the resolved chain levels
+        chain_roles = [
+            lvl["role"] if isinstance(lvl, dict) else lvl
+            for lvl in resolved_levels
+        ]
+
+        # Build map of existing approvals by level â€” merge manual assignments with chain
         existing_by_level = {
             a.level: a
             for a in (db.query(Approval).filter(Approval.decision_id == decision_id).all())
         }
 
-        for level, role_str in enumerate(chain_config.roles, start=1):
+        # Determine current round (max existing round + 1)
+        max_round = 1
+        for a in existing_by_level.values():
+            if a.round and a.round >= max_round:
+                max_round = a.round + 1
+
+        for level, role_str in enumerate(chain_roles, start=1):
             existing = existing_by_level.get(level)
 
             if existing and existing.status == ApprovalStatus.PENDING:
-                # Keep manually-assigned approval (don't supersede, don't re-assign)
-                existing.status = ApprovalStatus.PENDING
-            else:
-                # Supersede any previous-cycle approval at this level
-                if existing:
-                    existing.status = ApprovalStatus.SUPERSEDED
-                    existing.acted_at = datetime.now(timezone.utc)
+                # Keep manually-assigned approval (don't replace, don't re-assign)
+                continue
 
-                # Auto-assign a new approver (exclude self, deterministic order)
-                approver = (
-                    db.query(User)
-                    .join(Membership, User.id == Membership.user_id)
-                    .join(GroupMembership, GroupMembership.user_id == User.id)
-                    .filter(
-                        Membership.company_id == decision.company_id,
-                        GroupMembership.group_id == decision.group_id,
-                        User.role == role_str,
-                        User.id != current_user.id,
-                    )
-                    .order_by(User.created_at)
-                    .first()
+            # Mark previous-cycle approval as SUPERSEDED instead of hard-deleting.
+            # This preserves approval history for audit trail. The unique constraint
+            # is now on (decision_id, level, round), so superseded rows at old rounds
+            # don't conflict with new round rows.
+            if existing:
+                existing.status = ApprovalStatus.SUPERSEDED
+                existing.acted_at = datetime.now(timezone.utc)
+                existing.comments = "Superseded by resubmission"
+                db.flush()
+
+            # Auto-assign a new approver using CompanyRole (from Membership)
+            # instead of User.role for proper multi-tenant scoping. If no group
+            # member holds the required role, fall back to an ADMIN member so
+            # small teams (admin + employees) can still complete the flow.
+            approver = ApprovalChainService.find_eligible_approver(
+                db,
+                decision.company_id,
+                decision.group_id,
+                role_str,
+                exclude_user_id=current_user.id,
+            )
+            if not approver:
+                group = db.query(Group).filter(Group.id == decision.group_id).first()
+                group_name = group.name if group else str(decision.group_id)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"No eligible approvers for level {level} (role: {role_str}) "
+                        f"in group '{group_name}'. Ask an administrator to add a "
+                        f"member with this role to the group or adjust the approval "
+                        f"chain."
+                    ),
                 )
-                if not approver:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"No eligible approvers found for level {level}."
-                    )
 
-                new_approval = Approval(
-                    decision_id=decision.id,
-                    approver_id=approver.id,
-                    level=level,
-                    status=ApprovalStatus.PENDING,
-                )
-                db.add(new_approval)
+            new_approval = Approval(
+                decision_id=decision.id,
+                approver_id=approver.id,
+                level=level,
+                round=max_round,
+                status=ApprovalStatus.PENDING,
+            )
+            db.add(new_approval)
 
-        # Supersede any leftover approvals whose level is no longer in the chain
-        chain_levels = set(range(1, len(chain_config.roles) + 1))
+        # Delete any leftover approvals whose level is no longer in the chain
+        chain_levels = set(range(1, len(chain_roles) + 1))
         for a in existing_by_level.values():
-            if a.level not in chain_levels and a.status != ApprovalStatus.SUPERSEDED:
-                a.status = ApprovalStatus.SUPERSEDED
-                a.acted_at = datetime.now(timezone.utc)
+            if a.level not in chain_levels:
+                db.delete(a)
 
         old_status = decision.status.value
         decision.status = DecisionStatus.UNDER_REVIEW
@@ -524,8 +568,24 @@ class DecisionService:
             entity_id=decision.id,
             performed_by=current_user.id,
             action="submit",
-            diff={"status": {"old": old_status, "new": DecisionStatus.UNDER_REVIEW.value}}
+            diff={"status": {"old": old_status, "new": DecisionStatus.UNDER_REVIEW.value}},
+            company_id=decision.company_id,
         )
+
+        # Notify assigned approvers
+        for a in db.query(Approval).filter(
+            Approval.decision_id == decision.id,
+            Approval.round == max_round,
+        ).all():
+            if a.approver_id != current_user.id:
+                NotificationService.create_in_app(
+                    db=db,
+                    user_id=a.approver_id,
+                    type="approval_needed",
+                    title="Decision Pending Review",
+                    message=f"Decision '{decision.title}' requires your review (Level {a.level}).",
+                    payload={"decision_id": str(decision.id)},
+                )
 
         db.commit()
         db.refresh(decision)
@@ -556,7 +616,8 @@ class DecisionService:
             entity_id=decision.id,
             performed_by=current_user.id,
             action="archive",
-            diff={"status": {"old": old_status, "new": DecisionStatus.ARCHIVED.value}}
+            diff={"status": {"old": old_status, "new": DecisionStatus.ARCHIVED.value}},
+            company_id=decision.company_id,
         )
 
         db.commit()
@@ -601,7 +662,8 @@ class DecisionService:
             entity_id=decision.id,
             performed_by=current_user.id,
             action="revise",
-            diff={"status": {"old": old_status, "new": DecisionStatus.DRAFT.value}}
+            diff={"status": {"old": old_status, "new": DecisionStatus.DRAFT.value}},
+            company_id=decision.company_id,
         )
 
         db.commit()
@@ -650,6 +712,7 @@ class DecisionService:
             action="set_outcome",
             performed_by=current_user.id,
             new_value={"outcome": outcome, "outcome_notes": outcome_notes},
+            company_id=decision.company_id,
         )
 
         db.commit()
@@ -662,23 +725,14 @@ class DecisionService:
     @staticmethod
     def get_user_stats(db: Session, user_id: UUID, company_id: UUID) -> dict:
         """Get decision stats for a user's dashboard in a company."""
-        total = (
-            db.query(func.count(Decision.id))
+        # Single query with GROUP BY (fixes N+1)
+        rows = (
+            db.query(Decision.status, func.count(Decision.id).label("cnt"))
             .filter(Decision.created_by == user_id, Decision.company_id == company_id)
-            .scalar()
+            .group_by(Decision.status)
+            .all()
         )
-
-        by_status = {}
-        for s in DecisionStatus:
-            count = (
-                db.query(func.count(Decision.id))
-                .filter(
-                    Decision.created_by == user_id,
-                    Decision.company_id == company_id,
-                    Decision.status == s,
-                )
-                .scalar()
-            )
-            by_status[s.value] = count
+        by_status = {row.status.value: row.cnt for row in rows}
+        total = sum(by_status.values())
 
         return {"total": total, "by_status": by_status}

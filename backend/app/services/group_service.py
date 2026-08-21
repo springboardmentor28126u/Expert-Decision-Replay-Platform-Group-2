@@ -1,4 +1,4 @@
-"""
+﻿"""
 Expert Decision Replay Platform - Group Service
 
 Business logic for group creation and membership management within a company.
@@ -202,9 +202,16 @@ class GroupService:
             )
             .all()
         )
+        # Batch-load users for all memberships (fixes N+1)
+        user_ids = [gm.user_id for gm in memberships]
+        users_map = {
+            u.id: u
+            for u in db.query(User).filter(User.id.in_(user_ids)).all()
+        } if user_ids else {}
+
         members = []
         for gm in memberships:
-            user = db.query(User).filter(User.id == gm.user_id).first()
+            user = users_map.get(gm.user_id)
             members.append(
                 {
                     "id": gm.id,
@@ -500,16 +507,24 @@ class GroupService:
             .all()
         }
 
+        # Batch-load member counts for all groups (fixes N+1)
+        group_ids = [g.id for g in groups]
+        member_counts = dict(
+            db.query(
+                GroupMembership.group_id,
+                func.count(GroupMembership.id).label("cnt"),
+            )
+            .filter(
+                GroupMembership.group_id.in_(group_ids),
+                GroupMembership.is_active == True,  # noqa: E712
+            )
+            .group_by(GroupMembership.group_id)
+            .all()
+        )
+
         rows = []
         for group in groups:
-            member_count = (
-                db.query(func.count(GroupMembership.id))
-                .filter(
-                    GroupMembership.group_id == group.id,
-                    GroupMembership.is_active == True,  # noqa: E712
-                )
-                .scalar()
-            )
+            member_count = member_counts.get(group.id, 0)
             pending = pending_requests.get(group.id)
             rows.append(
                 {

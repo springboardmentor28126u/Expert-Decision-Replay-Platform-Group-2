@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
@@ -58,6 +59,26 @@ export function Topbar({ onToggleSidebar }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const [notifRes, countRes] = await Promise.all([
+          api.get('/notifications?limit=10'),
+          api.get('/notifications/unread-count'),
+        ]);
+        setNotifications(notifRes.data);
+        setUnreadCount(countRes.data.count);
+      } catch (err) {
+        // Silently fail - notifications are non-critical
+      }
+    };
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSearchKeyDown = (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -79,7 +100,6 @@ export function Topbar({ onToggleSidebar }) {
   const badgeStyle = roleBadgeStyles[normalizeRole(user?.role)] || roleBadgeStyles.employee;
 
   const currentCompany = companies.find(c => c.id === currentCompanyId);
-  const currentGroup = groups.find(g => g.id === currentGroupId);
 
   const themeIcon =
     theme === 'dark' ? (
@@ -282,6 +302,11 @@ export function Topbar({ onToggleSidebar }) {
             className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <IconBell size={18} stroke={1.5} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
           <AnimatePresence>
             {showNotifMenu && (
@@ -294,9 +319,23 @@ export function Topbar({ onToggleSidebar }) {
                   exit="exit"
                   className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl py-1 overflow-hidden"
                 >
-                  <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
-                    No notifications yet
-                  </div>
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                      No notifications yet
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto">
+                      {notifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={`px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-0 ${notif.read_at ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-blue-900/10'}`}
+                        >
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{notif.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{notif.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               </>
             )}

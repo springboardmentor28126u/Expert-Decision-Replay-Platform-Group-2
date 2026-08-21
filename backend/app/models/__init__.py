@@ -19,10 +19,12 @@ from app.models.approval_chain import ApprovalChainConfig
 from app.models.decision_comment import DecisionComment
 from app.models.decision_comment_like import DecisionCommentLike
 
+from app.models.team_membership import TeamMembership
+
 __all__ = [
     "Team", "Company", "Group", "Membership", "CompanyRole", "GroupMembership",
     "GroupJoinRequest", "GroupJoinRequestStatus", "Notification",
     "User", "UserProfile", "PasswordResetToken", "DecisionCategory",
     "Decision", "Alternative", "DecisionVersion", "Approval", "AuditLog",
-    "ApprovalChainConfig", "DecisionComment", "DecisionCommentLike"
+    "ApprovalChainConfig", "DecisionComment", "DecisionCommentLike", "TeamMembership"
 ]

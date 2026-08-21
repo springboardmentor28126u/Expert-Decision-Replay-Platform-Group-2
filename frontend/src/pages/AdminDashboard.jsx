@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { StatCard } from '../components/dashboard/StatCard';
 import { userService } from '../services/userService';
@@ -12,6 +11,7 @@ import {
   IconUserCog,
   IconUsersGroup,
   IconFileSpreadsheet,
+  IconGitBranch,
 } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 
@@ -32,11 +32,11 @@ const sidebarItems = [
   { label: 'Dashboard', icon: IconHome, path: '/dashboard/admin' },
   { label: 'Users', icon: IconUserCog, path: '/dashboard/admin/users' },
   { label: 'Groups', icon: IconUsersGroup, path: '/dashboard/admin/groups' },
+  { label: 'Approval Chains', icon: IconGitBranch, path: '/dashboard/admin/approval-chains' },
   { label: 'Requests', icon: IconUsers, path: '/dashboard/admin/requests' },
 ];
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
   const [stats, setStats] = useState({ totalUsers: 0, activeDecisions: 0, orgReports: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
           activeDecisions: decStats?.total || 0,
           orgReports: 0,
         });
-      } catch (err) {
+      } catch {
         setError('Failed to load dashboard data');
       } finally {
         setLoading(false);

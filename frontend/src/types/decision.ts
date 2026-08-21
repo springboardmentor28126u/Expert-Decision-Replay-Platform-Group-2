@@ -8,7 +8,7 @@ export interface DecisionCategory {
 }
 
 export type DecisionStatus = 'draft' | 'under_review' | 'approved' | 'rejected' | 'archived';
-export type ImpactLevel = 'low' | 'medium' | 'high';
+export type ImpactLevel = 'low' | 'medium' | 'high' | 'critical';
 export type RiskLevel = 'low' | 'medium' | 'high';
 
 export interface CreatorSummary {
@@ -40,6 +40,8 @@ export interface Decision {
   category: DecisionCategory | null;
   status: DecisionStatus;
   impact_level: ImpactLevel;
+  financial_impact: number | null;
+  risk_score: number | null;
   created_by: string;
   creator: CreatorSummary | null;
   current_version: number;
@@ -61,6 +63,8 @@ export interface DecisionListItem {
   title: string;
   status: DecisionStatus;
   impact_level: ImpactLevel;
+  financial_impact: number | null;
+  risk_score: number | null;
   category: DecisionCategory | null;
   creator: CreatorSummary | null;
   alternative_count: number;
@@ -96,6 +100,8 @@ export interface DecisionCreatePayload {
   problem_statement: string;
   category_id: string;
   impact_level: ImpactLevel;
+  financial_impact?: number | null;
+  risk_score?: number | null;
   group_id: string;
   target_date?: string | null;
   stakeholder_ids?: string[];
@@ -107,6 +113,8 @@ export interface DecisionUpdatePayload {
   category_id?: string;
   group_id?: string;
   impact_level?: ImpactLevel;
+  financial_impact?: number | null;
+  risk_score?: number | null;
   target_date?: string | null;
   stakeholder_ids?: string[];
 }

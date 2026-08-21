@@ -101,7 +101,7 @@ def login(
     login_data = LoginRequest(
         email=username,
         password=password,
-        login_context=login_context if login_context in ("employee", "admin") else None,
+        login_context=login_context if login_context in ("employee", "reviewer", "manager", "admin") else None,
     )
 
     access_token, refresh_token = AuthService.authenticate_user(db, login_data)

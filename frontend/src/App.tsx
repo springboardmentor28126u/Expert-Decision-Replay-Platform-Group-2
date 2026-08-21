@@ -6,6 +6,7 @@ import { RoleGuard } from './components/dashboard/RoleGuard';
 import { Toaster } from './components/ui/toaster';
 
 // Auth Pages
+import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -15,6 +16,7 @@ import ResetPassword from './pages/ResetPassword';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import NotFound from './pages/NotFound';
 
 // Decision Pages
 import DecisionList from './pages/DecisionList';
@@ -28,6 +30,10 @@ import EmployeeDiscussions from './pages/EmployeeDiscussions';
 import EmployeeGroups from './pages/EmployeeGroups';
 import AdminRequests from './pages/AdminRequests';
 import AdminGroups from './pages/AdminGroups';
+import AdminApprovalChains from './pages/AdminApprovalChains';
+import AuditLog from './pages/AuditLog';
+import AdminTeams from './pages/AdminTeams';
+import MyApprovals from './pages/MyApprovals';
 
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -49,7 +55,7 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<AuthLayout><PageTransition><Login /></PageTransition></AuthLayout>} />
+        <Route path="/" element={<AuthLayout><PageTransition><Welcome /></PageTransition></AuthLayout>} />
 
         {/* Auth Routes */}
         <Route element={<AuthLayout />}>
@@ -120,6 +126,14 @@ function AnimatedRoutes() {
             </RoleGuard>
           }
         />
+        <Route
+          path="/dashboard/admin/approval-chains"
+          element={
+            <RoleGuard requiredRole="admin">
+              <PageTransition><AdminApprovalChains /></PageTransition>
+            </RoleGuard>
+          }
+        />
 
         {/* Manager Routes */}
         <Route
@@ -153,6 +167,34 @@ function AnimatedRoutes() {
           element={
             <RoleGuard requiredRole="employee">
               <PageTransition><EmployeeGroups /></PageTransition>
+            </RoleGuard>
+          }
+        />
+
+        {/* Admin Audit and Teams Routes */}
+        <Route
+          path="/dashboard/admin/audit-log"
+          element={
+            <RoleGuard requiredRole="admin">
+              <PageTransition><AuditLog /></PageTransition>
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/dashboard/admin/teams"
+          element={
+            <RoleGuard requiredRole="admin">
+              <PageTransition><AdminTeams /></PageTransition>
+            </RoleGuard>
+          }
+        />
+
+        {/* Manager/Employee Approvals Route */}
+        <Route
+          path="/dashboard/my-approvals"
+          element={
+            <RoleGuard>
+              <PageTransition><MyApprovals /></PageTransition>
             </RoleGuard>
           }
         />
@@ -192,7 +234,7 @@ function AnimatedRoutes() {
         />
 
         {/* 404 */}
-        <Route path="*" element={<AuthLayout><PageTransition><Login /></PageTransition></AuthLayout>} />
+        <Route path="*" element={<AuthLayout><PageTransition><NotFound /></PageTransition></AuthLayout>} />
       </Routes>
     </AnimatePresence>
   );

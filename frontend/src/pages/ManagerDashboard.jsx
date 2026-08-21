@@ -53,7 +53,7 @@ export default function ManagerDashboard() {
           teamDecisions: decData?.total || 0,
           pendingApprovals: pendCount?.total || 0,
         });
-      } catch (err) {
+      } catch {
         setError('Failed to load dashboard data');
       } finally {
         setLoading(false);

@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.api.v1.router import api_router
-from app.middleware.request_logging import RequestLoggingMiddleware
+from app.middleware.request_logging import RequestLoggingMiddleware, SecurityHeadersMiddleware
 
 logger = logging.getLogger("expert_decision")
 
@@ -29,10 +29,15 @@ async def lifespan(app: FastAPI):
     logger.info("Starting %s v%s", settings.APP_NAME, settings.APP_VERSION)
 
     # Create tables if they don't exist (dev convenience; Alembic handles prod)
-    from app.database.base import Base
-    from app.database.session import engine
-    import app.models  # noqa: F401 — ensure all models are imported
-    Base.metadata.create_all(bind=engine)
+    # Only run in DEBUG mode - production should use Alembic migrations
+    if settings.DEBUG:
+        from app.database.base import Base
+        from app.database.session import engine
+        import app.models  # noqa: F401 — ensure all models are imported
+        Base.metadata.create_all(bind=engine)
+        logger.info("DEBUG mode: Tables created via create_all()")
+    else:
+        logger.info("Production mode: Using Alembic for database migrations")
 
     # Seed predefined roles + default admin
     from app.database.seed import run_seed
@@ -85,6 +90,7 @@ def create_app() -> FastAPI:
     # In Starlette, each add_middleware() wraps the previous one, so the
     # LAST added middleware is the OUTERMOST.  CORSMiddleware must be last
     # so it can inject headers on every response, including error responses.
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
 
     # Setup CORS — added LAST so it is the outermost middleware and
@@ -93,8 +99,8 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Company-ID"],
     )
 
     # Setup Rate Limiting

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Expert Decision Replay Platform - Decision Comment Service
 
 Business logic for Instagram-style comments on decisions.
@@ -30,6 +30,7 @@ from app.schemas.decision_comment import (
 )
 from app.services.notification_service import NotificationService
 from app.services.audit_service import AuditService
+from app.api.deps import can_access_decision
 
 
 class DecisionCommentService:
@@ -70,16 +71,21 @@ class DecisionCommentService:
         if not raw_names:
             return []
 
-        mentioned_users: List[User] = []
-        for name in raw_names:
-            user = (
-                db.query(User)
-                .filter(
-                    func.lower(User.full_name) == name.lower(),
-                    User.id.in_(accessible_ids),
-                )
-                .first()
+        # Batch query: find all matching users in one query (fixes N+1)
+        lower_names = [n.lower() for n in raw_names]
+        users = (
+            db.query(User)
+            .filter(
+                func.lower(User.full_name).in_(lower_names),
+                User.id.in_(accessible_ids),
             )
+            .all()
+        )
+        # Map by lowercase name for matching
+        users_by_name = {u.full_name.lower(): u for u in users}
+        mentioned_users = []
+        for name in raw_names:
+            user = users_by_name.get(name.lower())
             if user:
                 mentioned_users.append(user)
         return mentioned_users
@@ -164,6 +170,8 @@ class DecisionCommentService:
         current_user: User,
     ) -> DecisionCommentResponse:
         """Create a new comment (top-level or reply)."""
+        # Defense-in-depth: verify company/group access
+        can_access_decision(current_user, decision, db)
         # Validate parent comment if provided
         if data.parent_comment_id:
             parent = (
@@ -342,7 +350,7 @@ class DecisionCommentService:
                 db.flush()
             except IntegrityError:
                 db.rollback()
-                # Race condition: another request already inserted — treat as unlike
+                # Race condition: another request already inserted â€” treat as unlike
                 existing = (
                     db.query(DecisionCommentLike)
                     .filter(
@@ -411,6 +419,10 @@ class DecisionCommentService:
         user_id: UUID,
     ) -> None:
         """Soft-delete a comment. Allowed for author or group owner (Admin/Manager)."""
+        # Defense-in-depth: verify company/group access
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            can_access_decision(user, decision, db)
         comment = db.query(DecisionComment).filter(DecisionComment.id == comment_id).first()
         if not comment:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")

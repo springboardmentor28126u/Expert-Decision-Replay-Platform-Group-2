@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { StatusBadge } from '../components/dashboard/StatusBadge';
 import { ConfirmModal } from '../components/dashboard/ConfirmModal';
+import { BenchmarkCard } from '../components/BenchmarkCard';
+import { AttestationBadge } from '../components/AttestationBadge';
 import { decisionService } from '../services/decisionService';
 import { approvalService } from '../services/approvalService';
 import type { Decision, DecisionVersion } from '../types/decision';
@@ -45,6 +47,7 @@ const impactColors: Record<string, string> = {
   low: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
   medium: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
   high: 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400',
+  critical: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400',
 };
 
 const riskColors: Record<string, string> = {
@@ -68,6 +71,7 @@ export default function DecisionDetail() {
   const [expandedVersion, setExpandedVersion] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionComment, setActionComment] = useState('');
+  const [attested, setAttested] = useState(false);
   const [actionError, setActionError] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'submit' | 'delete' | null>(null);
@@ -78,6 +82,7 @@ export default function DecisionDetail() {
 
   useEffect(() => {
     if (id) fetchDecision();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchDecision = async () => {
@@ -152,19 +157,19 @@ export default function DecisionDetail() {
     setActionLoading(action);
     setActionError('');
     try {
-      let result;
       if (action === 'approve') {
-        result = await approvalService.approve(id, approvalId, actionComment);
+        await approvalService.approve(id, approvalId, actionComment, attested);
       } else if (action === 'reject') {
-        result = await approvalService.reject(id, approvalId, actionComment);
+        await approvalService.reject(id, approvalId, actionComment, attested);
       } else {
-        result = await approvalService.requestChanges(id, approvalId, actionComment);
+        await approvalService.requestChanges(id, approvalId, actionComment, attested);
       }
       // Refresh approvals and decision
       await fetchApprovals();
       const updatedDecision = await decisionService.get(id);
       setDecision(updatedDecision);
       setActionComment('');
+      setAttested(false);
     } catch (err: any) {
       setActionError(err.response?.data?.detail || 'Action failed');
     }
@@ -306,61 +311,61 @@ export default function DecisionDetail() {
                 <IconTrash size={16} /> Archive
               </button>
             )}
-            </div>
-
-            {/* Outcome section (only for approved decisions) */}
-            {decision.status === 'approved' && (
-              <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                  Outcome
-                </h3>
-                {decision.outcome ? (
-                  <div className="space-y-2">
-                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                      decision.outcome === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
-                      decision.outcome === 'partial' ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' :
-                      decision.outcome === 'failed' ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
-                      'bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                    }`}>
-                      {decision.outcome.charAt(0).toUpperCase() + decision.outcome.slice(1)}
-                    </span>
-                    {decision.outcome_notes && (
-                      <p className="text-sm text-gray-700 dark:text-gray-300">{decision.outcome_notes}</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <select
-                      value={outcome}
-                      onChange={(e) => setOutcome(e.target.value)}
-                      className="w-full max-w-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    >
-                      <option value="">Select outcome...</option>
-                      <option value="success">Success</option>
-                      <option value="partial">Partial</option>
-                      <option value="failed">Failed</option>
-                      <option value="pending">Pending</option>
-                    </select>
-                    <textarea
-                      value={outcomeNotes}
-                      onChange={(e) => setOutcomeNotes(e.target.value)}
-                      placeholder="Outcome notes (optional)..."
-                      rows={2}
-                      className="w-full max-w-md px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
-                    />
-                    <button
-                      onClick={handleSetOutcome}
-                      disabled={!outcome || outcomeSaving}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
-                    >
-                      {outcomeSaving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <IconCheck size={16} />}
-                      Save Outcome
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
+        </div>
+
+          {/* Outcome section (only for approved decisions) */}
+          {decision.status === 'approved' && (
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                Outcome
+              </h3>
+              {decision.outcome ? (
+                <div className="space-y-2">
+                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                    decision.outcome === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' :
+                    decision.outcome === 'partial' ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' :
+                    decision.outcome === 'failed' ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
+                    'bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    {decision.outcome.charAt(0).toUpperCase() + decision.outcome.slice(1)}
+                  </span>
+                  {decision.outcome_notes && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{decision.outcome_notes}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <select
+                    value={outcome}
+                    onChange={(e) => setOutcome(e.target.value)}
+                    className="w-full max-w-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    <option value="">Select outcome...</option>
+                    <option value="success">Success</option>
+                    <option value="partial">Partial</option>
+                    <option value="failed">Failed</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                  <textarea
+                    value={outcomeNotes}
+                    onChange={(e) => setOutcomeNotes(e.target.value)}
+                    placeholder="Outcome notes (optional)..."
+                    rows={2}
+                    className="w-full max-w-md px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                  />
+                  <button
+                    onClick={handleSetOutcome}
+                    disabled={!outcome || outcomeSaving}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                  >
+                    {outcomeSaving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <IconCheck size={16} />}
+                    Save Outcome
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Tabs */}
         <div className="border-b border-gray-200 dark:border-gray-800">
@@ -418,6 +423,11 @@ export default function DecisionDetail() {
                 </p>
               </div>
             </div>
+            <BenchmarkCard
+              companyId={decision.company_id}
+              categoryId={decision.category_id}
+              financialImpact={decision.financial_impact}
+            />
           </div>
         )}
 
@@ -664,6 +674,17 @@ export default function DecisionDetail() {
                         </span>
                       </div>
 
+                      {approval.signature_hash && (
+                        <div className="mt-2">
+                          <AttestationBadge
+                            decisionId={id!}
+                            approvalId={approval.id}
+                            signatureHash={approval.signature_hash}
+                            attestedAt={approval.attested_at}
+                          />
+                        </div>
+                      )}
+
                       {canAct && (
                         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
                           <textarea
@@ -673,6 +694,17 @@ export default function DecisionDetail() {
                             rows={2}
                             className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
                           />
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={attested}
+                              onChange={(e) => setAttested(e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              I have reviewed this decision in its entirety and attest to my professional judgment
+                            </span>
+                          </label>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleApprovalAction(approval.id, 'approve')}

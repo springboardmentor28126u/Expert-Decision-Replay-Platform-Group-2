@@ -1,4 +1,4 @@
-"""
+﻿"""
 Expert Decision Replay Platform - Audit Log Model
 
 Immutable log of every state-changing action in the platform.
@@ -26,7 +26,7 @@ class AuditLog(Base):
                 "submit", "edit", "archive", "request_changes").
         old_value: Previous state as JSONB (nullable for create actions).
         new_value: New state as JSONB.
-        performed_by: FK to users — who performed this action.
+        performed_by: FK to users â€” who performed this action.
         created_at: Timestamp of the action.
     """
     __tablename__ = "audit_logs"
@@ -41,6 +41,13 @@ class AuditLog(Base):
         UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=False,
+        index=True,
+    )
+    company_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("companies.id"),
+        nullable=True,
+        index=True,
     )
     created_at = Column(
         DateTime(timezone=True),

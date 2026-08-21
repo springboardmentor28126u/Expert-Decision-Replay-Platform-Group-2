@@ -21,11 +21,12 @@ export function ReplyList({
   onCollapse,
 }: ReplyListProps) {
   const [replies, setReplies] = useState<DecisionComment[]>([]);
-  const [total, setTotal] = useState(0);
+  const [_total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchReplies();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commentId]);
 
   const fetchReplies = async () => {

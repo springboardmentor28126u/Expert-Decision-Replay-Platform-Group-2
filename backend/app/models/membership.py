@@ -18,6 +18,7 @@ class CompanyRole(str, enum.Enum):
     """Company-scoped user roles."""
     ADMIN = "admin"
     MANAGER = "manager"
+    REVIEWER = "reviewer"
     EMPLOYEE = "employee"
 
 

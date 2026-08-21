@@ -11,27 +11,31 @@ from sqlalchemy.orm import Session
 
 from app.models.alternative import Alternative
 from app.models.decision import Decision, DecisionStatus, ImpactLevel
+from app.models.user import User
 from app.schemas.alternative import AlternativeCreate, AlternativeUpdate
+from app.api.deps import can_access_decision
 
 
 class AlternativeService:
     """Service for managing decision alternatives."""
 
     @staticmethod
-    def _get_decision_for_edit(db: Session, decision_id: UUID, user_id: UUID) -> Decision:
-        """Get a decision and verify it's editable by this user."""
+    def _get_decision_for_edit(db: Session, decision_id: UUID, user: User) -> Decision:
+        """Get a decision and verify it's editable by this user (with full access check)."""
         decision = db.query(Decision).filter(Decision.id == decision_id).first()
         if not decision:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Decision not found",
             )
+        # Defense-in-depth: verify company/group access even if route already checked
+        can_access_decision(user, decision, db)
         if decision.status != DecisionStatus.DRAFT:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Alternatives can only be modified for draft decisions",
             )
-        if decision.created_by != user_id:
+        if decision.created_by != user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only the decision creator can modify alternatives",
@@ -43,10 +47,10 @@ class AlternativeService:
         db: Session,
         decision_id: UUID,
         data: AlternativeCreate,
-        user_id: UUID,
+        user: User,
     ) -> Alternative:
         """Add a new alternative to a decision."""
-        AlternativeService._get_decision_for_edit(db, decision_id, user_id)
+        AlternativeService._get_decision_for_edit(db, decision_id, user)
 
         # Map risk_level string to enum
         try:
@@ -79,10 +83,10 @@ class AlternativeService:
         decision_id: UUID,
         alternative_id: UUID,
         data: AlternativeUpdate,
-        user_id: UUID,
+        user: User,
     ) -> Alternative:
         """Update an existing alternative."""
-        AlternativeService._get_decision_for_edit(db, decision_id, user_id)
+        AlternativeService._get_decision_for_edit(db, decision_id, user)
 
         alternative = (
             db.query(Alternative)
@@ -117,10 +121,10 @@ class AlternativeService:
         db: Session,
         decision_id: UUID,
         alternative_id: UUID,
-        user_id: UUID,
+        user: User,
     ) -> None:
         """Remove an alternative from a decision."""
-        AlternativeService._get_decision_for_edit(db, decision_id, user_id)
+        AlternativeService._get_decision_for_edit(db, decision_id, user)
 
         alternative = (
             db.query(Alternative)

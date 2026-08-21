@@ -24,7 +24,7 @@ export function CommentThread({ decisionId }: CommentThreadProps) {
   const fetchComments = useCallback(async (reset = false) => {
     const skip = reset ? 0 : page * PAGE_SIZE;
     try {
-      const result = await decisionCommentService.listComments(decisionId, skip, PAGE_SIZE);
+      const result = await decisionCommentService.list(decisionId, skip, PAGE_SIZE);
       if (reset) {
         setComments(result.items);
         setPage(1);
@@ -43,6 +43,7 @@ export function CommentThread({ decisionId }: CommentThreadProps) {
 
   useEffect(() => {
     fetchComments(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [decisionId]);
 
   // Infinite scroll observer

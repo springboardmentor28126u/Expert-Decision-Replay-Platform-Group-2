@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { StatusBadge } from '../components/dashboard/StatusBadge';
 import { decisionService } from '../services/decisionService';
@@ -9,7 +8,6 @@ import type { DecisionListItem, DecisionCategory } from '../types/decision';
 import {
   IconPlus,
   IconSearch,
-  IconFilter,
   IconChevronRight,
   IconFileText,
   IconHome,
@@ -36,7 +34,6 @@ const impactColors: Record<string, string> = {
 
 export default function DecisionList() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [decisions, setDecisions] = useState<DecisionListItem[]>([]);
   const [categories, setCategories] = useState<DecisionCategory[]>([]);
   const [total, setTotal] = useState(0);

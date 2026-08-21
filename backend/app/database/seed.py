@@ -6,6 +6,7 @@ Idempotent — safe to run multiple times.
 """
 
 import logging
+import os
 from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal
@@ -16,10 +17,11 @@ from app.core.security import hash_password
 
 logger = logging.getLogger("expert_decision")
 
+# Use environment variables for passwords in production
 DEFAULT_ADMIN = {
     "full_name": "System Administrator",
-    "email": "admin@edrp.com",
-    "password": "Admin@123",
+    "email": os.environ.get("ADMIN_EMAIL", "admin@edrp.com"),
+    "password": os.environ.get("ADMIN_PASSWORD", "Admin@123"),
 }
 
 # Default decision categories
@@ -35,11 +37,11 @@ DEFAULT_CATEGORIES = [
 ]
 
 DEMO_USERS = [
-    {"full_name": "Alice Johnson", "email": "alice@demo.com", "password": "Demo@123", "role": UserRole.EMPLOYEE},
-    {"full_name": "Bob Smith", "email": "bob@demo.com", "password": "Demo@123", "role": UserRole.REVIEWER},
-    {"full_name": "Carol Williams", "email": "carol@demo.com", "password": "Demo@123", "role": UserRole.REVIEWER},
-    {"full_name": "Dave Brown", "email": "dave@demo.com", "password": "Demo@123", "role": UserRole.MANAGER},
-    {"full_name": "Demo Admin", "email": "admin@demo.com", "password": "Demo@123", "role": UserRole.ADMIN},
+    {"full_name": "Alice Johnson", "email": "alice@demo.com", "password": os.environ.get("DEMO_PASSWORD", "Demo@123"), "role": UserRole.EMPLOYEE},
+    {"full_name": "Bob Smith", "email": "bob@demo.com", "password": os.environ.get("DEMO_PASSWORD", "Demo@123"), "role": UserRole.REVIEWER},
+    {"full_name": "Carol Williams", "email": "carol@demo.com", "password": os.environ.get("DEMO_PASSWORD", "Demo@123"), "role": UserRole.REVIEWER},
+    {"full_name": "Dave Brown", "email": "dave@demo.com", "password": os.environ.get("DEMO_PASSWORD", "Demo@123"), "role": UserRole.MANAGER},
+    {"full_name": "Demo Admin", "email": "admin@demo.com", "password": os.environ.get("DEMO_PASSWORD", "Demo@123"), "role": UserRole.ADMIN},
 ]
 
 
@@ -88,9 +90,8 @@ def seed_admin(db: Session) -> None:
     db.add(gm)
 
     logger.info(
-        "Created default admin: %s (password: %s)",
+        "Created default admin: %s",
         DEFAULT_ADMIN["email"],
-        DEFAULT_ADMIN["password"],
     )
 
 
@@ -155,25 +156,48 @@ def seed_demo_users(db: Session) -> None:
 
 
 def seed_approval_chain(db: Session) -> None:
-    """Create approval chain config for Engineering category."""
+    """Create approval chain config for default company (category='default' and category='Engineering')."""
+    from app.models.company import Company
     from app.models.approval_chain import ApprovalChainConfig
 
-    engineering = db.query(DecisionCategory).filter(DecisionCategory.name == "Engineering").first()
-    if not engineering:
-        logger.warning("Engineering category not found — skipping approval chain seed.")
+    default_company = db.query(Company).filter(Company.slug == "default-company").first()
+    if not default_company:
+        logger.warning("Default company not found — skipping approval chain seed.")
         return
 
-    existing = db.query(ApprovalChainConfig).filter(ApprovalChainConfig.category_id == engineering.id).first()
-    if existing:
-        return
+    # 1. Default fallback chain for company
+    existing_default = db.query(ApprovalChainConfig).filter(
+        ApprovalChainConfig.company_id == default_company.id,
+        ApprovalChainConfig.group_id.is_(None),
+        ApprovalChainConfig.category == "default"
+    ).first()
+    if not existing_default:
+        default_chain = ApprovalChainConfig(
+            company_id=default_company.id,
+            group_id=None,
+            category="default",
+            levels=[{"level": 1, "role": "manager"}],
+            sla_hours=24,
+        )
+        db.add(default_chain)
+        logger.info("Created default approval chain for Default Company: [manager]")
 
-    chain = ApprovalChainConfig(
-        category_id=engineering.id,
-        roles=["reviewer", "manager"],
-        sla_hours=48,
-    )
-    db.add(chain)
-    logger.info("Created approval chain for Engineering: [reviewer, manager]")
+    # 2. Engineering chain for company
+    existing_eng = db.query(ApprovalChainConfig).filter(
+        ApprovalChainConfig.company_id == default_company.id,
+        ApprovalChainConfig.group_id.is_(None),
+        ApprovalChainConfig.category == "Engineering"
+    ).first()
+    if not existing_eng:
+        eng_chain = ApprovalChainConfig(
+            company_id=default_company.id,
+            group_id=None,
+            category="Engineering",
+            levels=[{"level": 1, "role": "employee"}, {"level": 2, "role": "manager"}],
+            sla_hours=48,
+        )
+        db.add(eng_chain)
+        logger.info("Created approval chain for Engineering: [employee, manager]")
 
 
 def run_seed() -> None:

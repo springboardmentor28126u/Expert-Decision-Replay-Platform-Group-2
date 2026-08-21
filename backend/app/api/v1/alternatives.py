@@ -55,7 +55,7 @@ def create_alternative(
         from fastapi import HTTPException, status as http_status
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Decision not found")
     can_access_decision(current_user, decision, db)
-    return AlternativeService.create(db, decision_id, data, current_user.id)
+    return AlternativeService.create(db, decision_id, data, current_user)
 
 
 @router.put(
@@ -75,7 +75,7 @@ def update_alternative(
         from fastapi import HTTPException, status as http_status
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Decision not found")
     can_access_decision(current_user, decision, db)
-    return AlternativeService.update(db, decision_id, alternative_id, data, current_user.id)
+    return AlternativeService.update(db, decision_id, alternative_id, data, current_user)
 
 
 @router.delete(
@@ -94,5 +94,5 @@ def delete_alternative(
         from fastapi import HTTPException, status as http_status
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Decision not found")
     can_access_decision(current_user, decision, db)
-    AlternativeService.delete(db, decision_id, alternative_id, current_user.id)
+    AlternativeService.delete(db, decision_id, alternative_id, current_user)
     return {"message": "Alternative deleted successfully"}

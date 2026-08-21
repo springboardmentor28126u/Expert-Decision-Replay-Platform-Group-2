@@ -25,6 +25,7 @@ class AuditService:
         performed_by: UUID,
         old_value: Optional[Any] = None,
         new_value: Optional[Any] = None,
+        company_id: Optional[UUID] = None,
     ) -> AuditLog:
         """
         Create an immutable audit log entry.
@@ -37,6 +38,7 @@ class AuditService:
             performed_by: UUID of the acting user.
             old_value: Previous state snapshot (JSONB-serializable).
             new_value: New state snapshot (JSONB-serializable).
+            company_id: Company scoping for multi-tenant isolation.
 
         Returns:
             The created AuditLog entry (not yet committed — caller owns the transaction).
@@ -48,6 +50,7 @@ class AuditService:
             old_value=old_value,
             new_value=new_value,
             performed_by=performed_by,
+            company_id=company_id,
         )
         db.add(entry)
         return entry

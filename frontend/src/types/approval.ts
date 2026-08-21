@@ -10,12 +10,16 @@ export interface ApprovalRow {
   status: ApprovalStatus;
   comments: string | null;
   acted_at: string | null;
+  signature_hash: string | null;
+  attested_at: string | null;
+  attestation_text: string | null;
   created_at: string;
 }
 
 export interface ApprovalActionPayload {
   action: 'approved' | 'rejected' | 'changes_requested';
   comments?: string;
+  attested?: boolean;
 }
 
 export interface PendingApprovalsResponse {

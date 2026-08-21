@@ -85,6 +85,10 @@ def get_optional_current_user(token: str | None = Depends(oauth2_scheme_optional
         return None
 
 
+# Alias for clarity in endpoints that require an active user
+get_current_active_user = get_current_user
+
+
 def require_role(*allowed_roles: UserRole):
     """Dependency generator for global role-based access control."""
     def checker(current_user: User = Depends(get_current_user)) -> User:

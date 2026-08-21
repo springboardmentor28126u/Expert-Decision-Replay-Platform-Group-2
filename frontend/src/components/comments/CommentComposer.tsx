@@ -136,7 +136,7 @@ export function CommentComposer({
       };
       const realComment = await decisionCommentService.create(decisionId, payload);
       // Replace the optimistic comment with the real one
-      onCommentCreated(realComment, tempId);
+      onCommentCreated(realComment);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to post comment');
       // Keep the temp comment visible with error state

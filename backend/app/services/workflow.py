@@ -1,4 +1,4 @@
-"""
+﻿"""
 Expert Decision Replay Platform - Workflow Service
 
 Handles transition logic, state machine guards, audit logging, and escalations.
@@ -44,18 +44,42 @@ def log_audit_event(
     entity_id: UUID,
     performed_by: UUID,
     action: str,
-    diff: dict = None
+    diff: dict = None,
+    company_id: UUID = None,
 ) -> AuditLog:
     """
     Writes a standardized audit log entry.
+    Splits the diff dict into old_value and new_value where possible.
     Must be called within an active transaction so it commits together with the change.
     """
+    old_value = None
+    new_value = diff or {}
+
+    # If diff contains nested dicts with 'old'/'new' keys, split them
+    # Handle both single-key and multi-key diffs
+    if diff and isinstance(diff, dict):
+        old_parts = {}
+        new_parts = {}
+        has_old_new = False
+        for key, val in diff.items():
+            if isinstance(val, dict) and "old" in val and "new" in val:
+                old_parts[key] = val["old"]
+                new_parts[key] = val["new"]
+                has_old_new = True
+            else:
+                new_parts[key] = val
+        if has_old_new:
+            old_value = old_parts if old_parts else None
+            new_value = new_parts
+
     log_entry = AuditLog(
         entity_type=entity_type,
         entity_id=entity_id,
         performed_by=performed_by,
         action=action,
-        new_value=diff or {},
+        old_value=old_value,
+        new_value=new_value,
+        company_id=company_id,
     )
     db.add(log_entry)
     return log_entry

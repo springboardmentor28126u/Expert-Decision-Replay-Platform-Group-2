@@ -89,10 +89,10 @@ def _ensure_seed_data(admin_token: str) -> tuple:
         company_id = company["id"]
 
     # Get or create default group under this company
-    groups = _get("/groups", admin_token, params={"company_id": company_id})
+    groups = _get("/admin/groups", admin_token, params={"company_id": company_id})
     default_group_id = groups[0]["id"] if groups else None
     if not default_group_id:
-        group = _post(f"/groups?company_id={company_id}", admin_token, {"name": "Engineering"})
+        group = _post(f"/admin/groups?company_id={company_id}", admin_token, {"name": "Engineering"})
         default_group_id = group["id"]
 
     # Get or create Engineering category
@@ -110,12 +110,22 @@ def _ensure_seed_data(admin_token: str) -> tuple:
     db = SessionLocal()
     try:
         from app.models.approval_chain import ApprovalChainConfig
-        existing = db.query(ApprovalChainConfig).filter(ApprovalChainConfig.category_id == cat_id).first()
+        existing = db.query(ApprovalChainConfig).filter(
+            ApprovalChainConfig.company_id == company_id,
+            ApprovalChainConfig.group_id.is_(None),
+            ApprovalChainConfig.category == "Engineering",
+        ).first()
         if not existing:
-            chain = ApprovalChainConfig(category_id=cat_id, roles=["reviewer", "manager"], sla_hours=48)
+            chain = ApprovalChainConfig(
+                company_id=company_id,
+                group_id=None,
+                category="Engineering",
+                levels=[{"level": 1, "role": "employee"}, {"level": 2, "role": "manager"}],
+                sla_hours=48,
+            )
             db.add(chain)
             db.commit()
-            print("   [SETUP] Created approval chain: [reviewer, manager]")
+            print("   [SETUP] Created approval chain: [employee, manager]")
     finally:
         db.close()
 

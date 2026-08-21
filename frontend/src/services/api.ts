@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true';
 
 export const api = axios.create({
@@ -93,7 +93,7 @@ api.interceptors.response.use(
 
         // return originalRequest object with Axios.
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch {
         // If refresh fails, clear auth state via React callback
         setAccessToken(null);
         if (onAuthFailure) {

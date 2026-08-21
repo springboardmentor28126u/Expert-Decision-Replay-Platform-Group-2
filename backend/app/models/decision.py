@@ -1,15 +1,15 @@
-"""
+﻿"""
 Expert Decision Replay Platform - Decision Model
 
-Defines the decisions table — the core entity of the platform.
-Every decision moves through: DRAFT → UNDER_REVIEW → APPROVED/REJECTED → ARCHIVED.
+Defines the decisions table â€” the core entity of the platform.
+Every decision moves through: DRAFT â†’ UNDER_REVIEW â†’ APPROVED/REJECTED â†’ ARCHIVED.
 """
 
 import uuid
 import enum
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, String, Text, DateTime, Date, Integer, Enum, ForeignKey, Index
+    Column, String, Text, DateTime, Date, Integer, Numeric, Enum, ForeignKey, Index
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
@@ -31,6 +31,7 @@ class ImpactLevel(str, enum.Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+    CRITICAL = "critical"
 
 
 class ImplementationStatus(str, enum.Enum):
@@ -50,7 +51,7 @@ class DecisionOutcome(str, enum.Enum):
 
 class Decision(Base):
     """
-    Decision model — the central entity.
+    Decision model â€” the central entity.
 
     Attributes:
         id: Unique decision identifier (UUID).
@@ -58,10 +59,11 @@ class Decision(Base):
         problem_statement: Detailed description of the problem.
         category_id: FK to decision_categories table.
         status: Current lifecycle status.
-        impact_level: Low/Medium/High impact classification.
-        created_by: FK to users — the decision creator.
+        impact_level: Low/Medium/High/Critical impact classification.
+        financial_impact: Optional dollar amount for rule evaluation.
+        risk_score: Optional risk score (1-10) for rule evaluation.
+        created_by: FK to users â€” the decision creator.
         current_version: Current version number (incremented on submit).
-        locked: Whether the decision is locked from editing.
         target_date: Target date for making the decision.
         stakeholder_ids: Optional JSON array of user IDs tagged as stakeholders.
         implementation_status: Post-approval tracking status.
@@ -102,7 +104,9 @@ class Decision(Base):
         default=ImpactLevel.MEDIUM,
         nullable=False,
     )
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    financial_impact = Column(Numeric(12, 2), nullable=True)
+    risk_score = Column(Integer, nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     current_version = Column(Integer, default=1, nullable=False)
     target_date = Column(Date, nullable=True)
     stakeholder_ids = Column(JSONB, nullable=True, default=list)
@@ -154,6 +158,7 @@ class Decision(Base):
     __table_args__ = (
         Index("ix_decisions_company_group_status", "company_id", "group_id", "status"),
         Index("ix_decisions_status_category_creator", "status", "category_id", "created_by"),
+        Index("ix_decisions_company_category_status", "company_id", "category_id", "status"),
     )
 
     def __repr__(self) -> str:

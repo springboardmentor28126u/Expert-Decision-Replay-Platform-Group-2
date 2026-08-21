@@ -64,12 +64,14 @@ export default function AdminRequests() {
 
   useEffect(() => {
     loadRequests();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, groupId]);
 
   useEffect(() => {
     if (urlStatus !== status) {
       setStatus(urlStatus);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlStatus]);
 
   const decide = async (request: GroupJoinRequest, decision: 'accept' | 'reject') => {

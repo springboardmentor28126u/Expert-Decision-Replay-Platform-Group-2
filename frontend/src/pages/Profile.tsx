@@ -15,8 +15,6 @@ import {
   IconFileText,
   IconMessageCircle,
   IconUserCog,
-  IconFileSpreadsheet,
-  IconChartBar,
   IconUsers,
   IconChecklist,
 } from '@tabler/icons-react';
@@ -254,8 +252,8 @@ export default function Profile() {
                   <div className="space-y-4">
                     <p>As a Manager, you oversee the decision-making workflows for your designated team.</p>
                     <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-                      <p className="font-medium text-gray-900 dark:text-white mb-1">Your Team: {user?.team?.name || "Not assigned"}</p>
-                      <p className="text-xs text-gray-500">{user?.team?.description || "No team description available."}</p>
+                      <p className="font-medium text-gray-900 dark:text-white mb-1">Your Team: {user?.profile?.department || "Not assigned"}</p>
+                      <p className="text-xs text-gray-500">{user?.profile?.designation || "No team description available."}</p>
                     </div>
                   </div>
                 )}

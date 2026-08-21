@@ -1,7 +1,6 @@
 import api from './api';
 import type {
   Decision,
-  DecisionListItem,
   DecisionCreatePayload,
   DecisionUpdatePayload,
   DecisionVersion,

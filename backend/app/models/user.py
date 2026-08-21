@@ -72,6 +72,7 @@ class User(Base):
     # Relationships
     memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
     group_memberships = relationship("GroupMembership", back_populates="user", cascade="all, delete-orphan")
+    team_memberships = relationship("TeamMembership", back_populates="user", cascade="all, delete-orphan")
     profile = relationship(
         "UserProfile",
         back_populates="user",

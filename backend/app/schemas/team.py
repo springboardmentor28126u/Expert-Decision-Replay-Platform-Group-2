@@ -30,6 +30,7 @@ class TeamUpdate(BaseModel):
 class TeamResponse(BaseModel):
     """Schema for team in API responses."""
     id: UUID
+    company_id: UUID
     name: str
     description: Optional[str] = None
     created_at: datetime
@@ -38,3 +39,18 @@ class TeamResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class TeamMemberAdd(BaseModel):
+    """Schema for adding a member to a team."""
+    user_id: UUID
+    role: Optional[str] = Field(default="member", pattern=r"^(leader|member)$")
+
+
+class TeamMemberResponse(BaseModel):
+    """Schema for team member in API responses."""
+    id: UUID
+    full_name: str
+    email: str
+    role: str
+    joined_at: datetime

@@ -14,13 +14,14 @@ class RegisterRequest(BaseModel):
     email: EmailStr = Field(..., examples=["john.doe@example.com"])
     password: str = Field(..., min_length=8, max_length=128, examples=["StrongP@ss1"])
     confirm_password: str = Field(..., min_length=8, max_length=128, examples=["StrongP@ss1"])
+    role: Optional[str] = Field(None, pattern="^(employee|reviewer|manager|admin)$")
 
 
 class LoginRequest(BaseModel):
     """Schema for user login."""
     email: EmailStr = Field(..., examples=["john.doe@example.com"])
     password: str = Field(..., min_length=1, examples=["StrongP@ss1"])
-    login_context: Optional[str] = Field(None, pattern="^(employee|admin)$")
+    login_context: Optional[str] = Field(None, pattern="^(employee|reviewer|manager|admin)$")
 
 
 

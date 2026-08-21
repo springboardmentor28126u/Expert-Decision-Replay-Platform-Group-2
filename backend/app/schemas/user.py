@@ -59,6 +59,11 @@ class AssignRoleRequest(BaseModel):
     role: str = Field(..., min_length=1)
 
 
+class AssignTeamRequest(BaseModel):
+    """Schema for assigning a user to a team."""
+    team_id: UUID
+
+
 class UserResponse(BaseModel):
     """Schema for user in API responses."""
     id: UUID

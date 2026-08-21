@@ -5,6 +5,8 @@ import { DashboardLayout } from '../components/dashboard/DashboardLayout';
 import { decisionService } from '../services/decisionService';
 import { alternativeService } from '../services/alternativeService';
 import { categoryService } from '../services/categoryService';
+import { approvalChainService } from '../services/approvalChainService';
+import { routingRuleService, type RoutingPreviewResult } from '../services/routingRuleService';
 import type {
   DecisionCategory,
   DecisionCreatePayload,
@@ -45,7 +47,7 @@ interface AlternativeForm extends AlternativeCreatePayload {
 
 export default function CreateDecision() {
   const navigate = useNavigate();
-  const { groups, currentGroupId, switchGroup } = useAuth();
+  const { groups, currentGroupId, switchGroup, currentCompanyId } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [categories, setCategories] = useState<DecisionCategory[]>([]);
   const [saving, setSaving] = useState(false);
@@ -56,12 +58,20 @@ export default function CreateDecision() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [chainWarning, setChainWarning] = useState<{
+    message: string;
+    adminName?: string | null;
+    adminEmail?: string | null;
+  } | null>(null);
+  const [routingPreview, setRoutingPreview] = useState<RoutingPreviewResult | null>(null);
 
   // Step 1 — Basic Info
   const [title, setTitle] = useState('');
   const [problemStatement, setProblemStatement] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [impactLevel, setImpactLevel] = useState<string>('medium');
+  const [financialImpact, setFinancialImpact] = useState<string>('');
+  const [riskScore, setRiskScore] = useState<string>('');
   const [targetDate, setTargetDate] = useState('');
 
   // Step 2 — Alternatives
@@ -99,6 +109,38 @@ export default function CreateDecision() {
   }, [loadCategories]);
 
   useEffect(() => {
+    if (!categoryId || !currentCompanyId) {
+      setChainWarning(null);
+      return;
+    }
+    const selectedCat = categories.find((c) => c.id === categoryId);
+    if (!selectedCat) return;
+
+    approvalChainService
+      .check(currentCompanyId, selectedCat.name, groupId)
+      .then((res) => {
+        if (!res.has_chain) {
+          setChainWarning({
+            message: `This category isn't set up for approval yet — contact your administrator`,
+            adminName: res.admin_name,
+            adminEmail: res.admin_email,
+          });
+        } else if (res.approver_ok === false) {
+          setChainWarning({
+            message: `The approval chain for this category needs a ${res.missing_role ?? 'member'} in the selected group, but nobody is eligible to approve. Your administrator can add someone to this group or adjust the approval chain.`,
+            adminName: res.admin_name,
+            adminEmail: res.admin_email,
+          });
+        } else {
+          setChainWarning(null);
+        }
+      })
+      .catch(() => {
+        setChainWarning(null);
+      });
+  }, [categoryId, groupId, currentCompanyId, categories]);
+
+  useEffect(() => {
     if (currentGroupId) {
       setGroupId(currentGroupId);
     } else if (groups.length > 0) {
@@ -124,6 +166,8 @@ export default function CreateDecision() {
             problem_statement: problemStatement,
             category_id: categoryId,
             impact_level: impactLevel as ImpactLevel,
+            financial_impact: financialImpact ? parseFloat(financialImpact) : null,
+            risk_score: riskScore ? parseInt(riskScore, 10) : null,
             group_id: groupId || '',
             target_date: targetDate || null,
           };
@@ -159,6 +203,17 @@ export default function CreateDecision() {
         return;
       }
       setCurrentStep(2);
+      // Fetch routing preview for Step 2
+      if (currentCompanyId && categoryId) {
+        const catName = categories.find(c => c.id === categoryId)?.name || '';
+        routingRuleService.preview(
+          currentCompanyId,
+          catName,
+          financialImpact ? parseFloat(financialImpact) : undefined,
+          riskScore ? parseInt(riskScore, 10) : undefined,
+          impactLevel,
+        ).then(setRoutingPreview).catch(() => setRoutingPreview(null));
+      }
     }
   };
 
@@ -313,6 +368,8 @@ export default function CreateDecision() {
           problem_statement: problemStatement,
           category_id: categoryId,
           impact_level: impactLevel as ImpactLevel,
+          financial_impact: financialImpact ? parseFloat(financialImpact) : null,
+          risk_score: riskScore ? parseInt(riskScore, 10) : null,
           group_id: groupId || '',
           target_date: targetDate || null,
         };
@@ -354,33 +411,33 @@ export default function CreateDecision() {
 
         {/* Steps indicator */}
         {groupId && (
-        <div className="flex items-center gap-2">
-          {steps.map((step, idx) => (
-            <div key={step} className="flex items-center gap-2 flex-1">
-              <div
-                className={`flex items-center justify-center h-8 w-8 rounded-full text-sm font-bold transition-colors ${idx < currentStep
-                    ? 'bg-green-500 text-white'
-                    : idx === currentStep
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                  }`}
-              >
-                {idx < currentStep ? <IconCheck size={16} /> : idx + 1}
+          <div className="flex items-center gap-2">
+            {steps.map((step, idx) => (
+              <div key={step} className="flex items-center gap-2 flex-1">
+                <div
+                  className={`flex items-center justify-center h-8 w-8 rounded-full text-sm font-bold transition-colors ${idx < currentStep
+                      ? 'bg-green-500 text-white'
+                      : idx === currentStep
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                    }`}
+                >
+                  {idx < currentStep ? <IconCheck size={16} /> : idx + 1}
+                </div>
+                <span
+                  className={`text-sm font-medium hidden sm:block ${idx === currentStep
+                      ? 'text-indigo-600 dark:text-indigo-400'
+                      : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                >
+                  {step}
+                </span>
+                {idx < steps.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-2 ${idx < currentStep ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                )}
               </div>
-              <span
-                className={`text-sm font-medium hidden sm:block ${idx === currentStep
-                    ? 'text-indigo-600 dark:text-indigo-400'
-                    : 'text-gray-500 dark:text-gray-400'
-                  }`}
-              >
-                {step}
-              </span>
-              {idx < steps.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-2 ${idx < currentStep ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
         )}
 
         {/* Error banner */}
@@ -443,463 +500,504 @@ export default function CreateDecision() {
           </div>
         ) : (
           <>
-        {/* Step 1 — Basic Info */}
-        {currentStep === 0 && (
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h2>
+            {/* Step 1 — Basic Info */}
+            {currentStep === 0 && (
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 p-6 space-y-5">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h2>
 
-            {categoriesError && (
-              <div className="flex items-center justify-between p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
-                <span>{categoriesError}</span>
-                <button onClick={loadCategories} className="text-sm font-medium underline hover:no-underline">Retry</button>
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="decision-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="decision-title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Q3 Budget Allocation"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="group-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Group <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="group-select"
-                value={groupId || ''}
-                onChange={(e) => {
-                  setGroupId(e.target.value);
-                  switchGroup(e.target.value);
-                }}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              >
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>{group.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Category <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="category-select"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              >
-                <option value="">Select category...</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="problem-statement" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Problem Statement <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="problem-statement"
-                rows={4}
-                value={problemStatement}
-                onChange={(e) => setProblemStatement(e.target.value)}
-                placeholder="Describe the problem or opportunity that requires a decision..."
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="impact-level" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Impact Level
-                </label>
-                <select
-                  id="impact-level"
-                  value={impactLevel}
-                  onChange={(e) => setImpactLevel(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="target-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Target Decision Date
-                </label>
-                <input
-                  id="target-date"
-                  type="date"
-                  value={targetDate}
-                  onChange={(e) => setTargetDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2 — Alternatives */}
-        {currentStep === 1 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Alternatives ({alternatives.length})
-              </h2>
-              <button
-                onClick={addAlternative}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-              >
-                <IconPlus size={16} /> Add Alternative
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Add at least two alternatives and mark at least one as recommended (★). Save each alternative before proceeding.
-            </p>
-
-            {alternatives.length === 0 && (
-              <div className="rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">No alternatives yet</p>
-                <button
-                  onClick={addAlternative}
-                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-medium transition-colors"
-                >
-                  <IconPlus size={16} /> Add First Alternative
-                </button>
-              </div>
-            )}
-
-            {alternatives.map((alt) => (
-              <div
-                key={alt._key}
-                className={`rounded-2xl border bg-white dark:bg-gray-900/80 p-6 space-y-5 shadow-sm transition-all duration-200 ${alt._saved
-                    ? 'border-green-200 dark:border-green-800/40'
-                    : 'border-gray-200 dark:border-gray-800/60'
-                  }`}
-              >
-                {/* Card header */}
-                <div className="flex items-center justify-between pb-1">
-                  <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                    Alternative {alternatives.findIndex(a => a._key === alt._key) + 1}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {alt._saved ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-0.5 rounded-full">
-                        <IconCheck size={12} /> Saved
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 px-2.5 py-0.5 rounded-full">
-                        <span className="h-1.5 w-1.5 rounded-full bg-gray-300 dark:bg-gray-600" /> Unsaved
-                      </span>
-                    )}
-                    <button
-                      onClick={() => deleteAlternative(alt)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                    >
-                      <IconTrash size={16} />
-                    </button>
+                {categoriesError && (
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
+                    <span>{categoriesError}</span>
+                    <button onClick={loadCategories} className="text-sm font-medium underline hover:no-underline">Retry</button>
                   </div>
-                </div>
+                )}
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => toggleRecommended(alt._key)}
-                    className={`p-1 rounded-lg transition-colors ${alt.is_recommended
-                        ? 'text-amber-500 hover:text-amber-600'
-                        : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'
-                      }`}
-                    title={alt.is_recommended ? 'Recommended' : 'Mark as recommended'}
-                  >
-                    {alt.is_recommended ? <IconStarFilled size={20} /> : <IconStar size={20} />}
-                  </button>
+                <div>
+                  <label htmlFor="decision-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Title <span className="text-red-500">*</span>
+                  </label>
                   <input
+                    id="decision-title"
                     type="text"
-                    value={alt.title}
-                    onChange={(e) => updateAlternative(alt._key, 'title', e.target.value)}
-                    placeholder="Alternative title"
-                    className="text-base font-semibold text-gray-900 dark:text-white bg-transparent border-none outline-none placeholder:text-gray-400 flex-1"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g., Q3 Budget Allocation"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
 
-                <textarea
-                  value={alt.description || ''}
-                  onChange={(e) => updateAlternative(alt._key, 'description', e.target.value)}
-                  placeholder="Describe this alternative..."
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Pros */}
-                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-xl p-3">
-                    <label className="block text-xs font-semibold text-green-700 dark:text-green-400 mb-1.5 uppercase tracking-wide">
-                      Pros
-                    </label>
-                    {alt.pros.map((pro, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 mb-1.5">
-                        <span className="text-green-500 text-sm">+</span>
-                        <input
-                          type="text"
-                          value={pro}
-                          onChange={(e) => updateListItem(alt._key, 'pros', idx, e.target.value)}
-                          placeholder="Add a pro..."
-                          className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500/30"
-                        />
-                        <button
-                          onClick={() => removeListItem(alt._key, 'pros', idx)}
-                          className="text-gray-400 hover:text-red-500 text-xs"
-                        >
-                          ×
-                        </button>
-                      </div>
+                <div>
+                  <label htmlFor="group-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Group <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="group-select"
+                    value={groupId || ''}
+                    onChange={(e) => {
+                      setGroupId(e.target.value);
+                      switchGroup(e.target.value);
+                    }}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>{group.name}</option>
                     ))}
-                    <button
-                      onClick={() => addListItem(alt._key, 'pros')}
-                      className="text-xs text-green-600 dark:text-green-400 hover:underline mt-0.5"
-                    >
-                      + Add pro
-                    </button>
-                  </div>
-
-                  {/* Cons */}
-                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl p-3">
-                    <label className="block text-xs font-semibold text-red-700 dark:text-red-400 mb-1.5 uppercase tracking-wide">
-                      Cons
-                    </label>
-                    {alt.cons.map((con, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 mb-1.5">
-                        <span className="text-red-500 text-sm">−</span>
-                        <input
-                          type="text"
-                          value={con}
-                          onChange={(e) => updateListItem(alt._key, 'cons', idx, e.target.value)}
-                          placeholder="Add a con..."
-                          className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-red-500/30"
-                        />
-                        <button
-                          onClick={() => removeListItem(alt._key, 'cons', idx)}
-                          className="text-gray-400 hover:text-red-500 text-xs"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => addListItem(alt._key, 'cons')}
-                      className="text-xs text-red-600 dark:text-red-400 hover:underline mt-0.5"
-                    >
-                      + Add con
-                    </button>
-                  </div>
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="category-select"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    <option value="">Select category...</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+
+                  {chainWarning && (
+                    <div className="mt-2.5 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+                      <IconAlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold">{chainWarning.message}</p>
+                        {chainWarning.adminName && (
+                          <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                            Contact Admin: <span className="font-medium">{chainWarning.adminName}</span>
+                            {chainWarning.adminEmail && <span> ({chainWarning.adminEmail})</span>}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="problem-statement" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Problem Statement <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="problem-statement"
+                    rows={4}
+                    value={problemStatement}
+                    onChange={(e) => setProblemStatement(e.target.value)}
+                    placeholder="Describe the problem or opportunity that requires a decision..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Cost (₹)
-                    </label>
-                    <input
-                      type="number"
-                      value={alt.estimated_cost ?? ''}
-                      onChange={(e) =>
-                        updateAlternative(alt._key, 'estimated_cost', e.target.value ? Number(e.target.value) : null)
-                      }
-                      placeholder="0"
-                      className="w-full px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Feasibility (1–10)
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={alt.feasibility_score ?? ''}
-                      onChange={(e) =>
-                        updateAlternative(alt._key, 'feasibility_score', e.target.value ? Number(e.target.value) : null)
-                      }
-                      className="w-full px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Risk Level
+                    <label htmlFor="impact-level" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Impact Level
                     </label>
                     <select
-                      value={alt.risk_level}
-                      onChange={(e) => updateAlternative(alt._key, 'risk_level', e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                      id="impact-level"
+                      value={impactLevel}
+                      onChange={(e) => setImpactLevel(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
+                      <option value="critical">Critical</option>
                     </select>
+                  </div>
+                  <div>
+                    <label htmlFor="target-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Target Decision Date
+                    </label>
+                    <input
+                      id="target-date"
+                      type="date"
+                      value={targetDate}
+                      onChange={(e) => setTargetDate(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="financial-impact" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Financial Impact ($)
+                    </label>
+                    <input
+                      id="financial-impact"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={financialImpact}
+                      onChange={(e) => setFinancialImpact(e.target.value)}
+                      placeholder="e.g. 50000"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="risk-score" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Risk Score (1-10)
+                    </label>
+                    <input
+                      id="risk-score"
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={riskScore}
+                      onChange={(e) => setRiskScore(e.target.value)}
+                      placeholder="e.g. 7"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2 — Alternatives */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Alternatives ({alternatives.length})
+                  </h2>
                   <button
-                    onClick={() => saveAlternative(alt)}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-sm font-medium shadow-sm shadow-indigo-600/20 transition-all duration-150"
+                    onClick={addAlternative}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
                   >
-                    {savingAlt === alt._key ? (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <IconCheck size={16} />
-                        {alt._id ? 'Update' : 'Save'} Alternative
-                      </>
-                    )}
+                    <IconPlus size={16} /> Add Alternative
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
 
-        {/* Step 3 — Review & Submit */}
-        {currentStep === 2 && (
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 p-6 space-y-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Review & Submit</h2>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">Title</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{title}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">Category</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{getCategoryName()}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">Impact Level</p>
-                  <p className="font-medium text-gray-900 dark:text-white capitalize">{impactLevel}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">Target Date</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{targetDate || 'Not set'}</p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Problem Statement</p>
-                <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{problemStatement}</p>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                  Alternatives ({alternatives.length})
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Add at least two alternatives and mark at least one as recommended (★). Save each alternative before proceeding.
                 </p>
-                <div className="space-y-3">
-                  {alternatives.map((alt) => (
-                    <div
-                      key={alt._key}
-                      className={`p-4 rounded-xl border ${alt.is_recommended
-                          ? 'border-amber-200 dark:border-amber-800/40 bg-amber-50/50 dark:bg-amber-900/10'
-                          : 'border-gray-200 dark:border-gray-700'
-                        }`}
+
+                {alternatives.length === 0 && (
+                  <div className="rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">No alternatives yet</p>
+                    <button
+                      onClick={addAlternative}
+                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-medium transition-colors"
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        {alt.is_recommended && <IconStarFilled size={16} className="text-amber-500" />}
-                        <p className="font-medium text-sm text-gray-900 dark:text-white">{alt.title}</p>
-                      </div>
-                      {alt.description && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{alt.description}</p>
-                      )}
-                      <div className="flex gap-6 text-xs text-gray-500 dark:text-gray-400">
-                        <span>Pros: {alt.pros.filter(p => p.trim()).length}</span>
-                        <span>Cons: {alt.cons.filter(c => c.trim()).length}</span>
-                        {alt.estimated_cost != null && <span>Cost: ₹{Number(alt.estimated_cost).toLocaleString()}</span>}
-                        {alt.feasibility_score != null && <span>Feasibility: {alt.feasibility_score}/10</span>}
-                        <span className="capitalize">Risk: {alt.risk_level}</span>
+                      <IconPlus size={16} /> Add First Alternative
+                    </button>
+                  </div>
+                )}
+
+                {alternatives.map((alt) => (
+                  <div
+                    key={alt._key}
+                    className={`rounded-2xl border bg-white dark:bg-gray-900/80 p-6 space-y-5 shadow-sm transition-all duration-200 ${alt._saved
+                        ? 'border-green-200 dark:border-green-800/40'
+                        : 'border-gray-200 dark:border-gray-800/60'
+                      }`}
+                  >
+                    {/* Card header */}
+                    <div className="flex items-center justify-between pb-1">
+                      <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                        Alternative {alternatives.findIndex(a => a._key === alt._key) + 1}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {alt._saved ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-0.5 rounded-full">
+                            <IconCheck size={12} /> Saved
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 px-2.5 py-0.5 rounded-full">
+                            <span className="h-1.5 w-1.5 rounded-full bg-gray-300 dark:bg-gray-600" /> Unsaved
+                          </span>
+                        )}
+                        <button
+                          onClick={() => deleteAlternative(alt)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <IconTrash size={16} />
+                        </button>
                       </div>
                     </div>
-                  ))}
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleRecommended(alt._key)}
+                        className={`p-1 rounded-lg transition-colors ${alt.is_recommended
+                            ? 'text-amber-500 hover:text-amber-600'
+                            : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'
+                          }`}
+                        title={alt.is_recommended ? 'Recommended' : 'Mark as recommended'}
+                      >
+                        {alt.is_recommended ? <IconStarFilled size={20} /> : <IconStar size={20} />}
+                      </button>
+                      <input
+                        type="text"
+                        value={alt.title}
+                        onChange={(e) => updateAlternative(alt._key, 'title', e.target.value)}
+                        placeholder="Alternative title"
+                        className="text-base font-semibold text-gray-900 dark:text-white bg-transparent border-none outline-none placeholder:text-gray-400 flex-1"
+                      />
+                    </div>
+
+                    <textarea
+                      value={alt.description || ''}
+                      onChange={(e) => updateAlternative(alt._key, 'description', e.target.value)}
+                      placeholder="Describe this alternative..."
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Pros */}
+                      <div className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-xl p-3">
+                        <label className="block text-xs font-semibold text-green-700 dark:text-green-400 mb-1.5 uppercase tracking-wide">
+                          Pros
+                        </label>
+                        {alt.pros.map((pro, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 mb-1.5">
+                            <span className="text-green-500 text-sm">+</span>
+                            <input
+                              type="text"
+                              value={pro}
+                              onChange={(e) => updateListItem(alt._key, 'pros', idx, e.target.value)}
+                              placeholder="Add a pro..."
+                              className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500/30"
+                            />
+                            <button
+                              onClick={() => removeListItem(alt._key, 'pros', idx)}
+                              className="text-gray-400 hover:text-red-500 text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => addListItem(alt._key, 'pros')}
+                          className="text-xs text-green-600 dark:text-green-400 hover:underline mt-0.5"
+                        >
+                          + Add pro
+                        </button>
+                      </div>
+
+                      {/* Cons */}
+                      <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl p-3">
+                        <label className="block text-xs font-semibold text-red-700 dark:text-red-400 mb-1.5 uppercase tracking-wide">
+                          Cons
+                        </label>
+                        {alt.cons.map((con, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 mb-1.5">
+                            <span className="text-red-500 text-sm">−</span>
+                            <input
+                              type="text"
+                              value={con}
+                              onChange={(e) => updateListItem(alt._key, 'cons', idx, e.target.value)}
+                              placeholder="Add a con..."
+                              className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-red-500/30"
+                            />
+                            <button
+                              onClick={() => removeListItem(alt._key, 'cons', idx)}
+                              className="text-gray-400 hover:text-red-500 text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => addListItem(alt._key, 'cons')}
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline mt-0.5"
+                        >
+                          + Add con
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <label className="flex items-center gap-1.5">
+                          Cost ($):
+                          <input
+                            type="number"
+                            value={alt.estimated_cost ?? ''}
+                            onChange={(e) => updateAlternative(alt._key, 'estimated_cost', e.target.value ? Number(e.target.value) : null)}
+                            placeholder="0"
+                            className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                          />
+                        </label>
+                        <label className="flex items-center gap-1.5">
+                          Feasibility (1-10):
+                          <input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={alt.feasibility_score ?? 5}
+                            onChange={(e) => updateAlternative(alt._key, 'feasibility_score', Number(e.target.value))}
+                            className="w-16 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                          />
+                        </label>
+                      </div>
+
+                      <button
+                        onClick={() => saveAlternative(alt)}
+                        disabled={savingAlt === alt._key || !alt.title.trim()}
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                      >
+                        {savingAlt === alt._key ? (
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        ) : (
+                          <IconCheck size={14} />
+                        )}
+                        {alt._saved ? 'Update Alternative' : 'Save Alternative'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Step 3 — Review & Submit */}
+            {currentStep === 2 && (
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-900/80 p-6 space-y-6">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Review & Submit</h2>
+
+                <div className="space-y-4 text-sm">
+                  <div className="pb-4 border-b border-gray-100 dark:border-gray-800">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Title</span>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white mt-1">{title}</p>
+                  </div>
+
+                  <div className="pb-4 border-b border-gray-100 dark:border-gray-800">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Problem Statement</span>
+                    <p className="text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">{problemStatement}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+                    <div>
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Category</span>
+                      <p className="font-medium text-gray-900 dark:text-white mt-1">{getCategoryName()}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Impact Level</span>
+                      <p className="font-medium text-gray-900 dark:text-white mt-1 capitalize">{impactLevel}</p>
+                    </div>
+                    {targetDate && (
+                      <div>
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Target Date</span>
+                        <p className="font-medium text-gray-900 dark:text-white mt-1">{targetDate}</p>
+                      </div>
+                    )}
+                    {financialImpact && (
+                      <div>
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Financial Impact</span>
+                        <p className="font-medium text-gray-900 dark:text-white mt-1">${parseFloat(financialImpact).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {riskScore && (
+                      <div>
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Risk Score</span>
+                        <p className="font-medium text-gray-900 dark:text-white mt-1">{riskScore}/10</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-2">
+                      Alternatives ({alternatives.length})
+                    </span>
+                    <div className="space-y-2">
+                      {alternatives.map((alt) => (
+                        <div
+                          key={alt._key}
+                          className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-xs"
+                        >
+                          <span className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                            {alt.is_recommended && <IconStarFilled size={14} className="text-amber-500" />}
+                            {alt.title}
+                          </span>
+                          <span className="text-gray-500 capitalize">{alt.risk_level} Risk</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Routing Preview */}
+                  {routingPreview && routingPreview.additional_approvals_needed > 0 && (
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/30 p-4">
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                        {routingPreview.additional_approvals_needed} additional approval(s) will be required
+                      </p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                        Based on your decision attributes, the following routing rules will modify the approval chain:
+                      </p>
+                      <ul className="mt-2 space-y-1">
+                        {routingPreview.matching_rules.map((rule, idx) => (
+                          <li key={idx} className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-100 dark:bg-amber-900/50">
+                              {rule.condition_field} {rule.operator} {rule.condition_value}
+                            </span>
+                            → insert <span className="font-semibold capitalize">{rule.inserted_role}</span>
+                            {rule.insert_position === 'append' ? ' (append)' : ` (before L${rule.insert_before_level})`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Footer — Navigation */}
-        <div className="flex items-center justify-between pt-2">
-          <div>
-            {currentStep > 0 && (
+            {/* Bottom Controls */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-800">
               <button
-                onClick={handleBack}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                type="button"
+                onClick={handleSaveDraft}
+                className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                <IconArrowLeft size={16} /> Back
+                Save as Draft
               </button>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSaveDraft}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Save Draft & Exit
-            </button>
-            {currentStep < 2 ? (
-              <button
-                onClick={handleNext}
-                disabled={
-                  (currentStep === 0 && !canProceedStep1) ||
-                  (currentStep === 1 && !canProceedStep2) ||
-                  saving
-                }
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors shadow-sm shadow-indigo-600/20"
-              >
-                {saving ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                ) : (
-                  <>Next <IconArrowRight size={16} /></>
+
+              <div className="flex items-center gap-3">
+                {currentStep > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <IconArrowLeft size={16} /> Back
+                  </button>
                 )}
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium transition-colors shadow-sm shadow-green-600/20"
-              >
-                {submitting ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+
+                {currentStep < 2 ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={currentStep === 0 ? !canProceedStep1 || saving : !canProceedStep2}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    {saving ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      <>Next <IconArrowRight size={16} /></>
+                    )}
+                  </button>
                 ) : (
-                  <>
-                    <IconCheck size={16} /> Submit for Review
-                  </>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    {submitting ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      <>Submit for Review <IconCheck size={16} /></>
+                    )}
+                  </button>
                 )}
-              </button>
-            )}
-          </div>
-          {currentStep === 1 && !canProceedStep2 && (
-            <p className="text-xs text-gray-400 text-right mt-2">
-              {alternatives.length < 2 && `Need ${2 - alternatives.length} more alternative${2 - alternatives.length > 1 ? 's' : ''}. `}
-              {!alternatives.some(a => a.is_recommended) && `Mark one as recommended (★). `}
-              {!alternatives.every(a => a._saved) && `Save all alternatives first.`}
-            </p>
-          )}
-        </div>
-        </>)}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

@@ -75,6 +75,17 @@ class CompanyService:
         )
         db.add(group_member)
 
+        # Safety default: Auto-create a default approval chain for the company
+        from app.models.approval_chain import ApprovalChainConfig
+        default_chain = ApprovalChainConfig(
+            company_id=company.id,
+            group_id=None,
+            category="default",
+            levels=[{"level": 1, "role": "manager"}],
+            sla_hours=24,
+        )
+        db.add(default_chain)
+
         db.commit()
         db.refresh(company)
         db.refresh(membership)
@@ -120,14 +131,19 @@ class CompanyService:
         # Check if target user exists
         target_user = db.query(User).filter(User.email == email).first()
         if not target_user:
-            # Create account for target user with temporary password
+            # Create account for target user with a random temporary password
+            # User will be required to reset password on first login
+            import secrets
+            temp_password = secrets.token_urlsafe(16)
             target_user = User(
                 full_name=email.split("@")[0].capitalize(),
                 email=email,
-                password_hash=hash_password("TemporaryPassword123!"),
+                password_hash=hash_password(temp_password),
+                status=UserStatus.ACTIVE,
             )
             db.add(target_user)
             db.flush()
+            logger.info(f"Created new user {email} with temporary password (must reset on first login)")
 
         # Check if already a member
         existing_mem = (
