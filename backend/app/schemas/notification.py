@@ -1,23 +1,19 @@
-"""
-Expert Decision Replay Platform - Notification Schemas
-"""
-
-from datetime import datetime
-from typing import Any, Optional
-from uuid import UUID
-
 from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
 
-
-class NotificationResponse(BaseModel):
-    id: UUID
-    user_id: UUID
-    type: str
-    title: str
+class NotificationBase(BaseModel):
     message: str
-    payload: Optional[dict[str, Any]] = None
-    read_at: Optional[datetime] = None
-    created_at: datetime
+    notification_type: str
+
+class NotificationCreate(NotificationBase):
+    user_id: int
+
+class NotificationResponse(NotificationBase):
+    id: int
+    user_id: int
+    is_read: bool
+    created_at: Optional[datetime] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True

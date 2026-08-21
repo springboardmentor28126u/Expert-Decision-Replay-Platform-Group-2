@@ -1,0 +1,22 @@
+# Frontend .dockerignore
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+env/
+.git/
+.gitignore
+*.log
+node_modules/
+.pytest_cache/
+.mypy_cache/
+jsx_to_html.py
+

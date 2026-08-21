@@ -1,151 +1,63 @@
-"""
-Expert Decision Replay Platform - Alternative Service
-
-Business logic for the Alternative Analysis module.
-"""
-
-from typing import List
-from uuid import UUID
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.models.alternative import Alternative
-from app.models.decision import Decision, DecisionStatus, ImpactLevel
-from app.models.user import User
 from app.schemas.alternative import AlternativeCreate, AlternativeUpdate
-from app.api.deps import can_access_decision
 
+from app.core.security import generate_data_hash
 
 class AlternativeService:
-    """Service for managing decision alternatives."""
+    @staticmethod
+    def get_by_decision(db: Session, decision_id: int):
+        return db.query(Alternative).filter(Alternative.decision_id == decision_id).all()
 
     @staticmethod
-    def _get_decision_for_edit(db: Session, decision_id: UUID, user: User) -> Decision:
-        """Get a decision and verify it's editable by this user (with full access check)."""
-        decision = db.query(Decision).filter(Decision.id == decision_id).first()
-        if not decision:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Decision not found",
-            )
-        # Defense-in-depth: verify company/group access even if route already checked
-        can_access_decision(user, decision, db)
-        if decision.status != DecisionStatus.DRAFT:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Alternatives can only be modified for draft decisions",
-            )
-        if decision.created_by != user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the decision creator can modify alternatives",
-            )
-        return decision
+    def get_by_id(db: Session, alternative_id: int):
+        return db.query(Alternative).filter(Alternative.id == alternative_id).first()
 
     @staticmethod
-    def create(
-        db: Session,
-        decision_id: UUID,
-        data: AlternativeCreate,
-        user: User,
-    ) -> Alternative:
-        """Add a new alternative to a decision."""
-        AlternativeService._get_decision_for_edit(db, decision_id, user)
-
-        # Map risk_level string to enum
-        try:
-            risk = ImpactLevel(data.risk_level)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid risk_level '{data.risk_level}'. Must be one of: low, medium, high",
-            )
-
-        alternative = Alternative(
-            decision_id=decision_id,
-            title=data.title,
-            description=data.description,
-            pros=data.pros,
-            cons=data.cons,
-            estimated_cost=data.estimated_cost,
-            feasibility_score=data.feasibility_score,
-            risk_level=risk,
-            is_recommended=data.is_recommended,
+    def create(db: Session, alternative: AlternativeCreate):
+        db_alt = Alternative(**alternative.model_dump())
+        db_alt.content_hash = generate_data_hash(
+            db_alt.decision_id, db_alt.title, db_alt.description, db_alt.pros, db_alt.cons, db_alt.cost, db_alt.feasibility_score, db_alt.risk_level
         )
-        db.add(alternative)
+        db.add(db_alt)
         db.commit()
-        db.refresh(alternative)
-        return alternative
+        db.refresh(db_alt)
+        return db_alt
 
     @staticmethod
-    def update(
-        db: Session,
-        decision_id: UUID,
-        alternative_id: UUID,
-        data: AlternativeUpdate,
-        user: User,
-    ) -> Alternative:
-        """Update an existing alternative."""
-        AlternativeService._get_decision_for_edit(db, decision_id, user)
-
-        alternative = (
-            db.query(Alternative)
-            .filter(Alternative.id == alternative_id, Alternative.decision_id == decision_id)
-            .first()
-        )
-        if not alternative:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Alternative not found",
-            )
-
-        update_data = data.model_dump(exclude_unset=True)
-        if "risk_level" in update_data and update_data["risk_level"] is not None:
-            try:
-                update_data["risk_level"] = ImpactLevel(update_data["risk_level"])
-            except ValueError:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Invalid risk_level '{update_data['risk_level']}'. Must be one of: low, medium, high",
-                )
-
+    def update(db: Session, alternative_id: int, alternative: AlternativeUpdate):
+        db_alt = AlternativeService.get_by_id(db, alternative_id)
+        if not db_alt:
+            return None
+        
+        update_data = alternative.model_dump(exclude_unset=True)
         for key, value in update_data.items():
-            setattr(alternative, key, value)
-
+            setattr(db_alt, key, value)
+            
+        db_alt.content_hash = generate_data_hash(
+            db_alt.decision_id, db_alt.title, db_alt.description, db_alt.pros, db_alt.cons, db_alt.cost, db_alt.feasibility_score, db_alt.risk_level
+        )
+            
         db.commit()
-        db.refresh(alternative)
-        return alternative
+        db.refresh(db_alt)
+        return db_alt
 
     @staticmethod
-    def delete(
-        db: Session,
-        decision_id: UUID,
-        alternative_id: UUID,
-        user: User,
-    ) -> None:
-        """Remove an alternative from a decision."""
-        AlternativeService._get_decision_for_edit(db, decision_id, user)
-
-        alternative = (
-            db.query(Alternative)
-            .filter(Alternative.id == alternative_id, Alternative.decision_id == decision_id)
-            .first()
-        )
-        if not alternative:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Alternative not found",
-            )
-
-        db.delete(alternative)
-        db.commit()
+    def delete(db: Session, alternative_id: int):
+        db_alt = AlternativeService.get_by_id(db, alternative_id)
+        if db_alt:
+            db.delete(db_alt)
+            db.commit()
+            return True
+        return False
 
     @staticmethod
-    def list_by_decision(db: Session, decision_id: UUID) -> List[Alternative]:
-        """Get all alternatives for a decision."""
-        return (
-            db.query(Alternative)
-            .filter(Alternative.decision_id == decision_id)
-            .order_by(Alternative.created_at)
-            .all()
+    def verify_integrity(db: Session, alternative_id: int) -> bool:
+        db_alt = AlternativeService.get_by_id(db, alternative_id)
+        if not db_alt:
+            return False
+            
+        calculated_hash = generate_data_hash(
+            db_alt.decision_id, db_alt.title, db_alt.description, db_alt.pros, db_alt.cons, db_alt.cost, db_alt.feasibility_score, db_alt.risk_level
         )
+        return db_alt.content_hash == calculated_hash

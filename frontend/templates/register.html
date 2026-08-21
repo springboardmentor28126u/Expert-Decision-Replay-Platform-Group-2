@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - EDRP Decision Platform</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+            color: #0F172A;
+            min-height: 100vh;
+        }
+        .navbar-custom {
+            background-color: #FFFFFF;
+            border-bottom: 1px solid #F1F5F9;
+            padding: 16px 40px;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background-color: #2563EB;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .brand-text-top {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0F172A;
+            line-height: 1;
+        }
+        .brand-text-bottom {
+            font-size: 11px;
+            color: #94A3B8;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+        .nav-right-text {
+            font-size: 13px;
+            color: #64748B;
+            font-weight: 500;
+        }
+        .nav-right-link {
+            color: #2563EB;
+            font-weight: 700;
+            text-decoration: none;
+        }
+        .register-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px 80px;
+        }
+        .register-card {
+            background: #FFFFFF;
+            border-radius: 20px;
+            padding: 48px;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+            border: 1px solid #F1F5F9;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #0F172A;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #64748B;
+            margin-bottom: 32px;
+        }
+        .form-label-custom {
+            font-size: 11px;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .form-label-custom span {
+            color: #EF4444;
+        }
+        .input-group-custom {
+            display: flex;
+            align-items: center;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #FFFFFF;
+            transition: all 0.2s ease-in-out;
+        }
+        .input-group-custom:focus-within {
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .input-group-custom.is-invalid {
+            border-color: #EF4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+        }
+        .input-group-custom.is-valid {
+            border-color: #22C55E !important;
+        }
+        .field-error-msg {
+            color: #EF4444;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 4px;
+            display: none;
+        }
+        .input-field {
+            flex: 1;
+            border: none;
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #0F172A;
+            outline: none;
+            background: transparent;
+        }
+        .input-field::placeholder {
+            color: #94A3B8;
+        }
+        .input-icon-left {
+            padding-left: 16px;
+            color: #94A3B8;
+            display: flex;
+            align-items: center;
+        }
+        .input-icon-right {
+            padding-right: 16px;
+            color: #94A3B8;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        .role-card {
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            background: #FFFFFF;
+        }
+        .role-card:hover {
+            border-color: #CBD5E1;
+        }
+        .role-card.active {
+            border-color: #2563EB;
+            box-shadow: 0 0 0 1px #2563EB, 0 4px 14px rgba(37,99,235,0.1);
+        }
+        .role-card.is-invalid-role {
+            border-color: #EF4444;
+            box-shadow: 0 0 0 1px #EF4444;
+        }
+        .role-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #F8FAFC;
+            color: #94A3B8;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            transition: all 0.2s ease-in-out;
+        }
+        .role-card.active .role-icon {
+            background: #EFF6FF;
+            color: #2563EB;
+        }
+        .role-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 4px;
+        }
+        .role-card.active .role-title {
+            color: #2563EB;
+        }
+        .role-desc {
+            font-size: 11px;
+            color: #64748B;
+            line-height: 1.4;
+        }
+        .check-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 20px;
+            height: 20px;
+            background: #2563EB;
+            color: white;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease-in-out;
+        }
+        .role-card.active .check-badge {
+            display: flex;
+        }
+        .password-checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .req-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s ease-in-out;
+        }
+        .req-item.invalid {
+            color: #EF4444;
+        }
+        .req-item.valid {
+            color: #22C55E;
+        }
+        .btn-submit {
+            background-color: #2563EB;
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 15px;
+            padding: 16px;
+            border-radius: 10px;
+            border: none;
+            width: 100%;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .btn-submit:hover {
+            background-color: #1D4ED8;
+        }
+
+        @media (max-width: 768px) {
+            .role-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .register-card {
+                padding: 28px 20px;
+            }
+        }
+        @media (max-width: 480px) {
+            .role-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar-custom d-flex justify-content-between align-items-center">
+        <a href="{{ url_for('home') }}" class="navbar-brand">
+            <div class="logo-icon">
+                <i data-lucide="zap" style="color: white; width: 22px; height: 22px;"></i>
+            </div>
+            <div>
+                <div class="brand-text-top">EDRP</div>
+                <div class="brand-text-bottom">Decision Platform</div>
+            </div>
+        </a>
+        <div class="nav-right-text">
+            Already have an account? <a href="{{ url_for('login') }}" class="nav-right-link">Sign In</a>
+        </div>
+    </nav>
+
+    <div class="register-wrapper">
+        <div class="register-card">
+            <h2 class="title">Step 1: User Registration</h2>
+            <p class="subtitle">Enter your account details. A verification code will be sent to your email address.</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} small py-2.5 mb-4 fw-semibold">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('register') }}" id="registerForm" novalidate>
+                
+                <!-- ROW 1 -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Full Name <span>*</span></label>
+                        <div class="input-group-custom" id="groupFullName">
+                            <input type="text" name="full_name" id="fullName" class="input-field" placeholder="John Doe" value="{{ form_data.full_name if form_data else '' }}" required>
+                        </div>
+                        <div class="field-error-msg" id="nameErrorMsg">Please enter your full name.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Email Address <span>*</span></label>
+                        <div class="input-group-custom" id="groupEmail">
+                            <input type="email" name="email" id="email" class="input-field" placeholder="john@company.com" value="{{ form_data.email if form_data else '' }}" required>
+                        </div>
+                        <div class="field-error-msg" id="emailErrorMsg">Please enter a valid email address.</div>
+                    </div>
+                </div>
+
+                <!-- ROW 2: PASSWORDS -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Password <span>*</span></label>
+                        <div class="input-group-custom" id="groupPassword">
+                            <div class="input-icon-left"><i data-lucide="lock" style="width: 16px; height: 16px;"></i></div>
+                            <input type="password" name="password" id="password" class="input-field" placeholder="••••••••••••" required>
+                            <div class="input-icon-right" id="togglePw"><i data-lucide="eye" style="width: 16px; height: 16px;"></i></div>
+                        </div>
+                        
+                        <!-- Live Password Validation Checklist -->
+                        <div class="password-checklist">
+                            <div id="req-length" class="req-item invalid"><span class="req-icon">✓</span> Minimum 8 characters</div>
+                            <div id="req-upper" class="req-item invalid"><span class="req-icon">✓</span> One uppercase letter</div>
+                            <div id="req-lower" class="req-item invalid"><span class="req-icon">✓</span> One lowercase letter</div>
+                            <div id="req-number" class="req-item invalid"><span class="req-icon">✓</span> One number</div>
+                            <div id="req-special" class="req-item invalid"><span class="req-icon">✓</span> One special character</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Confirm Password <span>*</span></label>
+                        <div class="input-group-custom" id="groupConfirmPassword">
+                            <div class="input-icon-left"><i data-lucide="lock" style="width: 16px; height: 16px;"></i></div>
+                            <input type="password" name="confirm_password" id="confirm_password" class="input-field" placeholder="••••••••••••" required>
+                            <div class="input-icon-right" id="toggleCpw"><i data-lucide="eye" style="width: 16px; height: 16px;"></i></div>
+                        </div>
+
+                        <!-- Live Confirm Password Match Indicator -->
+                        <div id="confirmPasswordMatch" class="mt-2" style="font-size: 12px; font-weight: 600; display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- ROW 3: ROLES -->
+                <div class="mb-5">
+                    <label class="form-label-custom mb-3">Select Role <span>*</span></label>
+                    <div class="role-grid">
+                        <!-- Employee (role_id 3) -->
+                        <label class="role-card {% if form_data and form_data.role_id == '3' %}active{% endif %}" for="roleEmployee">
+                            <input type="radio" name="role_id" id="roleEmployee" value="3" class="d-none" {% if form_data and form_data.role_id == '3' %}checked{% endif %}>
+                            <div class="check-badge"><i data-lucide="check" style="width: 12px; height: 12px;"></i></div>
+                            <div class="role-icon"><i data-lucide="users" style="width: 20px; height: 20px;"></i></div>
+                            <div class="role-title">Employee</div>
+                            <div class="role-desc">EMP Prefix</div>
+                        </label>
+                        <!-- Reviewer (role_id 4) -->
+                        <label class="role-card {% if form_data and form_data.role_id == '4' %}active{% endif %}" for="roleReviewer">
+                            <input type="radio" name="role_id" id="roleReviewer" value="4" class="d-none" {% if form_data and form_data.role_id == '4' %}checked{% endif %}>
+                            <div class="check-badge"><i data-lucide="check" style="width: 12px; height: 12px;"></i></div>
+                            <div class="role-icon"><i data-lucide="eye" style="width: 20px; height: 20px;"></i></div>
+                            <div class="role-title">Reviewer</div>
+                            <div class="role-desc">RW Prefix</div>
+                        </label>
+                        <!-- Manager (role_id 2) -->
+                        <label class="role-card {% if form_data and form_data.role_id == '2' %}active{% endif %}" for="roleManager">
+                            <input type="radio" name="role_id" id="roleManager" value="2" class="d-none" {% if form_data and form_data.role_id == '2' %}checked{% endif %}>
+                            <div class="check-badge"><i data-lucide="check" style="width: 12px; height: 12px;"></i></div>
+                            <div class="role-icon"><i data-lucide="user-check" style="width: 20px; height: 20px;"></i></div>
+                            <div class="role-title">Manager</div>
+                            <div class="role-desc">MN Prefix</div>
+                        </label>
+                        <!-- Admin (role_id 1) -->
+                        <label class="role-card {% if form_data and form_data.role_id == '1' %}active{% endif %}" for="roleAdmin">
+                            <input type="radio" name="role_id" id="roleAdmin" value="1" class="d-none" {% if form_data and form_data.role_id == '1' %}checked{% endif %}>
+                            <div class="check-badge"><i data-lucide="check" style="width: 12px; height: 12px;"></i></div>
+                            <div class="role-icon"><i data-lucide="shield" style="width: 20px; height: 20px;"></i></div>
+                            <div class="role-title">Administrator</div>
+                            <div class="role-desc">AD Prefix</div>
+                        </label>
+                    </div>
+                    <div id="roleErrorMsg" class="field-error-msg mt-2 fw-bold" style="font-size: 12px;">Please select a role.</div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    Continue to Email Verification &rarr;
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const form = document.getElementById('registerForm');
+        const fullNameInput = document.getElementById('fullName');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirm_password');
+
+        const groupFullName = document.getElementById('groupFullName');
+        const groupEmail = document.getElementById('groupEmail');
+        const groupPassword = document.getElementById('groupPassword');
+        const groupConfirmPassword = document.getElementById('groupConfirmPassword');
+
+        const nameErrorMsg = document.getElementById('nameErrorMsg');
+        const emailErrorMsg = document.getElementById('emailErrorMsg');
+        const roleErrorMsg = document.getElementById('roleErrorMsg');
+
+        const roleInputs = document.querySelectorAll('input[name="role_id"]');
+        const roleCards = document.querySelectorAll('.role-card');
+
+        // 1. Role Selection Behavior
+        roleInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                roleCards.forEach(card => {
+                    card.classList.remove('active');
+                    card.classList.remove('is-invalid-role');
+                });
+                this.parentElement.classList.add('active');
+                roleErrorMsg.style.display = 'none';
+            });
+        });
+
+        // 2. Password Strength Validation (Real-time)
+        function validatePassword() {
+            const val = passwordInput.value;
+            const checks = {
+                length: val.length >= 8,
+                upper: /[A-Z]/.test(val),
+                lower: /[a-z]/.test(val),
+                number: /[0-9]/.test(val),
+                special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(val)
+            };
+
+            for (const [key, isValid] of Object.entries(checks)) {
+                const el = document.getElementById(`req-${key}`);
+                if (el) {
+                    if (isValid) {
+                        el.classList.remove('invalid');
+                        el.classList.add('valid');
+                    } else {
+                        el.classList.remove('valid');
+                        el.classList.add('invalid');
+                    }
+                }
+            }
+
+            const allValid = Object.values(checks).every(Boolean);
+            if (val.length > 0) {
+                if (allValid) {
+                    groupPassword.classList.remove('is-invalid');
+                    groupPassword.classList.add('is-valid');
+                } else {
+                    groupPassword.classList.remove('is-valid');
+                    groupPassword.classList.add('is-invalid');
+                }
+            } else {
+                groupPassword.classList.remove('is-invalid', 'is-valid');
+            }
+            return allValid;
+        }
+
+        passwordInput.addEventListener('input', () => {
+            validatePassword();
+            if (confirmPasswordInput.value.length > 0) {
+                validateConfirmPassword();
+            }
+        });
+
+        // 3. Confirm Password Validation (Real-time)
+        function validateConfirmPassword() {
+            const pw = passwordInput.value;
+            const cpw = confirmPasswordInput.value;
+            const matchEl = document.getElementById('confirmPasswordMatch');
+
+            if (cpw.length === 0) {
+                matchEl.style.display = 'none';
+                groupConfirmPassword.classList.remove('is-invalid', 'is-valid');
+                return false;
+            }
+
+            matchEl.style.display = 'block';
+
+            if (pw === cpw && pw.length > 0) {
+                matchEl.style.color = '#22C55E';
+                matchEl.innerHTML = '✓ Password matched';
+                groupConfirmPassword.classList.remove('is-invalid');
+                groupConfirmPassword.classList.add('is-valid');
+                return true;
+            } else {
+                matchEl.style.color = '#EF4444';
+                matchEl.innerHTML = '✗ Password not matched';
+                groupConfirmPassword.classList.remove('is-valid');
+                groupConfirmPassword.classList.add('is-invalid');
+                return false;
+            }
+        }
+
+        confirmPasswordInput.addEventListener('input', validateConfirmPassword);
+
+        // Live validation for Full Name & Email
+        fullNameInput.addEventListener('input', () => {
+            if (fullNameInput.value.trim().length > 0) {
+                groupFullName.classList.remove('is-invalid');
+                nameErrorMsg.style.display = 'none';
+            }
+        });
+
+        emailInput.addEventListener('input', () => {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailRegex.test(emailInput.value.trim())) {
+                groupEmail.classList.remove('is-invalid');
+                emailErrorMsg.style.display = 'none';
+            }
+        });
+
+        // 4. Password Toggle
+        function setupPasswordToggle(toggleId, inputId) {
+            const toggleBtn = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+            if (toggleBtn && input) {
+                toggleBtn.addEventListener('click', () => {
+                    const isPw = input.type === 'password';
+                    input.type = isPw ? 'text' : 'password';
+                    toggleBtn.innerHTML = isPw 
+                        ? `<i data-lucide="eye-off" style="width: 16px; height: 16px;"></i>` 
+                        : `<i data-lucide="eye" style="width: 16px; height: 16px;"></i>`;
+                    if (window.lucide) lucide.createIcons();
+                });
+            }
+        }
+        setupPasswordToggle('togglePw', 'password');
+        setupPasswordToggle('toggleCpw', 'confirm_password');
+
+        // 5. Submit Validation (Prevent navigation if invalid)
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+
+            // Check Full Name
+            if (!fullNameInput.value.trim()) {
+                groupFullName.classList.add('is-invalid');
+                nameErrorMsg.style.display = 'block';
+                isValid = false;
+            } else {
+                groupFullName.classList.remove('is-invalid');
+                nameErrorMsg.style.display = 'none';
+            }
+
+            // Check Email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailInput.value.trim() || !emailRegex.test(emailInput.value.trim())) {
+                groupEmail.classList.add('is-invalid');
+                emailErrorMsg.style.display = 'block';
+                isValid = false;
+            } else {
+                groupEmail.classList.remove('is-invalid');
+                emailErrorMsg.style.display = 'none';
+            }
+
+            // Check Password Strength
+            const isPwValid = validatePassword();
+            if (!isPwValid) {
+                groupPassword.classList.add('is-invalid');
+                isValid = false;
+            }
+
+            // Check Confirm Password Match
+            const isMatch = validateConfirmPassword();
+            if (!isMatch) {
+                groupConfirmPassword.classList.add('is-invalid');
+                isValid = false;
+            }
+
+            // Check Role Selection
+            const selectedRole = document.querySelector('input[name="role_id"]:checked');
+            if (!selectedRole) {
+                roleCards.forEach(card => card.classList.add('is-invalid-role'));
+                roleErrorMsg.style.display = 'block';
+                isValid = false;
+            } else {
+                roleCards.forEach(card => card.classList.remove('is-invalid-role'));
+                roleErrorMsg.style.display = 'none';
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

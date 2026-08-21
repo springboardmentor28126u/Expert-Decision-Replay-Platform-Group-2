@@ -1,85 +1,63 @@
-"""
-Expert Decision Replay Platform - User Model
-
-Defines the users table with authentication fields.
-Role is scoped per company via the Membership model.
-"""
-
-import uuid
-import enum
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Enum as SAEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    ForeignKey,
+)
 
 from app.database.base import Base
 
 
-class UserStatus(str, enum.Enum):
-    """Enumeration of possible user statuses."""
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    SUSPENDED = "suspended"
-
-
-class UserRole(str, enum.Enum):
-    """Global user-level role (used for route-level authorization)."""
-    ADMIN = "admin"
-    MANAGER = "manager"
-    REVIEWER = "reviewer"
-    EMPLOYEE = "employee"
-
-
 class User(Base):
-    """
-    User model for authentication and identity.
-
-    Attributes:
-        id: Unique user identifier (UUID).
-        full_name: User's full display name.
-        email: Unique email address used for login.
-        password_hash: Bcrypt-hashed password.
-        status: Account status (active, inactive, suspended).
-        created_at: Timestamp when the user was created.
-        updated_at: Timestamp of last update.
-        memberships: Relationship to company memberships.
-        group_memberships: Relationship to group memberships.
-        profile: One-to-one relationship to extended profile.
-    """
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Integer, primary_key=True, index=True)
+
     full_name = Column(String(100), nullable=False)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
-    status = Column(
-        SAEnum(UserStatus, name="user_status"),
-        default=UserStatus.ACTIVE,
-        nullable=False,
-    )
-    role = Column(
-        SAEnum(UserRole, name="user_role"),
-        default=UserRole.EMPLOYEE,
-        nullable=False,
-    )
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-    )
 
-    # Relationships
-    memberships = relationship("Membership", back_populates="user", cascade="all, delete-orphan")
-    group_memberships = relationship("GroupMembership", back_populates="user", cascade="all, delete-orphan")
-    team_memberships = relationship("TeamMembership", back_populates="user", cascade="all, delete-orphan")
-    profile = relationship(
-        "UserProfile",
-        back_populates="user",
-        uselist=False,
-        cascade="all, delete-orphan",
-        lazy="joined",
-    )
+    email = Column(String(100), unique=True, nullable=False)
+    email_hash = Column(String(64), index=True, nullable=True)
+    email_original = Column(String(100), nullable=True)
 
-    def __repr__(self) -> str:
-        return f"<User(id={self.id}, email={self.email})>"
+    employee_id = Column(String(50), unique=True, index=True)
+
+    password = Column(String(255), nullable=False)
+
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable = False)
+
+    role = relationship( "Role", back_populates="users")
+
+    team_id = Column(Integer, ForeignKey("teams.id"))
+    team = relationship("Team", back_populates="users")
+
+    designation = Column(String(100))
+
+    phone = Column(String(20))
+
+    is_active = Column(Boolean, default=True)
+
+    email_verified = Column(Boolean, default=False)
+    approved = Column(Boolean, default=False)
+    status = Column(String(50), default="Pending Approval")
+
+    approved_by = Column(String(100), nullable=True)
+    approved_at = Column(String(50), nullable=True)
+    rejected_by = Column(String(100), nullable=True)
+    rejected_at = Column(String(50), nullable=True)
+
+    created_at = Column(String(50), nullable=True)
+    updated_at = Column(String(50), nullable=True)
+
+
+class VerificationCode(Base):
+    __tablename__ = "verification_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(100), index=True, nullable=False)
+    code = Column(String(10), nullable=False)
+    expires_at = Column(Integer, nullable=False)  # Unix timestamp
+    purpose = Column(String(20), nullable=False)  # "register", "reset_password"

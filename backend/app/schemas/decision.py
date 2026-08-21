@@ -1,113 +1,198 @@
-"""
-Expert Decision Replay Platform - Decision Schemas
-
-Pydantic schemas for decision management operations.
-"""
-
-from pydantic import BaseModel, Field
-from uuid import UUID
-from datetime import datetime, date
-from typing import Optional, List, Any
-
-from app.schemas.decision_category import DecisionCategoryResponse
-from app.schemas.alternative import AlternativeResponse
-
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
 
 class DecisionCreate(BaseModel):
-    """Schema for creating a new decision (draft)."""
-    title: str = Field(..., min_length=3, max_length=255)
-    problem_statement: str = Field(..., min_length=10)
-    category_id: UUID
-    group_id: UUID
-    impact_level: str = Field(default="medium")  # low, medium, high, critical
-    financial_impact: Optional[float] = Field(None, ge=0)
-    risk_score: Optional[int] = Field(None, ge=1, le=10)
-    target_date: Optional[date] = None
-    stakeholder_ids: Optional[List[UUID]] = Field(default_factory=list)
-
+    title: str
+    description: str
+    created_by: int
+    category_id: Optional[int] = None
 
 class DecisionUpdate(BaseModel):
-    """Schema for updating a draft decision."""
-    title: Optional[str] = Field(None, min_length=3, max_length=255)
-    problem_statement: Optional[str] = Field(None, min_length=10)
-    category_id: Optional[UUID] = None
-    group_id: Optional[UUID] = None
-    impact_level: Optional[str] = None
-    financial_impact: Optional[float] = Field(None, ge=0)
-    risk_score: Optional[int] = Field(None, ge=1, le=10)
-    target_date: Optional[date] = None
-    stakeholder_ids: Optional[List[UUID]] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category_id: Optional[int] = None
+    change_reason: Optional[str] = None
 
-
-class CreatorSummary(BaseModel):
-    """Minimal user info for embedding in decision responses."""
-    id: UUID
-    full_name: str
-    email: str
-
-    class Config:
-        from_attributes = True
-
+class DecisionStatusUpdate(BaseModel):
+    status: str
 
 class DecisionResponse(BaseModel):
-    """Full decision response for detail views."""
-    id: UUID
-    company_id: UUID
-    group_id: UUID
+    id: int
     title: str
-    problem_statement: str
-    category_id: UUID
-    category: Optional[DecisionCategoryResponse] = None
+    description: str
     status: str
-    impact_level: str
-    financial_impact: Optional[float] = None
-    risk_score: Optional[int] = None
-    created_by: UUID
-    creator: Optional[CreatorSummary] = None
-    current_version: int
-    target_date: Optional[date] = None
-    stakeholder_ids: Optional[List[UUID]] = None
-    implementation_status: str
-    outcome: Optional[str] = None
-    outcome_notes: Optional[str] = None
-    alternatives: List[AlternativeResponse] = []
-    alternative_count: int = 0
+    category_id: Optional[int] = None
+    category_name: Optional[str] = None
+    created_by: int
+    creator_name: Optional[str] = None
+    creator_initials: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
-
-class ImplementationStatusUpdate(BaseModel):
-    """Schema for updating implementation_status."""
-    implementation_status: str = Field(..., pattern=r"^(not_started|in_progress|completed)$")
-
-
-class DecisionListItem(BaseModel):
-    """Lighter decision schema for list views."""
-    id: UUID
-    company_id: UUID
-    group_id: UUID
+class AlternativeCreateForDecision(BaseModel):
     title: str
+    description: Optional[str] = None
+    pros: Optional[str] = None
+    cons: Optional[str] = None
+    cost: Optional[float] = None
+    feasibility_score: Optional[int] = None
+    risk_level: Optional[str] = None
+
+class ReviewerCreateForDecision(BaseModel):
+    reviewer_id: int
+    deadline: Optional[datetime] = None
+    approval_type: Optional[str] = None
+
+class DecisionFullCreate(BaseModel):
+    title: str
+    description: str
+    created_by: int
+    category_id: Optional[int] = None
+    priority_level: Optional[str] = None
+    department: Optional[str] = None
+    decision_date: Optional[datetime] = None
+    tags: Optional[str] = None
+    status: Optional[str] = "Pending"
+    alternatives: List[AlternativeCreateForDecision] = []
+    reviewers: List[ReviewerCreateForDecision] = []
+    temp_file_ids: List[int] = []
+    change_reason: Optional[str] = None
+
+class DecisionVersionResponse(BaseModel):
+    id: int
+    decision_id: int
+    version_number: int
+    title: str
+    description: str
+    category_id: Optional[int] = None
     status: str
-    impact_level: str
-    financial_impact: Optional[float] = None
-    risk_score: Optional[int] = None
-    category: Optional[DecisionCategoryResponse] = None
-    creator: Optional[CreatorSummary] = None
-    alternative_count: int = 0
-    current_version: int
-    target_date: Optional[date] = None
+    priority_level: Optional[str] = None
+    department: Optional[str] = None
+    decision_date: Optional[datetime] = None
+    tags: Optional[str] = None
+    changed_by: Optional[int] = None
+    change_reason: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
+class AttachmentResponse(BaseModel):
+    id: int
+    filename: str
+    file_size: int
+    uploaded_at: datetime
+    uploaded_by: int
 
-class OutcomeUpdate(BaseModel):
-    """Schema for setting a decision outcome."""
-    outcome: str = Field(..., pattern=r"^(success|partial|failed|pending)$")
-    outcome_notes: Optional[str] = None
+    model_config = {
+        "from_attributes": True
+    }
 
+class CommentCreate(BaseModel):
+    content: str
+    user_id: int
+    reply_to_id: Optional[int] = None
+
+class CommentResponse(BaseModel):
+    id: int
+    content: str
+    user_id: int
+    reply_to_id: Optional[int] = None
+    is_edited: Optional[bool] = False
+    is_deleted: Optional[bool] = False
+    is_pinned: Optional[bool] = False
+    reactions: Optional[str] = None
+    read_receipts: Optional[str] = None
+    edit_history: Optional[str] = None
+    created_at: datetime
+    author_name: Optional[str] = None
+    author_role: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class DiscussionThreadCreate(BaseModel):
+    topic: str
+    created_by: int
+
+class DiscussionThreadResponse(BaseModel):
+    id: int
+    topic: str
+    status: str
+    is_pinned: Optional[bool] = False
+    created_by: int
+    created_at: datetime
+    comments: List[CommentResponse] = []
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class MeetingNoteCreate(BaseModel):
+    title: str
+    notes: str
+    meeting_date: Optional[datetime] = None
+    participants: Optional[str] = None
+    agenda: Optional[str] = None
+    action_items: Optional[str] = None
+    next_meeting_date: Optional[datetime] = None
+    meeting_link: Optional[str] = None
+    created_by: int
+
+class MeetingNoteResponse(BaseModel):
+    id: int
+    title: str
+    notes: str
+    meeting_date: Optional[datetime] = None
+    participants: Optional[str] = None
+    agenda: Optional[str] = None
+    action_items: Optional[str] = None
+    next_meeting_date: Optional[datetime] = None
+    meeting_link: Optional[str] = None
+    created_by: int
+    created_at: datetime
+    updated_by: Optional[int] = None
+    updated_at: Optional[datetime] = None
+    author_name: Optional[str] = None
+    status: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class DecisionRationaleResponse(BaseModel):
+    decision_id: int
+    why_required: Optional[str] = None
+    business_justification: Optional[str] = None
+    expected_benefits: Optional[str] = None
+    risks: Optional[str] = None
+    assumptions: Optional[str] = None
+    created_by: int
+    created_at: Optional[datetime] = None
+    updated_by: Optional[int] = None
+    updated_at: Optional[datetime] = None
+    updater_name: Optional[str] = None
+
+class DecisionRationaleUpdate(BaseModel):
+    why_required: Optional[str] = None
+    business_justification: Optional[str] = None
+    expected_benefits: Optional[str] = None
+    risks: Optional[str] = None
+    assumptions: Optional[str] = None
+    user_id: int
+
+from app.schemas.review import ReviewResponse
+
+class DecisionFullResponse(DecisionResponse):
+    alternatives: List[BaseModel] = []
+    reviews: List[ReviewResponse] = []
+    attachments: List[AttachmentResponse] = []
+    threads: List[DiscussionThreadResponse] = []
+    meeting_notes: List[MeetingNoteResponse] = []
+    versions: List[DecisionVersionResponse] = []

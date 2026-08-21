@@ -1,165 +1,73 @@
-﻿"""
-Expert Decision Replay Platform - Decision Model
-
-Defines the decisions table â€” the core entity of the platform.
-Every decision moves through: DRAFT â†’ UNDER_REVIEW â†’ APPROVED/REJECTED â†’ ARCHIVED.
-"""
-
-import uuid
-import enum
-from datetime import datetime, timezone
-from sqlalchemy import (
-    Column, String, Text, DateTime, Date, Integer, Numeric, Enum, ForeignKey, Index
-)
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
-from app.database.base import Base
-
-
-class DecisionStatus(str, enum.Enum):
-    """Decision lifecycle statuses."""
-    DRAFT = "draft"
-    UNDER_REVIEW = "under_review"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    ARCHIVED = "archived"
-
-
-class ImpactLevel(str, enum.Enum):
-    """Impact level of a decision."""
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
-class ImplementationStatus(str, enum.Enum):
-    """Post-approval implementation tracking."""
-    NOT_STARTED = "not_started"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-
-
-class DecisionOutcome(str, enum.Enum):
-    """Final outcome of an implemented decision."""
-    SUCCESS = "success"
-    PARTIAL = "partial"
-    FAILED = "failed"
-    PENDING = "pending"
+from app.database.connection import Base
 
 
 class Decision(Base):
-    """
-    Decision model â€” the central entity.
-
-    Attributes:
-        id: Unique decision identifier (UUID).
-        title: Short decision title.
-        problem_statement: Detailed description of the problem.
-        category_id: FK to decision_categories table.
-        status: Current lifecycle status.
-        impact_level: Low/Medium/High/Critical impact classification.
-        financial_impact: Optional dollar amount for rule evaluation.
-        risk_score: Optional risk score (1-10) for rule evaluation.
-        created_by: FK to users â€” the decision creator.
-        current_version: Current version number (incremented on submit).
-        target_date: Target date for making the decision.
-        stakeholder_ids: Optional JSON array of user IDs tagged as stakeholders.
-        implementation_status: Post-approval tracking status.
-        outcome: Final outcome after implementation.
-        outcome_notes: Free-text notes about the outcome.
-        created_at / updated_at: Timestamps.
-    """
     __tablename__ = "decisions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("companies.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    group_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("groups.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    title = Column(String(255), nullable=False)
-    problem_statement = Column(Text, nullable=False)
-    category_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("decision_categories.id"),
-        nullable=False,
-    )
+    id = Column(Integer, primary_key=True, index=True)
+
+    title = Column(String(200), nullable=False)
+
+    description = Column(Text, nullable=False)
+    
+    priority_level = Column(String(50), nullable=True)
+    department = Column(String(100), nullable=True)
+    decision_date = Column(DateTime(timezone=True), nullable=True)
+    tags = Column(String(200), nullable=True)
+    
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    category = relationship("Category", back_populates="decisions")
+
     status = Column(
-        Enum(DecisionStatus, name="decision_status"),
-        default=DecisionStatus.DRAFT,
-        nullable=False,
-        index=True,
+        String(50),
+        default="Pending"
     )
-    impact_level = Column(
-        Enum(ImpactLevel, name="impact_level"),
-        default=ImpactLevel.MEDIUM,
-        nullable=False,
+
+    created_by = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
     )
-    financial_impact = Column(Numeric(12, 2), nullable=True)
-    risk_score = Column(Integer, nullable=True)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    current_version = Column(Integer, default=1, nullable=False)
-    target_date = Column(Date, nullable=True)
-    stakeholder_ids = Column(JSONB, nullable=True, default=list)
-    implementation_status = Column(
-        Enum(ImplementationStatus, name="implementation_status"),
-        default=ImplementationStatus.NOT_STARTED,
-        nullable=False,
-    )
-    outcome = Column(
-        Enum(DecisionOutcome, name="decision_outcome"),
-        nullable=True,
-    )
-    outcome_notes = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(
+
+    created_at = Column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        server_default=func.now()
     )
 
-    # Relationships
-    company = relationship("Company", back_populates="decisions")
-    group = relationship("Group", back_populates="decisions")
-    creator = relationship("User", backref="decisions", lazy="joined")
-    category = relationship("DecisionCategory", back_populates="decisions", lazy="joined")
-    alternatives = relationship(
-        "Alternative",
-        back_populates="decision",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-        order_by="Alternative.created_at",
-    )
-    versions = relationship(
-        "DecisionVersion",
-        back_populates="decision",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-        order_by="DecisionVersion.version_number.desc()",
-    )
-    approvals = relationship(
-        "Approval",
-        back_populates="decision",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-        order_by="Approval.level",
-    )
+    creator = relationship("User", foreign_keys=[created_by])
+    alternatives = relationship("Alternative", back_populates="decision", cascade="all, delete-orphan")
+    reviews = relationship("Review", back_populates="decision", cascade="all, delete-orphan")
+    attachments = relationship("Attachment", back_populates="decision", cascade="all, delete-orphan")
+    threads = relationship("DiscussionThread", back_populates="decision", cascade="all, delete-orphan")
+    meeting_notes = relationship("MeetingNote", back_populates="decision", cascade="all, delete-orphan")
+    versions = relationship("DecisionVersion", backref="decision", cascade="all, delete-orphan", order_by="desc(DecisionVersion.version_number)")
 
-    # Composite index for dashboard filters
-    __table_args__ = (
-        Index("ix_decisions_company_group_status", "company_id", "group_id", "status"),
-        Index("ix_decisions_status_category_creator", "status", "category_id", "created_by"),
-        Index("ix_decisions_company_category_status", "company_id", "category_id", "status"),
-    )
+    content_hash = Column(String(64), nullable=True)
 
-    def __repr__(self) -> str:
-        return f"<Decision(id={self.id}, title={self.title}, status={self.status}, company_id={self.company_id})>"
+    rationale_why = Column(Text, nullable=True)
+    rationale_justification = Column(Text, nullable=True)
+    rationale_benefits = Column(Text, nullable=True)
+    rationale_risks = Column(Text, nullable=True)
+    rationale_assumptions = Column(Text, nullable=True)
+    rationale_updated_at = Column(DateTime(timezone=True), nullable=True)
+    rationale_updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    rationale_updater = relationship("User", foreign_keys=[rationale_updated_by])
+
+    @property
+    def creator_name(self):
+        return self.creator.full_name if self.creator else None
+
+    @property
+    def creator_initials(self):
+        if not self.creator or not self.creator.full_name:
+            return "U"
+        parts = self.creator.full_name.split()
+        return "".join([p[0].upper() for p in parts])[:2]
+
+    @property
+    def category_name(self):
+        return self.category.name if self.category else None

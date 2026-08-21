@@ -1,80 +1,121 @@
-"""
-Expert Decision Replay Platform - User Schemas
-
-Pydantic schemas for user-related operations.
-"""
-
 from pydantic import BaseModel, EmailStr, Field
-from uuid import UUID
-from datetime import datetime
 from typing import Optional
 
 
-class UserProfileBase(BaseModel):
-    """Base schema for user profile data."""
-    phone: Optional[str] = Field(None, max_length=20)
-    department: Optional[str] = Field(None, max_length=100)
-    designation: Optional[str] = Field(None, max_length=100)
-    avatar_url: Optional[str] = Field(None, max_length=500)
-    bio: Optional[str] = None
-
-
-class UserProfileUpdate(UserProfileBase):
-    """Schema for updating a user profile."""
-    pass
-
-
-class UserProfileResponse(UserProfileBase):
-    """Schema for user profile in API responses."""
-    id: UUID
-    user_id: UUID
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class UserBase(BaseModel):
-    """Base schema for user data."""
-    full_name: str = Field(..., min_length=2, max_length=100)
+# -----------------------------
+# User Registration Workflow Schemas
+# -----------------------------
+class RegisterStep1(BaseModel):
+    full_name: str = Field(..., min_length=3, max_length=100)
     email: EmailStr
+    password: str = Field(..., min_length=6)
+    role_id: int
+    team_id: Optional[int] = 1
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+
+class CheckEmployeeIDRequest(BaseModel):
+    role_id: int
+    employee_id: str
+
+class SaveEmployeeIDRequest(BaseModel):
+    email: EmailStr
+    role_id: int
+    employee_id: str
+    full_name: str
+    password: str
+    team_id: Optional[int] = 1
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+
+class AdminApprovalAction(BaseModel):
+    user_id: int
+    action: str = Field(..., pattern="^(approve|reject)$")
+    actor_name: Optional[str] = "Administrator"
+
+class UserRegister(BaseModel):
+    full_name: str = Field(..., min_length=3, max_length=100)
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    role_id: int
+    team_id: int
+    employee_id: Optional[str] = None
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+    verification_code: str = Field(..., min_length=6, max_length=6)
+
+class AdminUserCreate(BaseModel):
+    full_name: str = Field(..., min_length=3, max_length=100)
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    role_id: int
+    team_id: Optional[int] = 1
+    employee_id: Optional[str] = None
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+
+# -----------------------------
+# Code Verification
+# -----------------------------
+class SendCodeRequest(BaseModel):
+    email: EmailStr
+    purpose: str = Field(..., pattern="^(register|reset_password)$")
+    is_resend: bool = False
+
+class VerifyCodeRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
+    purpose: str = Field(..., pattern="^(register|reset_password)$")
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
+    new_password: str = Field(..., min_length=6)
+
+# -----------------------------
+# User Login
+# -----------------------------
+class UserLogin(BaseModel):
+    employee_id: str
+    password: str
 
 
-class UserCreate(UserBase):
-    """Schema for creating a new user."""
-    password: str = Field(..., min_length=8, max_length=128)
-    role: Optional[str] = Field(None, description="Optional role: employee, reviewer, manager, admin")
+# -----------------------------
+# JWT Token Response
+# -----------------------------
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user_id: int
+    role_name: Optional[str] = None
+    full_name: Optional[str] = None
 
-
-class UserUpdate(BaseModel):
-    """Schema for updating a user."""
-    full_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    email: Optional[EmailStr] = None
-    status: Optional[str] = None
-
-
-class AssignRoleRequest(BaseModel):
-    """Schema for assigning a role to a user."""
-    role: str = Field(..., min_length=1)
-
-
-class AssignTeamRequest(BaseModel):
-    """Schema for assigning a user to a team."""
-    team_id: UUID
-
-
+# -----------------------------
+# User Response
+# -----------------------------
 class UserResponse(BaseModel):
-    """Schema for user in API responses."""
-    id: UUID
+    id: int
     full_name: str
     email: str
-    status: str
-    role: str = "employee"
-    profile: Optional[UserProfileResponse] = None
-    created_at: datetime
-    updated_at: datetime
+    email_hash: Optional[str] = None
+    display_email: Optional[str] = None   # plain text email or fallback
+    email_original: Optional[str] = None
+    employee_id: Optional[str] = None
+    role_id: int
+    team_id: Optional[int] = 1
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: bool = True
+    email_verified: Optional[bool] = False
+    approved: Optional[bool] = False
+    status: Optional[str] = "Pending Approval"
+    approved_by: Optional[str] = None
+    approved_at: Optional[str] = None
+    rejected_by: Optional[str] = None
+    rejected_at: Optional[str] = None
+    created_at: Optional[str] = None
+    role_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
-
+    model_config = {
+        "from_attributes": True
+    }

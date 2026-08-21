@@ -1,32 +1,33 @@
-"""
-Expert Decision Replay Platform - Role Schemas
-
-Pydantic schemas for role-related operations.
-"""
-
-from pydantic import BaseModel, Field
-from uuid import UUID
-from datetime import datetime
+from pydantic import BaseModel
 from typing import Optional
 
 
-class RoleBase(BaseModel):
-    """Base schema for role data."""
-    name: str = Field(..., min_length=2, max_length=50)
-    description: Optional[str] = Field(None, max_length=255)
+# ==============================
+# Create Role
+# ==============================
+
+class RoleCreate(BaseModel):
+    role_name: str
+    description: Optional[str] = None
 
 
-class RoleCreate(RoleBase):
-    """Schema for creating a new role."""
-    pass
+# ==============================
+# Update Role
+# ==============================
 
+class RoleUpdate(BaseModel):
+    role_name: Optional[str] = None
+    description: Optional[str] = None
+
+
+# ==============================
+# Response
+# ==============================
 
 class RoleResponse(BaseModel):
-    """Schema for role in API responses."""
-    id: UUID
-    name: str
-    description: Optional[str] = None
-    created_at: Optional[datetime] = None
+    id: int
+    role_name: str
+    description: Optional[str]
 
     class Config:
         from_attributes = True

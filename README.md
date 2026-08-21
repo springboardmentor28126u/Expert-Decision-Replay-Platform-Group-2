@@ -1,6 +1,7 @@
-# Expert Decision Replay Platform (EDRP) —  Complete
+﻿# Expert Decision Replay Platform (EDRP) — Milestone 4 Complete
 
 > **Group 5** | A centralized platform for documenting, managing, replaying, and reviewing strategic organizational decisions.
+
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?style=flat&logo=fastapi&logoColor=white)
@@ -9,17 +10,24 @@
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-ORM-D71F00?style=flat&logo=python&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker&logoColor=white)
 
+
 ---
+
 
 ## Overview
 
+
 The **Expert Decision Replay Platform (EDRP)** is a full-stack web application designed to help organizations preserve institutional knowledge by capturing the complete lifecycle of strategic decisions. From initial draft through expert review to final archival, every step is documented, versioned, and audit-logged.
+
 
 The platform serves four user roles — **Administrator**, **Manager**, **Reviewer**, and **Employee** — each with role-based access controls. Administrators can monitor all activity through real-time dashboards and comprehensive audit trails, while decision creators can replay the full history of any decision to understand how and why it was made.
 
+
 ---
 
+
 ## System Architecture
+
 
 ```mermaid
 graph TB
@@ -28,6 +36,7 @@ graph TB
         FlaskApp["Flask Proxy Server<br/>Port 5000"]
     end
 
+
     subgraph "Backend Layer"
         FastAPIApp["FastAPI Backend<br/>Port 8000"]
         AuthModule["Authentication<br/>JWT + OTP + RBAC"]
@@ -35,15 +44,18 @@ graph TB
         EmailService["Email Service<br/>SMTP Threaded"]
     end
 
+
     subgraph "Data Layer"
         PostgreSQL[("PostgreSQL<br/>Database")]
         SQLAlchemy["SQLAlchemy ORM"]
         Alembic["Alembic<br/>Migrations"]
     end
 
+
     subgraph "External Services"
         SMTPServer["SMTP Server<br/>Email Delivery"]
     end
+
 
     Browser -->|"HTTP"| FlaskApp
     FlaskApp -->|"REST API"| FastAPIApp
@@ -55,6 +67,7 @@ graph TB
     Alembic --> PostgreSQL
     EmailService -->|"Email"| SMTPServer
 
+
     style Browser fill:#e3f2fd,stroke:#1565c0
     style FlaskApp fill:#fff3e0,stroke:#e65100
     style FastAPIApp fill:#e8f5e9,stroke:#2e7d32
@@ -64,7 +77,9 @@ graph TB
 
 ---
 
+
 ## Entity Relationship Diagram
+
 
 ```mermaid
 erDiagram
@@ -83,6 +98,7 @@ erDiagram
     USERS ||--o{ SUPPORT_TICKETS : submits
     USERS ||--o{ APPROVAL_CHAIN_CONFIGS : configures
 
+
     DECISIONS ||--o{ ALTERNATIVES : evaluates
     DECISIONS ||--o{ REVIEWS : receives
     DECISIONS ||--o{ DECISION_VERSIONS : versioned_by
@@ -91,7 +107,9 @@ erDiagram
     DECISIONS ||--o{ MEETING_NOTES : documented_in
     DECISIONS ||--o{ ATTACHMENTS : has
 
+
     DISCUSSION_THREADS ||--o{ COMMENTS : contains
+
 
     ROLES {
         int id PK
@@ -99,11 +117,13 @@ erDiagram
         string description
     }
 
+
     TEAMS {
         int id PK
         string name
         string description
     }
+
 
     USERS {
         int id PK
@@ -119,6 +139,7 @@ erDiagram
         datetime created_at
     }
 
+
     DECISIONS {
         int id PK
         string title
@@ -133,6 +154,7 @@ erDiagram
         datetime created_at
     }
 
+
     ALTERNATIVES {
         int id PK
         int decision_id FK
@@ -143,6 +165,7 @@ erDiagram
         string recommendation
     }
 
+
     REVIEWS {
         int id PK
         int decision_id FK
@@ -151,6 +174,7 @@ erDiagram
         text comments
         datetime reviewed_at
     }
+
 
     DECISION_VERSIONS {
         int id PK
@@ -161,6 +185,7 @@ erDiagram
         int changed_by FK
         datetime created_at
     }
+
 
     AUDIT_LOGS {
         int id PK
@@ -176,6 +201,7 @@ erDiagram
         datetime created_at
     }
 
+
     ACTIVITY_LOGS {
         int id PK
         int user_id FK
@@ -184,6 +210,7 @@ erDiagram
         string details
         datetime created_at
     }
+
 
     APPROVAL_CHAIN_CONFIGS {
         int id PK
@@ -196,6 +223,7 @@ erDiagram
         datetime created_at
     }
 
+
     NOTIFICATIONS {
         int id PK
         int user_id FK
@@ -205,6 +233,7 @@ erDiagram
         datetime created_at
     }
 
+
     DISCUSSION_THREADS {
         int id PK
         int decision_id FK
@@ -213,6 +242,7 @@ erDiagram
         datetime created_at
     }
 
+
     COMMENTS {
         int id PK
         int thread_id FK
@@ -220,6 +250,7 @@ erDiagram
         text content
         datetime created_at
     }
+
 
     ATTACHMENTS {
         int id PK
@@ -230,6 +261,7 @@ erDiagram
         datetime uploaded_at
     }
 
+
     MEETING_NOTES {
         int id PK
         int decision_id FK
@@ -238,6 +270,7 @@ erDiagram
         text notes
         datetime created_at
     }
+
 
     EMAIL_VERIFICATIONS {
         int id PK
@@ -248,6 +281,7 @@ erDiagram
         boolean is_verified
     }
 
+
     SUPPORT_TICKETS {
         int id PK
         int user_id FK
@@ -256,6 +290,7 @@ erDiagram
         string status
         datetime created_at
     }
+
 
     SYSTEM_SETTINGS {
         int id PK
@@ -267,33 +302,42 @@ erDiagram
 
 ---
 
+
 ## Decision Workflow
+
 
 ```mermaid
 stateDiagram-v2
     [*] --> Draft: Create Decision
 
+
     Draft --> InReview: Submit for Review
     Draft --> Archived: Discard
+
 
     InReview --> Approved: All Reviewers Approve
     InReview --> Rejected: Any Reviewer Rejects
     InReview --> Draft: Send Back for Revision
 
+
     Approved --> Archived: Archive Decision
     Rejected --> Draft: Revise & Resubmit
 
+
     Archived --> [*]
+
 
     note right of Draft
         Decision creator can edit
         all fields freely
     end note
 
+
     note right of InReview
         Reviewers assigned by admin
         can approve or reject
     end note
+
 
     note right of Approved
         Decision is finalized and
@@ -301,9 +345,12 @@ stateDiagram-v2
     end note
 ```
 
+
 ---
 
+
 ## User Onboarding Flow
+
 
 ```mermaid
 flowchart TD
@@ -325,6 +372,7 @@ flowchart TD
     RejectedNotif --> End([Account Cannot Login])
     Login --> Dashboard[Redirect to Dashboard]
 
+
     style Start fill:#e8f5e9,stroke:#2e7d32
     style Dashboard fill:#e3f2fd,stroke:#1565c0
     style End fill:#ffebee,stroke:#c62828
@@ -333,11 +381,15 @@ flowchart TD
     style Rejected fill:#ffebee,stroke:#c62828
 ```
 
+
 ---
+
 
 ## Features by Milestone
 
+
 ### Milestone 1 — Foundation
+
 
 | Feature | Description |
 |---------|-------------|
@@ -349,11 +401,13 @@ flowchart TD
 | Basic Dashboard | Role-based dashboard views for each user type |
 | File Uploads | Attach documents (PDF, DOCX, PPTX) to decisions |
 
+
 ### Milestone 2 — Decision Lifecycle & Audit
+
 
 | Feature | Description |
 |---------|-------------|
-| Decision Workflow Lifecycle | State machine: Draft → In Review → Approved/Rejected → Archived |
+| Decision Workflow Lifecycle | State machine: Draft -> In Review -> Approved/Rejected -> Archived |
 | Multi-Step OTP Registration | 6-digit Email OTP verification via SMTP before account creation |
 | Auto-Generated Employee IDs | Role-prefixed unique IDs (`AD`, `MN`, `RW`, `EMP`) |
 | Admin Approval Workflow | Pending accounts verified by administrators with email notifications |
@@ -367,7 +421,9 @@ flowchart TD
 | Single-Screen User Directory | Compact user table with profile modals and cascade deletion |
 | Admin/Manager/Employee Dashboards | Role-specific dashboards with live PostgreSQL data |
 
+
 ### Latest — Enhanced Audit & Approval Chains
+
 
 | Feature | Description |
 |---------|-------------|
@@ -383,7 +439,9 @@ flowchart TD
 
 ---
 
+
 ## Technology Stack
+
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
@@ -401,9 +459,12 @@ flowchart TD
 | **DevOps** | Docker, Docker Compose | Containerized deployment |
 | **Version Control** | Git, GitHub | Source code management |
 
+
 ---
 
+
 ## Project Structure
+
 
 ```
 EDRP/
@@ -514,7 +575,9 @@ EDRP/
 
 ---
 
+
 ## API Endpoints
+
 
 | Prefix | Module | Description |
 |--------|--------|-------------|
@@ -537,9 +600,12 @@ EDRP/
 | `/settings` | `settings_api` | System configuration |
 | `/support` | `support_api` | Support ticket system |
 
+
 ---
 
+
 ## Database Schema Summary
+
 
 | Table | Purpose | Key Relationships |
 |-------|---------|-------------------|
@@ -562,23 +628,30 @@ EDRP/
 | `support_tickets` | User support requests | FK to users |
 | `system_settings` | Application configuration | Standalone |
 
+
 ---
+
 
 ## Installation & Setup
 
+
 ### Prerequisites
+
 
 - Python 3.10+
 - PostgreSQL 15+
 - pip (Python package manager)
 - Git
 
+
 ### Backend Setup
+
 
 ```bash
 # Clone the repository
 git clone https://github.com/KoppalaNaveen/EDRP.git
 cd EDRP
+
 
 # Create and activate virtual environment
 python -m venv venv
@@ -587,9 +660,11 @@ venv\Scripts\activate
 # macOS/Linux
 source venv/bin/activate
 
+
 # Install backend dependencies
 cd backend
 pip install -r requirements.txt
+
 
 # Set up environment variables
 # Create backend/.env with:
@@ -600,27 +675,35 @@ pip install -r requirements.txt
 #   SMTP_USER=your-email@gmail.com
 #   SMTP_PASS=your-app-password
 
+
 # Run database migrations
 alembic upgrade head
+
 
 # Start the backend server
 uvicorn app.main:app --reload --port 8000
 ```
 
+
 ### Frontend Setup
+
 
 ```bash
 # In a new terminal, navigate to frontend
 cd frontend
 
+
 # Install frontend dependencies
 pip install -r requirements.txt
+
 
 # Start the Flask server
 python app.py
 ```
 
+
 ### Access the Application
+
 
 | Service | URL |
 |---------|-----|
@@ -628,21 +711,27 @@ python app.py
 | Backend API (FastAPI) | http://localhost:8000 |
 | API Documentation | http://localhost:8000/docs |
 
+
 ### Docker Setup
+
 
 ```bash
 # Build and start all services
 cd docker
 docker-compose up --build
 
+
 # Access the application
 # Frontend: http://localhost:5000
 # Backend: http://localhost:8000
 ```
 
+
 ---
 
+
 ## Security Features
+
 
 | Feature | Implementation |
 |---------|---------------|
@@ -657,11 +746,15 @@ docker-compose up --build
 | **IP & User-Agent Tracking** | Client metadata captured in audit trail |
 | **Field-Level Diff Logging** | Every change recorded with before/after values |
 
+
 ---
+
 
 ## Audit Logging System
 
+
 The audit system provides enterprise-grade compliance tracking:
+
 
 - **Structured Logs**: Each entry captures actor, action, entity, field-level diffs, IP, and user-agent
 - **Append-Only Enforcement**: Database triggers prevent any modification or deletion of audit records
@@ -670,14 +763,14 @@ The audit system provides enterprise-grade compliance tracking:
 - **CSV Export**: One-click export of filtered audit logs for compliance reporting
 - **Legacy Backfill**: Migration script carries historical events from activity_logs into audit_logs
 
+
 ---
+
 
 ## Contributors
 
+
 *
 
+
 ---
-
-
-
-

@@ -1,56 +1,21 @@
-"""
-Expert Decision Replay Platform - Team Schemas
-
-Pydantic schemas for team-related operations.
-"""
-
-from pydantic import BaseModel, Field
-from uuid import UUID
-from datetime import datetime
-from typing import Optional
+from pydantic import BaseModel
 
 
 class TeamBase(BaseModel):
-    """Base schema for team data."""
-    name: str = Field(..., min_length=2, max_length=100)
-    description: Optional[str] = None
+    team_name: str
+    description: str | None = None
 
 
 class TeamCreate(TeamBase):
-    """Schema for creating a new team."""
     pass
 
 
-class TeamUpdate(BaseModel):
-    """Schema for updating an existing team."""
-    name: Optional[str] = Field(None, min_length=2, max_length=100)
-    description: Optional[str] = None
+class TeamUpdate(TeamBase):
+    pass
 
 
-class TeamResponse(BaseModel):
-    """Schema for team in API responses."""
-    id: UUID
-    company_id: UUID
-    name: str
-    description: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
-    member_count: Optional[int] = 0
+class TeamResponse(TeamBase):
+    id: int
 
     class Config:
         from_attributes = True
-
-
-class TeamMemberAdd(BaseModel):
-    """Schema for adding a member to a team."""
-    user_id: UUID
-    role: Optional[str] = Field(default="member", pattern=r"^(leader|member)$")
-
-
-class TeamMemberResponse(BaseModel):
-    """Schema for team member in API responses."""
-    id: UUID
-    full_name: str
-    email: str
-    role: str
-    joined_at: datetime
