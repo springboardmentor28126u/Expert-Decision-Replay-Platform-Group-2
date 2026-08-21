@@ -1,11 +1,19 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import {
+  FileText,
+  CheckCircle2,
+  Users,
+  ShieldCheck,
+  FileDown,
+  FileSpreadsheet,
+} from "lucide-react";
 
 const REPORT_TABS = [
-  { key: "decision", label: "Decisions" },
-  { key: "approvals", label: "Approvals" },
-  { key: "team", label: "Teams" },
-  { key: "audit", label: "Audit" },
+  { key: "decision", label: "Decisions", icon: FileText },
+  { key: "approvals", label: "Approvals", icon: CheckCircle2 },
+  { key: "team", label: "Teams", icon: Users },
+  { key: "audit", label: "Audit", icon: ShieldCheck },
 ];
 
 const STATUS_LABELS = {
@@ -30,8 +38,8 @@ function formatDate(isoString) {
 // whatever the corresponding /api/v1/reports/* endpoint returns ΓÇö no
 // aggregation happens here, only formatting into the existing
 // stat-card/dash-table patterns already used elsewhere in the Dashboard.
-function ReportsPage({ token }) {
-  const [activeReport, setActiveReport] = useState("decision");
+function ReportsPage({ token, initialTab }) {
+  const [activeReport, setActiveReport] = useState(initialTab || "decision");
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -91,96 +99,91 @@ function ReportsPage({ token }) {
   };
 
   return (
-    <div className="panel">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "12px",
-          marginBottom: "16px",
-        }}
-      >
-        <p className="panel-title" style={{ margin: 0 }}>Reports</p>
+  <div className="panel reports-page">
 
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            className="form-btn"
-            disabled={!reportData || !!exporting}
-            onClick={() => handleExport("pdf")}
-            style={{ padding: "8px 16px", fontSize: "13px" }}
-          >
-            {exporting === "pdf" ? "Exporting..." : "📄 Export PDF"}
-          </button>
-          <button
-            className="form-btn primary"
-            disabled={!reportData || !!exporting}
-            onClick={() => handleExport("excel")}
-            style={{ padding: "8px 16px", fontSize: "13px" }}
-          >
-            {exporting === "excel" ? "Exporting..." : "📊 Export Excel"}
-          </button>
-        </div>
+    {/* Reports Header */}
+    <div className="reports-header">
+      <div>
+        <p className="panel-title reports-title">
+          Reports
+        </p>
+
+        <p className="reports-subtitle">
+          Decision analytics, approvals, team activity and audit information
+        </p>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          background: "var(--bg)",
-          border: "1px solid var(--border)",
-          borderRadius: "8px",
-          padding: "3px",
-          marginBottom: "20px",
-          width: "fit-content",
-        }}
-      >
-        {REPORT_TABS.map((tab) => (
+      <div className="reports-export-actions">
+        <button
+          className="reports-export-btn"
+          disabled={!reportData || !!exporting}
+          onClick={() => handleExport("pdf")}
+        >
+          <FileDown size={15} />
+          {exporting === "pdf" ? "Exporting..." : "Export PDF"}
+        </button>
+
+        <button
+          className="reports-export-btn reports-export-primary"
+          disabled={!reportData || !!exporting}
+          onClick={() => handleExport("excel")}
+        >
+          <FileSpreadsheet size={15} />
+          {exporting === "excel" ? "Exporting..." : "Export Excel"}
+        </button>
+      </div>
+    </div>
+
+    {/* Report Tabs */}
+    <div className="reports-tabs">
+      {REPORT_TABS.map((tab) => {
+        const Icon = tab.icon;
+
+        return (
           <button
             key={tab.key}
+            className={`reports-tab ${
+              activeReport === tab.key ? "active" : ""
+            }`}
             onClick={() => {
-              // Clear the previous tab's data in the same state update
-              // that switches tabs ΓÇö otherwise fetchReport() (which
-              // replaces it) only runs in a useEffect that fires after
-              // this render commits, leaving one render where
-              // activeReport has already changed but reportData still
-              // holds the *other* report's shape (e.g. Decision's
-              // by_status instead of Approval's by_level), which crashes
-              // whichever ReportView renders next.
               setActiveReport(tab.key);
               setReportData(null);
             }}
-            style={{
-              padding: "8px 18px",
-              fontSize: "13px",
-              fontWeight: 600,
-              borderRadius: "6px",
-              border: "none",
-              cursor: "pointer",
-              background: activeReport === tab.key ? "var(--accent-soft)" : "transparent",
-              color: activeReport === tab.key ? "var(--accent)" : "var(--text-secondary)",
-              transition: "all 0.15s",
-            }}
           >
-            {tab.label}
+            <Icon size={15} />
+            <span>{tab.label}</span>
           </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <p className="dash-card-note">Loading report...</p>
-      ) : error ? (
-        <p style={{ color: "var(--danger)", fontSize: "13px" }}>{error}</p>
-      ) : !reportData ? null : (
-        <>
-          {activeReport === "decision" && <DecisionReportView data={reportData} />}
-          {activeReport === "approvals" && <ApprovalReportView data={reportData} />}
-          {activeReport === "team" && <TeamReportView data={reportData} />}
-          {activeReport === "audit" && <AuditReportView data={reportData} />}
-        </>
-      )}
+        );
+      })}
     </div>
-  );
+
+    {loading ? (
+      <p className="dash-card-note">Loading report...</p>
+    ) : error ? (
+      <p style={{ color: "var(--danger)", fontSize: "13px" }}>
+        {error}
+      </p>
+    ) : !reportData ? null : (
+      <>
+        {activeReport === "decision" && (
+          <DecisionReportView data={reportData} />
+        )}
+
+        {activeReport === "approvals" && (
+          <ApprovalReportView data={reportData} />
+        )}
+
+        {activeReport === "team" && (
+          <TeamReportView data={reportData} />
+        )}
+
+        {activeReport === "audit" && (
+          <AuditReportView data={reportData} />
+        )}
+      </>
+    )}
+  </div>
+);
 }
 
 function StatCard({ label, value }) {
@@ -330,10 +333,12 @@ function ApprovalReportView({ data }) {
 }
 
 function TeamReportView({ data }) {
+  const teams = data.teams || [];
+
   return (
     <>
       <div className="stat-grid">
-        <StatCard label="Total Teams" value={data.total_teams} />
+        <StatCard label="Total Teams" value={data.total_teams ?? 0} />
       </div>
 
       <ReportSection title="Team Activity">
@@ -345,10 +350,10 @@ function TeamReportView({ data }) {
             </tr>
           </thead>
           <tbody>
-            {data.teams.length === 0 ? (
+            {teams.length === 0 ? (
               <EmptyRow colSpan={7} />
             ) : (
-              data.teams.map((t) => (
+              teams.map((t) => (
                 <tr key={t.team_id} className="dash-table-row">
                   <td style={{ fontWeight: 600 }}>{t.team_name}</td>
                   <td>{t.member_count}</td>

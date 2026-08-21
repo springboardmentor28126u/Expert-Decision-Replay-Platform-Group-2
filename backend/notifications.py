@@ -10,7 +10,7 @@ from schemas import NotificationResponse
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
-@router.get("/", response_model=List[NotificationResponse])
+@router.get("", response_model=List[NotificationResponse])
 def get_user_notifications(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

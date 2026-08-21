@@ -10,6 +10,7 @@ def log_audit(
     user_id: int,
     details: str | None = None,
     commit: bool = True,
+    refresh: bool = True,
 ) -> AuditLog:
     """
     Creates and saves an audit log entry.
@@ -25,7 +26,9 @@ def log_audit(
     db.add(log_entry)
     if commit:
         db.commit()
-        db.refresh(log_entry)
+
+        if refresh:
+            db.refresh(log_entry)
     return log_entry
 
 def log_activity(
@@ -59,4 +62,4 @@ def log_access(
     details: str | None = None,
     commit: bool = True,
 ) -> AuditLog:
-    return log_audit(db, "access", action, entity_type, entity_id, user_id, details, commit)
+    return log_audit(db, "access", action, entity_type, entity_id, user_id, details, commit, refresh=False,)

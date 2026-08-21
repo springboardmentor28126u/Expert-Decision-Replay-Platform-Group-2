@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
+import { Pencil, FileDown, Paperclip } from "lucide-react";
 import VersionHistory from "./VersionHistory";
 import AlternativesPanel from "./AlternativesPanel";
 import "./discussion.css";
 import "./dashboard.css";
 import FileUpload from "./FileUpload";
 import ApprovalHistory from "./ApprovalHistory";
+
+const API_BASE = import.meta.env.PROD ? "" : "http://127.0.0.1:8000";
 
 function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) {
   const [messages, setMessages] = useState([]);
@@ -90,7 +93,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
   const getAttachmentUrl = (url) => {
     if (!url) return null;
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `http://127.0.0.1:8000${url}`;
+    return `${API_BASE}${url}`;
   };
 
   const isImageFile = (url) => {
@@ -627,13 +630,14 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                 
                <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
                  <button className="dash-back-btn" onClick={() => setIsEditing(true)}>
-                   ✏️ Edit Decision
+                   <Pencil size={15} />
+                   Edit Decision
                  </button>
                  <a
-                  href={`http://127.0.0.1:8000/decisions/${decision.id}/export`}
+                  href={`${API_BASE}/decisions/${decision.id}/export`}
                   onClick={(e) => {
                     e.preventDefault();
-                    fetch(`http://127.0.0.1:8000/decisions/${decision.id}/export`, {
+                    fetch(`${API_BASE}/decisions/${decision.id}/export`, {
                       headers: { Authorization: `Bearer ${token}` },
                     })
                       .then((res) => res.blob())
@@ -648,7 +652,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   className="dash-back-btn"
                   style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
                 >
-                  ⬇ Download PDF
+                  <FileDown size={15} />
+                  Download PDF
                  </a>
                 </div>
               </div>
@@ -712,7 +717,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
             {decision.attachment_url && (
               <div style={{ marginTop: "12px", display: "flex", gap: "16px" }}>
                 <a
-                  href={`http://127.0.0.1:8000${decision.attachment_url}`}
+                  href={`${API_BASE}${decision.attachment_url}`}
                   target="_blank"
                   rel="noreferrer"
                   style={{ color: "#4FD1B5", fontSize: "13px", textDecoration: "none" }}
@@ -724,7 +729,7 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
                   href="#"
                   onClick={(e) => {
                    e.preventDefault();
-                   fetch(`http://127.0.0.1:8000${decision.attachment_url}?download=true`)
+                   fetch(`${API_BASE}${decision.attachment_url}?download=true`)
                       .then((res) => res.blob())
                       .then((blob) => {
                         const url = window.URL.createObjectURL(blob);
@@ -870,7 +875,8 @@ function DecisionDetails({ decision, token, profile, onStatusUpdated, onBack }) 
 
                 <div className="form-file-input-wrapper">
                   <label className="form-file-label">
-                    📎 Attach File (PDF, DOCX, JPG, PNG)
+                    <Paperclip size={15} />
+                    Attach File (PDF, DOCX, JPG, PNG)
                     <input
                       type="file"
                       className="form-file-input"

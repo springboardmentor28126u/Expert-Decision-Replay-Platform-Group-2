@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Float, Text, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy import DateTime
+from sqlalchemy.orm import relationship
 from database import Base
+from datetime import datetime
 import enum
 
 class UserRole(str, enum.Enum):
@@ -17,12 +20,11 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.employee, nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    team = relationship("Team", foreign_keys=[team_id], back_populates="members")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-from sqlalchemy import Text, ForeignKey
-from sqlalchemy.orm import relationship
 
 class DecisionStatus(str, enum.Enum):
     draft = "draft"
@@ -50,11 +52,14 @@ class Decision(Base):
     category = Column(String, nullable=True)
     status = Column(Enum(DecisionStatus), default=DecisionStatus.draft, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assigned_reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     attachment_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    ai_summary = Column(Text, nullable=True)
+    ai_summary_updated_at = Column(DateTime, nullable=True)
     
-    creator = relationship("User")
+    creator = relationship("User", foreign_keys=[created_by])
 
 
 class Alternative(Base):
@@ -79,8 +84,9 @@ class AuditLog(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     action = Column(String, nullable=False)
     entity_type = Column(String, nullable=False)
-    entity_id = Column(Integer, nullable=False, index=True)
+    entity_id = Column(Integer, nullable=True, index=True)
     details = Column(Text, nullable=True)
+    log_type = Column(String, nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User")
@@ -138,12 +144,45 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     message = Column(Text, nullable=False)
     type = Column(String, nullable=False, default="info")
     link = Column(String, nullable=True)
     is_read = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user = relationship("User")
+
+class ReviewerAssignment(Base):
+    __tablename__ = "reviewer_assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String, unique=True, nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assigned_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    reviewer = relationship("User", foreign_keys=[reviewer_id])
+
+class Team(Base):
+    __tablename__ = "teams"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    manager = relationship("User", foreign_keys=[manager_id])
+    members = relationship("User", foreign_keys="[User.team_id]", back_populates="team")
+
+class ChatHistory(Base):
+    __tablename__ = "chat_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    decision_id = Column(Integer, ForeignKey("decisions.id"), nullable=True)
+    tab_type = Column(String, nullable=False)  # "ask" or "task"
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

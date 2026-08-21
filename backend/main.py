@@ -1,16 +1,27 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile
+import os
+import time
+from collections import defaultdict
+from dotenv import load_dotenv
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse, FileResponse
+
+from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, Body, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import select, func, text
 from pathlib import Path
 from shutil import copyfileobj
 from uuid import uuid4
 from typing import List
+from fastapi import UploadFile, File
 import io
+import time
 from reportlab.lib import colors
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
+from ai_service import summarize_decision, find_similar_decisions, generate_sql_query, is_query_safe, parse_task_command, answer_decision_question, answer_with_file, recommend_approval, generate_problem_statement
+from discussion import DiscussionMessage
 
 from fastapi.responses import StreamingResponse
 from reportlab.lib.pagesizes import letter
@@ -29,20 +40,156 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 
 from database import engine, Base, get_db
-from models import User, UserRole, AuditLog
+from models import User, UserRole, AuditLog, ReviewerAssignment, ChatHistory, Team
+from audit_helper import log_activity, log_security, log_access
 from discussion import DiscussionMessage
 
 from uploads import router as uploads_router
+from redis_cache import (
+    get_cached_data,
+    set_cached_data,
+    delete_cached_data,
+    invalidate_decisions_cache,
+    invalidate_dashboard_cache,
+    invalidate_admin_dashboard_cache,
+)
 from notifications import router as notifications_router
-from notifications import notify_all_users
-
-from schemas import UserCreate, UserLogin, UserResponse, Token
-
+from notifications import notify_all_users, Notification
+from email_service import queue_email
+from schemas import UserCreate, UserLogin, UserResponse, Token, ReviewerAssignmentCreate, ReviewerAssignmentResponse, TeamCreate, TeamUpdate, TeamMemberAssign, TeamResponse, TeamDetailResponse, TeamReportResponse, TeamReportItem
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 # Create all tables (safe to keep, won't duplicate existing ones)
 Base.metadata.create_all(bind=engine)
 
+load_dotenv()
+
+try:
+    RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "60"))
+except ValueError:
+    RATE_LIMIT_PER_MIN = 60
+
+from redis_client import get_redis
+import logging
+
+logger = logging.getLogger(__name__)
+
+class RateLimitingMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, limit: int, window: int = 60):
+        super().__init__(app)
+        self.limit = limit
+        self.window = window
+        self.requests = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next):
+        if self.limit <= 0:
+            return await call_next(request)
+
+        # Identify client by user ID (email from token sub) or fallback to IP
+        client_identifier = None
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            try:
+                from auth import SECRET_KEY, ALGORITHM
+                from jose import jwt
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                email = payload.get("sub")
+                if email:
+                    client_identifier = f"user:{email}"
+            except Exception:
+                pass
+
+        if not client_identifier:
+            client_ip = request.client.host if request.client else "unknown"
+            client_identifier = f"ip:{client_ip}"
+
+        current_time = time.time()
+        
+        # Try to use Redis for rate limiting
+        r = get_redis()
+        if r is not None:
+            try:
+                key = f"ratelimit:{client_identifier}"
+                member = f"{current_time}:{uuid4()}"
+                
+                # Sliding window Lua script to check limit and record request atomically
+                lua_script = """
+                local key = KEYS[1]
+                local now = tonumber(ARGV[1])
+                local window = tonumber(ARGV[2])
+                local limit = tonumber(ARGV[3])
+                local member = ARGV[4]
+
+                -- Remove elements older than (now - window)
+                redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+                
+                -- Count current elements
+                local current_requests = redis.call('ZCARD', key)
+
+                if current_requests < limit then
+                    -- Record request
+                    redis.call('ZADD', key, now, member)
+                    redis.call('EXPIRE', key, window)
+                    return 1 -- Allowed
+                else
+                    return 0 -- Rate limited
+                end
+                """
+                
+                allowed = r.eval(lua_script, 1, key, current_time, self.window, self.limit, member)
+                if not allowed:
+                    return JSONResponse(
+                        status_code=429,
+                        content={"detail": "Too many requests. Please try again later."}
+                    )
+                return await call_next(request)
+            except Exception as e:
+                logger.error(f"Redis rate limiting error: {e}. Falling back to in-memory mode.")
+
+        # Fallback: In-memory sliding window rate limiter
+        # Clean up older timestamps
+        self.requests[client_identifier] = [
+            t for t in self.requests[client_identifier]
+            if current_time - t < self.window
+        ]
+        
+        if len(self.requests[client_identifier]) >= self.limit:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please try again later."}
+            )
+            
+        self.requests[client_identifier].append(current_time)
+        return await call_next(request)
+
+
+class SPAMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "GET":
+            accept = request.headers.get("accept", "")
+            path = request.url.path
+            
+            # Allow static files, uploads, and backend docs to bypass
+            is_static_or_upload = (
+                path.startswith("/uploads") or 
+                path.startswith("/assets") or
+                path.startswith("/docs") or
+                path.startswith("/redoc") or
+                path.startswith("/openapi.json") or
+                any(path.endswith(ext) for ext in [".js", ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".json", ".txt"])
+            )
+            
+            if "text/html" in accept and not is_static_or_upload:
+                index_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist", "index.html")
+                if os.path.exists(index_path):
+                    return FileResponse(index_path)
+                    
+        return await call_next(request)
+
+
 app = FastAPI()
+app.add_middleware(SPAMiddleware)
+app.add_middleware(RateLimitingMiddleware, limit=RATE_LIMIT_PER_MIN)
 
 UPLOAD_ROOT = Path(__file__).resolve().parent / "uploads"
 DISCUSSION_UPLOAD_DIR = UPLOAD_ROOT / "discussion"
@@ -85,6 +232,15 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
+    log_security(
+        db=db,
+        action="register",
+        entity_type="user",
+        entity_id=new_user.id,
+        user_id=new_user.id,
+        details="User registered successfully",
+    )
+    invalidate_admin_dashboard_cache()
     return new_user
 
 
@@ -99,6 +255,14 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": user.email, "role": user.role.value})
 
+    log_security(
+        db=db,
+        action="login",
+        entity_type="user",
+        entity_id=user.id,
+        user_id=user.id,
+        details="User logged in successfully",
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -159,17 +323,305 @@ def update_user_role(
     target_user.role = role_update.role
     db.commit()
     db.refresh(target_user)
-
+    invalidate_admin_dashboard_cache()
     return target_user
 
+@app.get("/teams", response_model=List[TeamResponse], tags=["Team Management"])
+def list_teams(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    teams = db.query(Team).all()
+
+    return [
+        TeamResponse(
+            id=team.id,
+            name=team.name,
+            description=team.description,
+            manager_id=team.manager_id,
+        )
+        for team in teams
+    ]
+
+@app.post(
+    "/teams",
+    response_model=TeamResponse,
+    status_code=201,
+    tags=["Team Management"],
+)
+def create_team(
+    team: TeamCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    # Prevent duplicate team names
+    existing_team = db.execute(
+        select(Team).where(Team.name == team.name)
+    ).scalar_one_or_none()
+
+    if existing_team:
+        raise HTTPException(
+            status_code=400,
+            detail="A team with this name already exists.",
+        )
+
+    # Validate manager if one is provided
+    if team.manager_id is not None:
+        manager = db.execute(
+            select(User).where(User.id == team.manager_id)
+        ).scalar_one_or_none()
+
+        if not manager:
+            raise HTTPException(
+                status_code=404,
+                detail="Manager user not found.",
+            )
+
+        if manager.role != UserRole.manager:
+            raise HTTPException(
+                status_code=400,
+                detail="Selected user must have the manager role.",
+            )
+
+    new_team = Team(
+        name=team.name,
+        description=team.description,
+        manager_id=team.manager_id,
+    )
+
+    db.add(new_team)
+    db.commit()
+    db.refresh(new_team)
+
+    return new_team
+
+@app.get(
+    "/teams/{team_id}",
+    response_model=TeamDetailResponse,
+    tags=["Team Management"],
+)
+def get_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    return TeamDetailResponse.from_team(team)
+
+@app.patch(
+    "/teams/{team_id}",
+    response_model=TeamResponse,
+    tags=["Team Management"],
+)
+def update_team(
+    team_id: int,
+    team_update: TeamUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    update_data = team_update.model_dump(exclude_unset=True)
+
+    # Validate the new manager, if supplied
+    if "manager_id" in update_data and update_data["manager_id"] is not None:
+        manager = db.execute(
+            select(User).where(User.id == update_data["manager_id"])
+        ).scalar_one_or_none()
+
+        if not manager:
+            raise HTTPException(
+                status_code=404,
+                detail="Manager user not found.",
+            )
+
+        if manager.role != UserRole.manager:
+            raise HTTPException(
+                status_code=400,
+                detail="Selected user must have the manager role.",
+            )
+
+    # Prevent duplicate names
+    if "name" in update_data:
+        existing_team = db.execute(
+            select(Team).where(
+                Team.name == update_data["name"],
+                Team.id != team_id,
+            )
+        ).scalar_one_or_none()
+
+        if existing_team:
+            raise HTTPException(
+                status_code=400,
+                detail="A team with this name already exists.",
+            )
+
+    for field, value in update_data.items():
+        setattr(team, field, value)
+
+    db.commit()
+    db.refresh(team)
+
+    return team
+
+@app.delete(
+    "/teams/{team_id}",
+    status_code=204,
+    tags=["Team Management"],
+)
+def delete_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.admin)
+    ),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    db.delete(team)
+    db.commit()
+
+    return None
+
+@app.delete(
+    "/teams/{team_id}/members/{user_id}",
+    response_model=TeamDetailResponse,
+    tags=["Team Management"],
+)
+def remove_team_member(
+    team_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    user = db.execute(
+        select(User).where(User.id == user_id)
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
+    if user.team_id != team_id:
+        raise HTTPException(
+            status_code=400,
+            detail="User is not a member of this team.",
+        )
+
+    user.team_id = None
+
+    db.commit()
+    db.refresh(team)
+
+    return TeamDetailResponse.from_team(team)
+
+@app.post(
+    "/teams/{team_id}/members",
+    response_model=TeamDetailResponse,
+    status_code=200,
+    tags=["Team Management"],
+)
+def add_team_member(
+    team_id: int,
+    assignment: TeamMemberAssign,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    team = db.execute(
+        select(Team).where(Team.id == team_id)
+    ).scalar_one_or_none()
+
+    if not team:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found.",
+        )
+
+    user = db.execute(
+        select(User).where(User.id == assignment.user_id)
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
+    user.team_id = team_id
+
+    db.commit()
+    db.refresh(user)
+    db.refresh(team)
+
+    return TeamDetailResponse.from_team(team)
+
 from schemas import (
-    DecisionCreate, DecisionResponse, DecisionStatusUpdate, DecisionReportResponse, ApprovalReportResponse, AuditReportResponse, )
-from models import ( Decision, DecisionStatus, Approval, ApprovalAction, )
+    DecisionCreate, DecisionResponse, DecisionStatusUpdate, DecisionReportResponse, ApprovalReportResponse, AuditReportResponse, PaginatedDecisionResponse, )
+from models import ( Decision, DecisionStatus, Approval, ApprovalAction, ReviewerAssignment, )
 from typing import List as ListType
 
 def _with_creator_name(decision: Decision) -> Decision:
     decision.creator_name = decision.creator.full_name if decision.creator else None
     return decision
+
+def serialize_decision(d: Decision) -> dict:
+    return {
+        "id": d.id,
+        "title": d.title,
+        "problem_statement": d.problem_statement,
+        "category": d.category,
+        "status": d.status.value if hasattr(d.status, "value") else d.status,
+        "created_by": d.created_by,
+        "creator_name": getattr(d, "creator_name", None) or (d.creator.full_name if d.creator else None),
+        "attachment_url": d.attachment_url,
+        "created_at": d.created_at.isoformat() if hasattr(d.created_at, "isoformat") else str(d.created_at),
+        "updated_at": d.updated_at.isoformat() if d.updated_at and hasattr(d.updated_at, "isoformat") else (str(d.updated_at) if d.updated_at else None),
+    }
 
 @app.post("/decisions", response_model=DecisionResponse, tags=["Decision Management"])
 def create_decision(
@@ -187,14 +639,57 @@ def create_decision(
     db.add(new_decision)
     db.commit()
     db.refresh(new_decision)
+
+    log_activity(
+        db=db,
+        action="create",
+        entity_type="decision",
+        entity_id=new_decision.id,
+        user_id=current_user.id,
+        details="Decision created",
+    )
     new_decision.creator_name = new_decision.creator.full_name
+    
+    # Broadcast notification to other users
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="New Decision Created",
+        message=f"A new decision '{new_decision.title}' has been created by {current_user.full_name}.",
+        type="DECISION_CREATED",
+        link=f"/decisions/{new_decision.id}"
+    )
+
+    # Invalidate decisions and dashboard caches
+    invalidate_decisions_cache()
+
     return new_decision
 
-@app.get("/decisions", response_model=ListType[DecisionResponse], tags=["Decision Management"])
+@app.post("/ai/generate-problem-statement", tags=["Decision Management"])
+def get_generated_problem_statement(
+    title: str = Body(..., embed=True),
+    current_user: User = Depends(get_current_user),
+):
+    if not title or len(title.strip()) < 3:
+        raise HTTPException(status_code=400, detail="Please provide a title first.")
+
+    result = generate_problem_statement(title)
+
+    if result == "AI_RATE_LIMITED":
+        raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
+
+    return {"title": title, "problem_statement": result}
+
+@app.get("/decisions", response_model=PaginatedDecisionResponse, tags=["Decision Management"])
 def list_decisions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     user_id: int | None = None,
+    page: int = 1,
+    limit: int = 10,
+    search: str | None = None,
+    status: str | None = None,
+    owner: str | None = None,
 ):
     if user_id is not None and current_user.role != UserRole.admin and current_user.id != user_id:
         raise HTTPException(
@@ -202,14 +697,90 @@ def list_decisions(
             detail="You can only request your own decisions."
         )
 
-    query = select(Decision)
+    # Keep pagination values safe
+    page = max(page, 1)
+    limit = min(max(limit, 1), 100)
+
+    search_key = search.strip().lower() if search else "all"
+    status_key = status if status else "all"
+    owner_key = owner if owner else "all"
+
+    cache_key = (
+        f"db_cache:decisions:all:search:{search_key}:status:{status_key}:owner:{owner_key}:page{page}:limit{limit}"
+        if user_id is None
+        else f"db_cache:decisions:user:{user_id}:search:{search_key}:status:{status_key}:owner:{owner_key}:page{page}:limit{limit}"
+    )
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
+
+    query = select(Decision).options(selectinload(Decision.creator))
+
     if user_id is not None:
         query = query.where(Decision.created_by == user_id)
+    elif owner == "mine":
+        query = query.where(Decision.created_by == current_user.id)
+
+    if status and status != "all":
+        query = query.where(Decision.status == status)
+
+    if search:
+        search_term = f"%{search.strip()}%"
+        query = query.where(
+            Decision.title.ilike(search_term)
+            | Decision.category.ilike(search_term)
+            | Decision.problem_statement.ilike(search_term)
+        )
+
+    # Get total number of matching decisions
+    count_start = time.perf_counter()
+
+    count_query = select(func.count()).select_from(query.subquery())
+    total = db.execute(count_query).scalar_one()
+
+    print(f"COUNT QUERY TIME: {time.perf_counter() - count_start:.4f}s")
+
+    # Fetch only the required page
+    offset = (page - 1) * limit
+
+    query = (
+        query
+        .order_by(Decision.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+
+    query_start = time.perf_counter()
 
     decisions = db.execute(query).scalars().all()
+    print(f"DECISION QUERY TIME: {time.perf_counter() - query_start:.4f}s")
     for d in decisions:
         d.creator_name = d.creator.full_name if d.creator else None
-    return decisions
+
+    log_start = time.perf_counter()
+
+    log_access(
+        db=db,
+        action="list",
+        entity_type="decision",
+        entity_id=None,
+        user_id=current_user.id,
+        details="Listed decisions",
+
+    )  
+    print(f"LOG ACCESS TIME: {time.perf_counter() - log_start:4f}s")
+    response_data = {
+        "items": decisions,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
+
+    #Enable this later after testing search
+    #set_cached_data(cache_key, response_data, expire=300)
+    
+    return response_data
 
 from datetime import datetime, timedelta
 
@@ -239,14 +810,288 @@ def get_decision(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    cache_key = f"db_cache:decision:{decision_id}"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
+
     decision = db.execute(
         select(Decision).where(Decision.id == decision_id)
     ).scalar_one_or_none()
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
     decision.creator_name = decision.creator.full_name if decision.creator else None
-    return decision
+    
+    serialized = serialize_decision(decision)
+    set_cached_data(cache_key, serialized, expire=300)
+    return serialized
 
+@app.get("/decisions/{decision_id}/ai-summary", tags=["Decision Management"])
+def get_ai_summary(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    # Use cached summary if it exists and the decision hasn't changed since
+    if decision.ai_summary and decision.ai_summary_updated_at and decision.updated_at:
+        summary_at = decision.ai_summary_updated_at
+        updated_at = decision.updated_at
+        if summary_at.tzinfo is not None:
+            summary_at = summary_at.replace(tzinfo=None)
+        if updated_at.tzinfo is not None:
+            updated_at = updated_at.replace(tzinfo=None)
+
+        if summary_at >= updated_at:
+            return {
+                "decision_id": decision.id,
+                "title": decision.title,
+                "status": decision.status,
+                "category": decision.category,
+                "created_by": decision.creator.full_name if decision.creator else None,
+                "created_at": decision.created_at,
+                "summary": decision.ai_summary,
+                "cached": True,
+            }
+
+    messages = db.execute(
+        select(DiscussionMessage).where(DiscussionMessage.decision_id == decision_id)
+    ).scalars().all()
+    discussion_text = "\n".join([m.message for m in messages]) if messages else ""
+
+    summary = summarize_decision(decision.problem_statement, discussion_text)
+
+    if summary == "AI_RATE_LIMITED":
+        summary = "AI summary temporarily unavailable (rate limit reached) — please try again in a minute."
+    elif summary == "AI_EMPTY_RESPONSE" or summary == "AI_ERROR":
+        summary = "AI summary could not be generated for this decision. Please try again."
+    else:
+        decision.ai_summary = summary
+        decision.ai_summary_updated_at = datetime.utcnow()
+        db.commit()
+
+    return {
+        "decision_id": decision.id,
+        "title": decision.title,
+        "status": decision.status,
+        "category": decision.category,
+        "created_by": decision.creator.full_name if decision.creator else None,
+        "created_at": decision.created_at,
+        "summary": summary,
+        "cached": False,
+    }
+
+@app.get("/decisions/{decision_id}/similar", tags=["Decision Management"])
+def get_similar_decisions(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    candidate_decisions = db.execute(
+        select(Decision)
+        .where(Decision.category == decision.category,
+                Decision.id != decision.id
+                )
+                .limit(20)
+    ).scalars().all()
+
+    similar = find_similar_decisions(decision, candidate_decisions)
+
+    return {
+        "decision_id": decision.id,
+        "similar_decisions": [
+            {
+                "id": d.id,
+                "title": d.title,
+                "status": d.status,
+                "category": d.category,
+            }
+            for d in similar
+        ]
+    }
+
+from fastapi import Body
+
+@app.post("/ai/ask", tags=["AI Assistant"])
+def ask_ai(
+    question: str = Body(..., embed=True),
+    history: list = Body(default=[], embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("manager", "admin")),
+):
+    sql = generate_sql_query(question, history)
+
+    if not is_query_safe(sql):
+        raise HTTPException(status_code=400, detail="This question could not be safely answered. Try rephrasing it.")
+
+    try:
+        result = db.execute(text(sql))
+        rows = [dict(row._mapping) for row in result]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Query failed: {str(e)}")
+
+    db.add(ChatHistory(user_id=current_user.id, tab_type="ask", question=question, answer=f"Found {len(rows)} result(s)"))
+    db.commit()
+
+    return {
+        "question": question,
+        "generated_sql": sql,
+        "results": rows,
+    }
+
+@app.post("/ai/task", tags=["AI Assistant"])
+def run_task_command(
+    command: str = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("manager", "admin")),
+):
+    parsed = parse_task_command(command)
+    action = parsed.get("action")
+    if action == "rate_limited":
+        raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
+    decision_id = parsed.get("decision_id")
+
+    if action == "unknown" or not decision_id:
+        raise HTTPException(status_code=400, detail="Could not understand that command. Try something like 'escalate decision 34' or 'reassign reviewer for decision 34 to user 5'.")
+
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail=f"Decision {decision_id} not found")
+
+    if action == "reassign_reviewer":
+        new_reviewer_id = parsed.get("new_reviewer_id")
+        if not new_reviewer_id:
+            raise HTTPException(status_code=400, detail="No reviewer ID specified in command")
+
+        reviewer = db.execute(
+            select(User).where(User.id == new_reviewer_id)
+        ).scalar_one_or_none()
+        if not reviewer:
+            raise HTTPException(status_code=404, detail=f"User {new_reviewer_id} not found")
+
+        decision.assigned_reviewer_id = new_reviewer_id
+        db.commit()
+
+        db.add(ChatHistory(user_id=current_user.id, decision_id=decision_id, tab_type="task", question=command, answer=f"reassign_reviewer: done"))
+        db.commit()
+
+        return {"action": "reassign_reviewer", "decision_id": decision_id, "new_reviewer_id": new_reviewer_id, "status": "done"}
+
+    elif action == "escalate":
+        notification = Notification(
+            user_id=current_user.id,
+            title="Decision Escalated",
+            message=f"Decision '{decision.title}' (ID {decision.id}) was flagged for escalation via AI Assistant.",
+            type="escalation",
+            is_read=False,
+            link=f"/decisions/{decision.id}",
+        )
+        db.add(notification)
+        db.commit()
+
+        db.add(ChatHistory(user_id=current_user.id, decision_id=decision_id, tab_type="task", question=command, answer="escalate: flagged"))
+        db.commit()
+
+        return {"action": "escalate", "decision_id": decision_id, "status": "flagged"}
+
+    raise HTTPException(status_code=400, detail="Unsupported action")
+
+@app.post("/ai/ask-with-file", tags=["AI Assistant"])
+async def ask_with_file(
+    question: str = Body(...),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    allowed_types = ["text/plain", "application/pdf", "image/jpeg", "image/png"]
+    mime_type = file.content_type
+
+    if mime_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Supported file types: .txt, .pdf, .jpg, .png")
+
+    file_bytes = await file.read()
+
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+
+    answer = answer_with_file(question, file_bytes, mime_type)
+
+    if answer == "AI_RATE_LIMITED":
+        raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
+
+    return {"question": question, "answer": answer, "filename": file.filename}
+
+@app.post("/decisions/{decision_id}/ai-ask", tags=["Decision Management"])
+def ask_about_decision(
+    decision_id: int,
+    question: str = Body(..., embed=True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    messages = db.execute(
+        select(DiscussionMessage).where(DiscussionMessage.decision_id == decision_id)
+    ).scalars().all()
+    discussion_text = "\n".join([m.message for m in messages]) if messages else ""
+
+    approvals = db.execute(
+        select(Approval).where(Approval.decision_id == decision_id)
+    ).scalars().all()
+    approvals_text = "\n".join([
+        f"Stage {a.stage}: {a.action} — {a.comment or 'no comment'}" for a in approvals
+    ]) if approvals else ""
+
+    answer = answer_decision_question(question, decision, discussion_text, approvals_text)
+
+    if answer == "AI_RATE_LIMITED":
+        raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
+
+    db.add(ChatHistory(user_id=current_user.id, decision_id=decision_id, tab_type="ask", question=question, answer=answer))
+    db.commit()
+
+    return {"decision_id": decision_id, "question": question, "answer": answer}
+
+@app.get("/ai/history", tags=["AI Assistant"])
+def get_chat_history(
+    tab_type: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = select(ChatHistory).where(ChatHistory.user_id == current_user.id)
+    if tab_type:
+        query = query.where(ChatHistory.tab_type == tab_type)
+    query = query.order_by(ChatHistory.created_at.desc()).limit(20)
+
+    history = db.execute(query).scalars().all()
+
+    return [
+        {
+            "id": h.id,
+            "decision_id": h.decision_id,
+            "tab_type": h.tab_type,
+            "question": h.question,
+            "answer": h.answer,
+            "created_at": h.created_at,
+        }
+        for h in history
+    ]
 
 @app.put("/decisions/{decision_id}/status", response_model=DecisionResponse, tags=["Decision Management"])
 def update_decision_status(
@@ -270,7 +1115,115 @@ def update_decision_status(
     decision.status = status_update.status
     db.commit()
     db.refresh(decision)
+    invalidate_decisions_cache(decision_id)
     return decision
+
+@app.post("/reviewer-assignments", response_model=ReviewerAssignmentResponse, tags=["Approval Workflow"])
+def assign_reviewer_to_category(
+    assignment: ReviewerAssignmentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.admin)),
+):
+    reviewer = db.execute(
+        select(User).where(User.id == assignment.reviewer_id)
+    ).scalar_one_or_none()
+
+    if not reviewer:
+        raise HTTPException(status_code=404, detail="Reviewer user not found")
+
+    if reviewer.role != UserRole.reviewer:
+        raise HTTPException(
+            status_code=400,
+            detail="Assigned user must have the Reviewer role"
+        )
+
+    existing = db.execute(
+        select(ReviewerAssignment).where(
+            func.lower(ReviewerAssignment.category) == assignment.category.lower()
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        existing.reviewer_id = assignment.reviewer_id
+        existing.assigned_by = current_user.id
+        db.commit()
+        db.refresh(existing)
+        existing.reviewer_name = reviewer.full_name
+        return existing
+
+    new_assignment = ReviewerAssignment(
+        category=assignment.category,
+        reviewer_id=assignment.reviewer_id,
+        assigned_by=current_user.id,
+    )
+
+    db.add(new_assignment)
+    db.commit()
+    db.refresh(new_assignment)
+    new_assignment.reviewer_name = reviewer.full_name
+    return new_assignment
+
+
+@app.get(
+    "/reviewer-assignments",
+    response_model=List[ReviewerAssignmentResponse],
+    tags=["Approval Workflow"],
+)
+def list_reviewer_assignments(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    assignments = db.execute(
+        select(ReviewerAssignment)
+    ).scalars().all()
+
+    for a in assignments:
+        a.reviewer_name = a.reviewer.full_name if a.reviewer else None
+
+    return assignments
+
+@app.get("/decisions/{decision_id}/ai-recommendation", tags=["Decision Management"])
+def get_approval_recommendation(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("reviewer", "manager", "admin")),
+):
+    decision = db.execute(
+        select(Decision).where(Decision.id == decision_id)
+    ).scalar_one_or_none()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    messages = db.execute(
+        select(DiscussionMessage).where(DiscussionMessage.decision_id == decision_id)
+    ).scalars().all()
+    discussion_text = "\n".join([m.message for m in messages]) if messages else ""
+
+    alternatives = db.execute(
+        select(Alternative).where(Alternative.decision_id == decision_id)
+    ).scalars().all()
+    alternatives_text = "\n".join([
+        f"{a.title} — Cost: {a.cost}, Risk: {a.risk_level}, Feasibility: {a.feasibility}" for a in alternatives
+    ]) if alternatives else ""
+
+    candidate_decisions = db.execute(
+       select(Decision)
+       .where(
+          Decision.category == decision.category,
+          Decision.id != decision.id
+       )
+       .limit(20)
+    ).scalars().all()
+
+    similar = find_similar_decisions(decision, candidate_decisions)
+    similar_text = "\n".join([f"{d.title} — {d.status}" for d in similar]) if similar else ""
+
+    recommendation = recommend_approval(decision, discussion_text, alternatives_text, similar_text)
+
+    if recommendation == "AI_RATE_LIMITED":
+        raise HTTPException(status_code=429, detail="AI is temporarily rate-limited. Please wait a minute and try again.")
+
+    return {"decision_id": decision_id, "recommendation": recommendation}
 
 from schemas import ApprovalCreate, ApprovalResponse
 from models import Approval, ApprovalAction
@@ -279,6 +1232,7 @@ from models import Approval, ApprovalAction
 def approve_decision(
     decision_id: int,
     approval: ApprovalCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -288,14 +1242,50 @@ def approve_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-     # Find the highest approval stage reached so far for this decision
-    last_approval = db.execute(
+    # Check whether this decision was resubmitted after a rejection
+    last_resubmission = db.execute(
         select(Approval)
-        .where(Approval.decision_id == decision_id, Approval.action == ApprovalAction.approved)
-        .order_by(Approval.stage.desc())
+        .where(
+            Approval.decision_id == decision_id,
+            Approval.action == ApprovalAction.resubmitted )
+        .order_by(Approval.created_at.desc())
     ).scalars().first()
 
+# Find the latest approval before the most recent resubmission
+    if last_resubmission:
+        last_approval = db.execute(
+           select(Approval)
+           .where(
+               Approval.decision_id == decision_id,
+               Approval.action == ApprovalAction.approved,
+               Approval.created_at > last_resubmission.created_at
+            )
+            .order_by(Approval.stage.desc())
+        ).scalars().first()
+    else:
+        last_approval = db.execute(
+            select(Approval)
+            .where(
+                Approval.decision_id == decision_id,
+                Approval.action == ApprovalAction.approved
+            )
+            .order_by(Approval.stage.desc())
+        ).scalars().first()
+
     next_stage = 1 if not last_approval else last_approval.stage + 1
+    print("Decision ID:", decision_id)
+
+    if last_approval:
+       print("Approval ID:", last_approval.id)
+       print("Decision ID in Approval:", last_approval.decision_id)
+       print("Stage:", last_approval.stage)
+       print("Action:", last_approval.action)
+       print("Reviewer ID:", last_approval.reviewer_id)
+    else:
+       print("Last approval: None")
+
+       print("Decision Status:", decision.status)
+       print("Next stage:", next_stage)
 
     if next_stage == 1:
         # Stage 1: Reviewer, Manager, or Admin can approve
@@ -307,7 +1297,31 @@ def approve_decision(
             raise HTTPException(status_code=403, detail="Only a Manager or Admin can give final approval")
     else:
         raise HTTPException(status_code=400, detail="This decision has already completed both approval stages")
-    
+
+    if current_user.role == UserRole.reviewer:
+       if not decision.category:
+           raise HTTPException(
+              status_code=400,
+              detail="Decision has no category assigned."
+        )
+
+       assignment = db.execute(
+            select(ReviewerAssignment).where(
+                func.lower(ReviewerAssignment.category) == decision.category.lower()
+        )
+        ).scalar_one_or_none()
+
+       if not assignment:
+            raise HTTPException(
+              status_code=400,
+              detail=f"No reviewer has been assigned for category '{decision.category}'."
+        )
+
+       if assignment.reviewer_id != current_user.id:
+            raise HTTPException(
+               status_code=403,
+               detail="This decision is assigned to another Reviewer for its category."
+        )
     new_approval = Approval(
         decision_id=decision_id,
         reviewer_id=current_user.id,
@@ -324,13 +1338,34 @@ def approve_decision(
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
-    return new_approval
+    invalidate_decisions_cache(decision_id)
 
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="Decision Approved" if next_stage == 2 else "Decision Review Approved (Stage 1)",
+        message=f"Decision '{decision.title}' has been approved by {current_user.full_name} (Stage {next_stage}).",
+        type="DECISION_APPROVED",
+        link=f"/decisions/{decision.id}"
+    )
+
+    if decision.creator and decision.creator.email:
+        heading = "Your decision was approved" if next_stage == 2 else "Your decision passed stage 1 review"
+        queue_email(
+            background_tasks,
+            to_email=decision.creator.email,
+            heading=heading,
+            message=f"Comment: {approval.comment}" if approval.comment else "No comment was left.",
+            decision_title=decision.title,
+            decision_id=decision.id,
+        )
+    return new_approval
 
 @app.post("/decisions/{decision_id}/reject", response_model=ApprovalResponse, tags=["Approval Workflow"])
 def reject_decision(
     decision_id: int,
     approval: ApprovalCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(UserRole.reviewer, UserRole.manager, UserRole.admin)),
 ):
@@ -343,6 +1378,30 @@ def reject_decision(
     if not approval.comment or not approval.comment.strip():
         raise HTTPException(status_code=400, detail="A comment is required when rejecting a decision")
 
+    if current_user.role == UserRole.reviewer:
+       if not decision.category:
+          raise HTTPException(
+            status_code=400,
+            detail="Decision has no category assigned."
+        )
+
+       assignment = db.execute(
+            select(ReviewerAssignment).where(
+                 func.lower(ReviewerAssignment.category) == decision.category.lower()
+            )
+        ).scalar_one_or_none()
+
+       if not assignment:
+          raise HTTPException(
+              status_code=400,
+              detail=f"No reviewer has been assigned for category '{decision.category}'."
+           )
+
+       if assignment.reviewer_id != current_user.id:
+          raise HTTPException(
+              status_code=403,
+              detail="This decision is assigned to another Reviewer for its category."
+          )
     last_approval = db.execute(
         select(Approval)
         .where(Approval.decision_id == decision_id, Approval.action == ApprovalAction.approved)
@@ -363,6 +1422,26 @@ def reject_decision(
     db.commit()
     db.refresh(new_approval)
     new_approval.reviewer_name = current_user.full_name
+    invalidate_decisions_cache(decision_id)
+
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="Decision Rejected",
+        message=f"Decision '{decision.title}' has been rejected by {current_user.full_name}.",
+        type="DECISION_REJECTED",
+        link=f"/decisions/{decision.id}"
+    )
+
+    if decision.creator and decision.creator.email:
+        queue_email(
+            background_tasks,
+            to_email=decision.creator.email,
+            heading="Your decision was rejected",
+            message=f"Reason: {approval.comment}",
+            decision_title=decision.title,
+            decision_id=decision.id,
+        )
     return new_approval
 
 @app.post("/decisions/{decision_id}/resubmit", response_model=DecisionResponse, tags=["Approval Workflow"])
@@ -418,6 +1497,17 @@ def resubmit_decision(
     decision.status = DecisionStatus.under_review
     db.commit()
     db.refresh(decision)
+    invalidate_decisions_cache(decision_id)
+
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="Decision Resubmitted",
+        message=f"Decision '{decision.title}' has been resubmitted for review by {current_user.full_name}.",
+        type="DECISION_CREATED",
+        link=f"/decisions/{decision.id}"
+    )
+
     return decision
 
 @app.get("/decisions/{decision_id}/approvals", response_model=ListType[ApprovalResponse], tags=["Approval Workflow"])
@@ -468,10 +1558,12 @@ def update_decision(
             )
 
     # Save a version snapshot of the CURRENT state, before making changes
-    existing_versions = db.execute(
-        select(DecisionVersion).where(DecisionVersion.decision_id == decision_id)
-    ).scalars().all()
-    next_version_number = len(existing_versions) + 1
+    max_version = db.execute(
+        select(func.max(DecisionVersion.version_number))
+        .where(DecisionVersion.decision_id == decision_id)
+    ).scalar()
+
+    next_version_number = (max_version or 0) + 1
 
     snapshot = DecisionVersion(
         decision_id=decision.id,
@@ -491,6 +1583,7 @@ def update_decision(
 
     db.commit()
     db.refresh(decision)
+    invalidate_decisions_cache(decision_id)
     return decision
 
 
@@ -530,7 +1623,7 @@ def delete_decision(
 
     db.delete(decision)
     db.commit()
-
+    invalidate_decisions_cache(decision_id)
     return {"message": "Decision deleted successfully"}
 
 
@@ -855,13 +1948,23 @@ async def add_discussion_comment(
         raise HTTPException(status_code=404, detail="Decision not found")
 
     attachment_url = _save_discussion_attachment(attachment) or discussion.attachment_url
-    return add_comment(
+    new_comment = add_comment(
         db,
         decision_id=discussion.decision_id,
         user_id=current_user.id,
         message=discussion.message,
         attachment_url=attachment_url,
     )
+    decision = get_decision_or_none(db, discussion.decision_id)
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="New Discussion Comment",
+        message=f"New comment on '{decision.title}' by {current_user.full_name}.",
+        type="NEW_DISCUSSION",
+        link=f"/decisions/{decision.id}"
+    )
+    return new_comment
 
 
 @app.post(
@@ -913,13 +2016,23 @@ async def add_discussion_meeting_note(
         raise HTTPException(status_code=404, detail="Decision not found")
 
     saved_attachment_url = _save_discussion_attachment(attachment) or attachment_url
-    return add_meeting_note(
+    new_note = add_meeting_note(
         db,
         decision_id=decision_id,
         user_id=current_user.id,
         message=message,
         attachment_url=saved_attachment_url,
     )
+    decision = get_decision_or_none(db, decision_id)
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="New Discussion Meeting Note",
+        message=f"New meeting note on '{decision.title}' by {current_user.full_name}.",
+        type="NEW_DISCUSSION",
+        link=f"/decisions/{decision.id}"
+    )
+    return new_note
 
 
 @app.post(
@@ -976,13 +2089,23 @@ async def reply_to_discussion_comment(
         raise HTTPException(status_code=404, detail="Decision not found")
 
     attachment_url = _save_discussion_attachment(attachment) or discussion_reply.attachment_url
-    return reply_to_comment(
+    new_reply = reply_to_comment(
         db,
         parent=parent,
         user_id=current_user.id,
         message=discussion_reply.message,
         attachment_url=attachment_url,
     )
+    decision = get_decision_or_none(db, parent.decision_id)
+    notify_all_users(
+        db=db,
+        exclude_user_id=current_user.id,
+        title="New Reply in Discussion",
+        message=f"New reply on '{decision.title}' by {current_user.full_name}.",
+        type="NEW_DISCUSSION",
+        link=f"/decisions/{decision.id}"
+    )
+    return new_reply
 
 
 @app.get("/discussion/decision/{decision_id}", response_model=ListType[DiscussionResponse], tags=["Discussion Module"])
@@ -1114,9 +2237,23 @@ def get_dashboard_stats(
         ).all()
     )
 
+    # Category Counts
+    category_counts = {}
+    for cat, count in db.execute(
+        select(
+            Decision.category,
+            func.count(Decision.id)
+        )
+        .where(*filters)
+        .group_by(Decision.category)
+    ).all():
+        label = cat.strip().title() if cat and cat.strip() else "Uncategorized"
+        category_counts[label] = category_counts.get(label, 0) + count
+
     # Recent Decisions
     recent_decisions = db.execute(
         select(Decision)
+        .options(selectinload(Decision.creator))
         .where(*filters)
         .order_by(Decision.created_at.desc())
         .limit(5)
@@ -1137,6 +2274,7 @@ def get_dashboard_stats(
         "archived_decisions": status_counts.get(
             DecisionStatus.archived, 0
         ),
+        "category_counts": category_counts,
         "recent_decisions": recent_decisions,
     }
     
@@ -1149,21 +2287,29 @@ def employee_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    cache_key = f"dashboard:employee:user:{current_user.id}"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
 
     stats = get_dashboard_stats(
         db,
         current_user.id,
     )
 
-    return EmployeeDashboardResponse(
-        my_decisions=stats["total_decisions"],
-        draft_decisions=stats["draft_decisions"],
-        under_review_decisions=stats["under_review_decisions"],
-        approved_decisions=stats["approved_decisions"],
-        rejected_decisions=stats["rejected_decisions"],
-        archived_decisions=stats["archived_decisions"],
-        recent_decisions=stats["recent_decisions"],
-    )
+    recent_serialized = [serialize_decision(d) for d in stats["recent_decisions"]]
+    response_data = {
+        "my_decisions": stats["total_decisions"],
+        "draft_decisions": stats["draft_decisions"],
+        "under_review_decisions": stats["under_review_decisions"],
+        "approved_decisions": stats["approved_decisions"],
+        "rejected_decisions": stats["rejected_decisions"],
+        "archived_decisions": stats["archived_decisions"],
+        "recent_decisions": recent_serialized,
+        "category_counts": stats["category_counts"],
+    }
+    set_cached_data(cache_key, response_data, expire=300)
+    return response_data
     
 @app.get(
     "/dashboard/reviewer",
@@ -1174,32 +2320,22 @@ def reviewer_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     if current_user.role != UserRole.reviewer:
         raise HTTPException(
             status_code=403,
             detail="Only reviewers can access this dashboard."
         )
 
-    under_review_decisions = db.execute(
-        select(func.count(Decision.id))
-        .where(
-            Decision.status == DecisionStatus.under_review
-        )
-    ).scalar_one()
+    cache_key = "dashboard:reviewer"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
 
-    approved_decisions = db.execute(
-        select(func.count(Decision.id))
-        .where(
-            Decision.status == DecisionStatus.approved
-        )
-    ).scalar_one()
+    stats = get_dashboard_stats(db)
 
-    rejected_decisions = db.execute(
+    my_decisions = db.execute(
         select(func.count(Decision.id))
-        .where(
-            Decision.status == DecisionStatus.rejected
-        )
+        .where(Decision.created_by == current_user.id)
     ).scalar_one()
 
     recent_under_review = db.execute(
@@ -1211,12 +2347,20 @@ def reviewer_dashboard(
         .limit(5)
     ).scalars().all()
 
-    return ReviewerDashboardResponse(
-        under_review_decisions=under_review_decisions,
-        approved_decisions=approved_decisions,
-        rejected_decisions=rejected_decisions,
-        recent_under_review=recent_under_review,
-    )
+    recent_serialized = [serialize_decision(d) for d in recent_under_review]
+    response_data = {
+        "total_decisions": stats["total_decisions"],
+        "draft_decisions": stats["draft_decisions"],
+        "under_review_decisions": stats["under_review_decisions"],
+        "approved_decisions": stats["approved_decisions"],
+        "rejected_decisions": stats["rejected_decisions"],
+        "archived_decisions": stats["archived_decisions"],
+        "my_decisions": my_decisions,
+        "recent_under_review": recent_serialized,
+        "category_counts": stats["category_counts"],
+    }
+    set_cached_data(cache_key, response_data, expire=300)
+    return response_data
     
 @app.get(
     "/dashboard/manager",
@@ -1233,17 +2377,26 @@ def manager_dashboard(
             detail="Only managers can access this dashboard."
         )
 
+    cache_key = "dashboard:manager"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
+
     stats = get_dashboard_stats(db)
 
-    return ManagerDashboardResponse(
-        total_decisions=stats["total_decisions"],
-        draft_decisions=stats["draft_decisions"],
-        under_review_decisions=stats["under_review_decisions"],
-        approved_decisions=stats["approved_decisions"],
-        rejected_decisions=stats["rejected_decisions"],
-        archived_decisions=stats["archived_decisions"],
-        recent_decisions=stats["recent_decisions"],
-    )
+    recent_serialized = [serialize_decision(d) for d in stats["recent_decisions"]]
+    response_data = {
+        "total_decisions": stats["total_decisions"],
+        "draft_decisions": stats["draft_decisions"],
+        "under_review_decisions": stats["under_review_decisions"],
+        "approved_decisions": stats["approved_decisions"],
+        "rejected_decisions": stats["rejected_decisions"],
+        "archived_decisions": stats["archived_decisions"],
+        "recent_decisions": recent_serialized,
+        "category_counts": stats["category_counts"],
+    }
+    set_cached_data(cache_key, response_data, expire=300)
+    return response_data
     
 @app.get(
     "/dashboard/admin",
@@ -1259,6 +2412,11 @@ def admin_dashboard(
             status_code=403,
             detail="Only admins can access this dashboard."
         )
+
+    cache_key = "dashboard:admin"
+    cached_data = get_cached_data(cache_key)
+    if cached_data is not None:
+        return cached_data
 
     # Reuse dashboard statistics
     stats = get_dashboard_stats(db)
@@ -1290,26 +2448,26 @@ def admin_dashboard(
         select(func.count(Alternative.id))
     ).scalar_one()
 
-    return AdminDashboardResponse(
-        total_users=total_users,
-        active_users=active_users,
-
-        employees=role_counts.get(UserRole.employee, 0),
-        reviewers=role_counts.get(UserRole.reviewer, 0),
-        managers=role_counts.get(UserRole.manager, 0),
-        admins=role_counts.get(UserRole.admin, 0),
-
-        total_alternatives=total_alternatives,
-
-        total_decisions=stats["total_decisions"],
-        draft_decisions=stats["draft_decisions"],
-        under_review_decisions=stats["under_review_decisions"],
-        approved_decisions=stats["approved_decisions"],
-        rejected_decisions=stats["rejected_decisions"],
-        archived_decisions=stats["archived_decisions"],
-
-        recent_decisions=stats["recent_decisions"],
-    )
+    recent_serialized = [serialize_decision(d) for d in stats["recent_decisions"]]
+    response_data = {
+        "total_users": total_users,
+        "active_users": active_users,
+        "employees": role_counts.get(UserRole.employee, 0),
+        "reviewers": role_counts.get(UserRole.reviewer, 0),
+        "managers": role_counts.get(UserRole.manager, 0),
+        "admins": role_counts.get(UserRole.admin, 0),
+        "total_alternatives": total_alternatives,
+        "total_decisions": stats["total_decisions"],
+        "draft_decisions": stats["draft_decisions"],
+        "under_review_decisions": stats["under_review_decisions"],
+        "approved_decisions": stats["approved_decisions"],
+        "rejected_decisions": stats["rejected_decisions"],
+        "archived_decisions": stats["archived_decisions"],
+        "recent_decisions": recent_serialized,
+        "category_counts": stats["category_counts"],
+    }
+    set_cached_data(cache_key, response_data, expire=300)
+    return response_data
 
 # Report Helper Functions
 
@@ -1401,6 +2559,358 @@ def build_decision_report(db: Session):
         "recent_decisions": recent_data,
     }
 
+@app.get(
+    "/reports/team",
+    response_model=TeamReportResponse,
+    tags=["Reports"],
+)
+def get_team_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_role(UserRole.manager, UserRole.admin)
+    ),
+):
+    teams = db.execute(
+        select(Team).order_by(Team.name)
+    ).scalars().all()
+
+    report_teams = []
+
+    for team in teams:
+        member_count = db.execute(
+            select(func.count(User.id)).where(
+                User.team_id == team.id
+            )
+        ).scalar_one()
+
+        decision_count = db.execute(
+            select(func.count(Decision.id)).where(
+                Decision.created_by.in_(
+                    select(User.id).where(User.team_id == team.id)
+                )
+            )
+        ).scalar_one()
+
+        approval_counts = db.execute(
+           select(
+               Approval.action,
+               func.count(Approval.id)
+           )
+           .join(Decision, Approval.decision_id == Decision.id)
+           .where(
+               Decision.created_by.in_(
+                   select(User.id).where(User.team_id == team.id)
+                )
+            )
+            .group_by(Approval.action)
+        ).all()
+
+        counts = {
+            str(action.value): count
+            for action, count in approval_counts
+        }
+
+        report_teams.append(
+            TeamReportItem(
+                team_id=team.id,
+                team_name=team.name,
+                member_count=member_count,
+                decision_count=decision_count,
+                pending_approvals=counts.get("pending", 0),
+                approved_approvals=counts.get("approved", 0),
+                rejected_approvals=counts.get("rejected", 0),
+                escalated_approvals=counts.get("escalated", 0),
+            )
+        )
+
+    return TeamReportResponse(
+        total_teams=len(report_teams),
+        teams=report_teams,
+    )
+
+@app.get(
+    "/reports/team/export/pdf",
+    tags=["Reports"],
+)
+def export_team_report_pdf(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in (UserRole.manager, UserRole.admin):
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers and admins can access reports."
+        )
+
+    report = get_team_report(db, current_user)
+
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter
+    )
+
+    styles = getSampleStyleSheet()
+    content = []
+
+    content.append(
+       Paragraph(
+           "<b>Expert Decision Replay Platform</b>",
+           styles["Title"],
+        )
+    )
+
+    content.append(
+       Paragraph(
+           "<font size=16 ><b>Team Analytics Report</b></font>",
+           styles["Heading2"],
+       )
+    )
+
+    content.append(
+       Paragraph(
+           f"Generated On: "
+           f"{datetime.now().strftime('%d %B %Y, %I:%M %p')}",
+           styles["Normal"],
+       )
+    )
+
+    content.append(
+       Paragraph(
+           f"Generated By: {current_user.full_name}",
+           styles["Normal"],
+       )
+    )
+
+    content.append(Spacer(1, 16))
+
+    content.append(
+        Paragraph(
+            "Team Summary",
+            styles["Heading3"]
+        )
+    )
+
+    summary_data = [
+        ["Metric", "Value"],
+        ["Total Teams", str(report.total_teams)],
+    ]
+
+    summary_table = Table(summary_data, colWidths=[250, 100], hAlign="LEFT")
+
+    summary_table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), "#1F4E79"),
+            ("TEXTCOLOR", (0, 0), (-1, 0), "white"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.5, "#CCCCCC"),
+            ("PADDING", (0, 0), (-1, -1), 6),
+        ])
+    )
+
+    content.append(summary_table)
+    content.append(Spacer(1, 18))
+
+    content.append(
+        Paragraph(
+            "Team Activity",
+            styles["Heading3"]
+        )
+    )
+
+    team_data = [
+        [
+            "Team",
+            "Members",
+            "Decisions",
+            "Pending",
+            "Approved",
+            "Rejected",
+            "Escalated",
+        ]
+    ]
+
+    for team in report.teams:
+        team_data.append([
+            team.team_name,
+            team.member_count,
+            team.decision_count,
+            team.pending_approvals,
+            team.approved_approvals,
+            team.rejected_approvals,
+            team.escalated_approvals,
+        ])
+
+    team_table = Table(team_data, repeatRows=1, hAlign="LEFT")
+
+    team_table.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), "#1F4E79"),
+            ("TEXTCOLOR", (0, 0), (-1, 0), "white"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.5, "#CCCCCC"),
+            ("ALIGN", (1, 1), (-1, -1), "CENTER"),
+            ("PADDING", (0, 0), (-1, -1), 5),
+        ])
+    )
+
+    content.append(team_table)
+
+    doc.build(
+        content,
+        onFirstPage=partial(
+            add_header_footer,
+            report_title="Team Report"
+        ),
+        onLaterPages=partial(
+            add_header_footer,
+            report_title="Team Report"
+        ),
+    )
+
+    buffer.seek(0)
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition":
+                "attachment; filename=team_report.pdf"
+        },
+    )
+
+@app.get(
+    "/reports/team/export/excel",
+    tags=["Reports"],
+)
+def export_team_report_excel(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in (UserRole.manager, UserRole.admin):
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers and admins can access reports."
+        )
+
+    report = get_team_report(db, current_user)
+
+    workbook = Workbook()
+
+    # -------------------------
+    # Summary Sheet
+    # -------------------------
+
+    sheet = workbook.active
+    sheet.title = "Summary"
+
+    sheet.append(["Metric", "Value"])
+
+    sheet.append([
+        "Total Teams",
+        report.total_teams
+    ])
+
+    for cell in sheet[1]:
+        cell.font = Font(
+            bold=True,
+            color="FFFFFF"
+        )
+        cell.fill = PatternFill(
+            start_color="1F4E79",
+            end_color="1F4E79",
+            fill_type="solid"
+        )
+        cell.alignment = Alignment(
+            horizontal="center"
+        )
+
+    sheet.freeze_panes = "A2"
+
+    # -------------------------
+    # Team Activity Sheet
+    # -------------------------
+
+    team_sheet = workbook.create_sheet(
+        "Team Activity"
+    )
+
+    team_sheet.append([
+        "Team",
+        "Members",
+        "Decisions",
+        "Pending",
+        "Approved",
+        "Rejected",
+        "Escalated",
+    ])
+
+    for team in report.teams:
+        team_sheet.append([
+            team.team_name,
+            team.member_count,
+            team.decision_count,
+            team.pending_approvals,
+            team.approved_approvals,
+            team.rejected_approvals,
+            team.escalated_approvals,
+        ])
+
+    for cell in team_sheet[1]:
+        cell.font = Font(
+            bold=True,
+            color="FFFFFF"
+        )
+        cell.fill = PatternFill(
+            start_color="1F4E79",
+            end_color="1F4E79",
+            fill_type="solid"
+        )
+        cell.alignment = Alignment(
+            horizontal="center"
+        )
+
+    team_sheet.freeze_panes = "A2"
+    team_sheet.auto_filter.ref = team_sheet.dimensions
+
+    # -------------------------
+    # Column Widths
+    # -------------------------
+
+    widths = {
+        "A": 25,
+        "B": 12,
+        "C": 12,
+        "D": 12,
+        "E": 12,
+        "F": 12,
+        "G": 12,
+    }
+
+    for column, width in widths.items():
+        team_sheet.column_dimensions[column].width = width
+
+    # -------------------------
+    # Return Excel File
+    # -------------------------
+
+    output = io.BytesIO()
+
+    workbook.save(output)
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition":
+                "attachment; filename=team_report.xlsx"
+        },
+    )
 # Decision Reports
 
 @app.get(
@@ -2207,7 +3717,8 @@ def export_approval_report_pdf(
        headers={
           "Content-Disposition": "attachment; filename=approval_report.pdf"
        },
-    )# ============================================================
+    )
+# ============================================================
 # Export Approval Report Excel
 # ============================================================
 
@@ -2955,3 +4466,10 @@ def export_audit_report_excel(
             "attachment; filename=audit_report.xlsx"
         },
     )
+
+
+# Serve frontend static files
+frontend_dist_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(frontend_dist_dir):
+    app.mount("/", StaticFiles(directory=frontend_dist_dir), name="frontend")
+
