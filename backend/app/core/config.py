@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     SMTP_PORT: int
     SMTP_EMAIL: str
     SMTP_PASSWORD: str
-    
+
+    OPENROUTER_API_KEY: str
+
     @property
     def DATABASE_URL(self):
         return (

@@ -9,10 +9,12 @@ from app.models.approval import Approval
 from app.models.notification import Notification
 from app.services.email_service import send_email
 
+
 router = APIRouter(
     prefix="/approvals",
     tags=["Approvals"]
 )
+
 
 MANAGER_ROLES = ["Manager", "Administrator"]
 
@@ -25,27 +27,18 @@ def require_manager(current_user: User):
         )
 
 
+# ---- List reviewers available to assign ----
 @router.get("/reviewers")
 def list_reviewers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     require_manager(current_user)
-
-    reviewers = db.query(User).filter(
-        User.role == "Reviewer"
-    ).all()
-
-    return [
-        {
-            "id": u.id,
-            "full_name": u.full_name,
-            "role": u.role
-        }
-        for u in reviewers
-    ]
+    reviewers = db.query(User).filter(User.role == "Reviewer").all()
+    return [{"id": u.id, "full_name": u.full_name, "role": u.role} for u in reviewers]
 
 
+# ---- Assign a reviewer to a decision at a given level ----
 @router.post("/assign")
 def assign_reviewer(
     decision_id: int,
@@ -56,16 +49,11 @@ def assign_reviewer(
 ):
     require_manager(current_user)
 
-    decision = db.query(Decision).filter(
-        Decision.id == decision_id
-    ).first()
-
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
     if not decision:
-        raise HTTPException(
-            status_code=404,
-            detail="Decision not found"
-        )
+        raise HTTPException(status_code=404, detail="Decision not found")
 
+    # ---- Enforce sequential level approval ----
     if level > 1:
         prev_approval = (
             db.query(Approval)
@@ -76,22 +64,15 @@ def assign_reviewer(
             .order_by(Approval.id.desc())
             .first()
         )
-
         if not prev_approval or prev_approval.status != "Approved":
             raise HTTPException(
                 status_code=400,
                 detail=f"Level {level - 1} must be approved before assigning Level {level}"
             )
 
-    reviewer = db.query(User).filter(
-        User.id == reviewer_id
-    ).first()
-
+    reviewer = db.query(User).filter(User.id == reviewer_id).first()
     if not reviewer:
-        raise HTTPException(
-            status_code=404,
-            detail="Reviewer not found"
-        )
+        raise HTTPException(status_code=404, detail="Reviewer not found")
 
     approval = Approval(
         decision_id=decision_id,
@@ -100,21 +81,22 @@ def assign_reviewer(
         level=level,
         status="Pending"
     )
-
     db.add(approval)
+
+    decision.status = "Pending"
 
     notification = Notification(
         user_id=reviewer_id,
         message=f"You've been assigned to review '{decision.title}' (Level {level})."
     )
-
     db.add(notification)
 
-    # SMTP EMAIL
-    send_email(
-        reviewer.email,
-        "Decision Review Assignment",
-        f"""
+    # SMTP EMAIL to reviewer
+    try:
+        send_email(
+            reviewer.email,
+            "Decision Review Assignment",
+            f"""
 Hello {reviewer.full_name},
 
 You have been assigned to review the decision:
@@ -126,14 +108,16 @@ Please login to Expert Decision Replay Platform and review it.
 
 Thank You.
 """
-    )
+        )
+    except Exception:
+        pass
 
     db.commit()
     db.refresh(approval)
-
     return approval
 
 
+# ---- Decisions assigned to the logged-in reviewer, still pending ----
 @router.get("/my")
 def my_approvals(
     db: Session = Depends(get_db),
@@ -149,7 +133,6 @@ def my_approvals(
     )
 
     result = []
-
     for a in approvals:
         result.append({
             "approval_id": a.id,
@@ -162,6 +145,7 @@ def my_approvals(
     return result
 
 
+# ---- Approve or reject a specific assignment ----
 @router.put("/{approval_id}/decide")
 def decide_approval(
     approval_id: int,
@@ -170,23 +154,12 @@ def decide_approval(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    approval = db.query(Approval).filter(
-        Approval.id == approval_id
-    ).first()
-
+    approval = db.query(Approval).filter(Approval.id == approval_id).first()
     if not approval:
-        raise HTTPException(
-            status_code=404,
-            detail="Approval not found"
-        )
+        raise HTTPException(status_code=404, detail="Approval not found")
 
-    is_assigned_reviewer = (
-        approval.reviewer_id == current_user.id
-    )
-
-    is_manager = (
-        current_user.role in MANAGER_ROLES
-    )
+    is_assigned_reviewer = approval.reviewer_id == current_user.id
+    is_manager = current_user.role in MANAGER_ROLES
 
     if not (is_assigned_reviewer or is_manager):
         raise HTTPException(
@@ -197,10 +170,7 @@ def decide_approval(
     approval.status = status
     approval.remarks = remarks
 
-    decision = db.query(Decision).filter(
-        Decision.id == approval.decision_id
-    ).first()
-
+    decision = db.query(Decision).filter(Decision.id == approval.decision_id).first()
     if decision:
         decision.status = status
 
@@ -208,18 +178,15 @@ def decide_approval(
             user_id=decision.created_by,
             message=f"Your decision '{decision.title}' has been {status.lower()} (Level {approval.level})."
         )
-
         db.add(notification)
 
-        creator = db.query(User).filter(
-            User.id == decision.created_by
-        ).first()
-
+        creator = db.query(User).filter(User.id == decision.created_by).first()
         if creator:
-            send_email(
-                creator.email,
-                f"Decision {status}",
-                f"""
+            try:
+                send_email(
+                    creator.email,
+                    f"Decision {status}",
+                    f"""
 Hello {creator.full_name},
 
 Your decision:
@@ -233,15 +200,15 @@ Remarks:
 
 Thank You.
 """
-            )
+                )
+            except Exception:
+                pass
 
     db.commit()
-
-    return {
-        "message": f"Approval {status.lower()} successfully"
-    }
+    return {"message": f"Approval {status.lower()} successfully"}
 
 
+# ---- All approvals across all decisions (manager/admin view) ----
 @router.get("/")
 def all_approvals(
     db: Session = Depends(get_db),
@@ -250,9 +217,7 @@ def all_approvals(
     require_manager(current_user)
 
     approvals = db.query(Approval).all()
-
     result = []
-
     for a in approvals:
         result.append({
             "approval_id": a.id,
@@ -275,25 +240,15 @@ def approve_decision(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in [
-        "Reviewer",
-        "Manager",
-        "Administrator"
-    ]:
+    if current_user.role not in ["Reviewer", "Manager", "Administrator"]:
         raise HTTPException(
             status_code=403,
             detail="Only Reviewer, Manager or Administrator can approve decisions"
         )
 
-    decision = db.query(Decision).filter(
-        Decision.id == decision_id
-    ).first()
-
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
     if not decision:
-        raise HTTPException(
-            status_code=404,
-            detail="Decision not found"
-        )
+        raise HTTPException(status_code=404, detail="Decision not found")
 
     approval = Approval(
         decision_id=decision.id,
@@ -301,47 +256,17 @@ def approve_decision(
         status=status,
         remarks=remarks
     )
-
     db.add(approval)
-
     decision.status = status
 
     notification = Notification(
         user_id=decision.created_by,
         message=f"Your decision '{decision.title}' has been {status}."
     )
-
     db.add(notification)
 
-    creator = db.query(User).filter(
-        User.id == decision.created_by
-    ).first()
-
-    if creator:
-        send_email(
-            creator.email,
-            f"Decision {status}",
-            f"""
-Hello {creator.full_name},
-
-Your decision:
-
-{decision.title}
-
-has been {status}.
-
-Remarks:
-{remarks}
-
-Thank You.
-"""
-        )
-
     db.commit()
-
-    return {
-        "message": f"Decision {status.lower()} successfully"
-    }
+    return {"message": f"Decision {status.lower()} successfully"}
 
 
 @router.get("/{decision_id}")
@@ -352,10 +277,7 @@ def approval_history(
 ):
     approvals = (
         db.query(Approval)
-        .filter(
-            Approval.decision_id == decision_id
-        )
+        .filter(Approval.decision_id == decision_id)
         .all()
     )
-
     return approvals
