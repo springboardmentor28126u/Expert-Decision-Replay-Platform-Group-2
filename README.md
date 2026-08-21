@@ -767,10 +767,4 @@ The audit system provides enterprise-grade compliance tracking:
 ---
 
 
-## Contributors
 
-
-*
-
-
----
