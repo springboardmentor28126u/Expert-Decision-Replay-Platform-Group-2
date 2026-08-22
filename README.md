@@ -1,10 +1,10 @@
-# Expert Decision Replay Platform (EDRP) — Milestone 3
+# Expert Decision Replay Platform (EDRP) 
 
 > **Group 5** | A centralized platform for documenting, managing, replaying, and reviewing strategic organizational decisions.
 
-## Milestone 3 Executive Summary
+## Executive Summary
 
-Milestone 3 completes the core enterprise requirements of the **Expert Decision Replay Platform (EDRP)**, delivering:
+ completes the core enterprise requirements of the **Expert Decision Replay Platform (EDRP)**, delivering:
 
 1. **Append-Only Structured Audit Logging** with field-level before/after diff tracking and database-level immutability triggers.
 2. **Configurable Multi-Tier Approval Chains** supporting dynamic routing, sequential reviewer evaluations, and SLA notifications.
@@ -16,7 +16,7 @@ Milestone 3 completes the core enterprise requirements of the **Expert Decision 
 
 ---
 
-## Key Modules Implemented in Milestone 3
+## Key Modules Implemented in EDRP
 
 ### 1. Structured & Append-Only Audit Logging System
 An enterprise-grade audit trail designed for regulatory compliance (SOC 2, ISO 27001) that tracks every state change across the platform:
@@ -315,11 +315,6 @@ docker compose logs -f backend   # tail backend logs
 
 ---
 
-## Contributors
-
-*Group 2 — Springboard Mentor Program*
-
----
 
 ## Milestone 3 Deliverables Summary
 
