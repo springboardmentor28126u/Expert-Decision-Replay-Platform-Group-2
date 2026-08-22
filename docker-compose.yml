@@ -1,0 +1,19 @@
+services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+
+    container_name: edrp-backend
+
+    ports:
+      - "8000:8000"
+
+    env_file:
+      - .env
+
+    environment:
+      OLLAMA_URL: http://host.docker.internal:11434/api/generate
+
+    restart: unless-stopped

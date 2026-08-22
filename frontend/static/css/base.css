@@ -1,0 +1,53 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:'Poppins',sans-serif;
+    background:#F4F7FC;
+    color:#1F2937;
+}
+
+a{
+    text-decoration:none;
+}
+
+button{
+    border:none;
+}
+
+.card{
+    border:none;
+    border-radius:15px;
+}
+
+.shadow-soft{
+    box-shadow:
+        0 8px 30px rgba(0,0,0,.08);
+}
+
+.page-title{
+    font-size:30px;
+    font-weight:700;
+    color:#1F2937;
+}
+
+.page-subtitle{
+    color:#6B7280;
+    font-size:15px;
+}
+
+.rounded-xl{
+    border-radius:20px;
+}
+
+.bg-primary-gradient{
+    background:
+    linear-gradient(
+        135deg,
+        #2563EB,
+        #4F46E5
+    );
+}

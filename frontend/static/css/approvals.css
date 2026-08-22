@@ -1,0 +1,220 @@
+/* =====================================================
+   Expert Decision Replay Platform
+   Approval Management CSS
+===================================================== */
+
+html{
+
+    scroll-behavior:smooth;
+
+}
+
+.page-header{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+
+}
+
+.page-header h2{
+
+    margin:0;
+    font-size:28px;
+    font-weight:700;
+
+}
+
+.page-header p{
+
+    margin-top:5px;
+    color:#6c757d;
+
+}
+
+.toolbar{
+
+    display:flex;
+    gap:15px;
+    margin-bottom:20px;
+
+}
+
+.toolbar input,
+.toolbar select{
+
+    padding:10px 15px;
+    border:1px solid #ddd;
+    border-radius:8px;
+    min-width:220px;
+    transition:.3s;
+
+}
+
+.toolbar input:focus,
+.toolbar select:focus{
+
+    border-color:#0d6efd;
+    box-shadow:0 0 0 4px rgba(13,110,253,.15);
+    outline:none;
+
+}
+
+.table-card{
+
+    background:#fff;
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+
+}
+
+table{
+
+    width:100%;
+    border-collapse:collapse;
+
+}
+
+thead{
+
+    background:#f8f9fa;
+
+}
+
+th,
+td{
+
+    padding:14px;
+    text-align:left;
+    border-bottom:1px solid #eee;
+
+}
+
+tbody tr{
+
+    transition:
+        background .3s,
+        transform .2s;
+
+}
+
+tbody tr:hover{
+
+    background:#f8f9fa;
+    transform:translateX(2px);
+
+}
+
+.status{
+
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:600;
+
+}
+
+.status.pending{
+
+    background:#fff3cd;
+    color:#856404;
+
+}
+
+.status.approved{
+
+    background:#d1e7dd;
+    color:#0f5132;
+
+}
+
+.status.rejected{
+
+    background:#f8d7da;
+    color:#842029;
+
+}
+
+.btn-sm{
+
+    margin-right:5px;
+    cursor:pointer;
+    transition:.3s;
+
+}
+
+.btn-sm:hover{
+
+    transform:translateY(-2px);
+
+}
+
+.modal-header{
+
+    background:#0d6efd;
+    color:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+
+}
+
+.modal-title{
+
+    font-weight:600;
+
+}
+
+.toast-container{
+
+    z-index:9999;
+
+}
+
+.toast{
+
+    animation:fadeIn .3s ease;
+
+}
+
+@keyframes fadeIn{
+
+    from{
+
+        opacity:0;
+        transform:translateY(20px);
+
+    }
+
+    to{
+
+        opacity:1;
+        transform:translateY(0);
+
+    }
+
+}
+
+@media (max-width:768px){
+
+    .toolbar{
+
+        flex-direction:column;
+
+    }
+
+    .toolbar input,
+    .toolbar select{
+
+        width:100%;
+        min-width:100%;
+
+    }
+
+    .table-card{
+
+        overflow-x:auto;
+
+    }
+
+}

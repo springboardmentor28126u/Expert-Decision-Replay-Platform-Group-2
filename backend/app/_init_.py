@@ -1,0 +1,7 @@
+DATABASE_URL=postgresql://postgres:YOUR_POSTGRES_PASSWORD@localhost:5432/expert_decision_db
+
+SECRET_KEY=change_this_to_a_long_random_secret_key_12345
+
+ALGORITHM=HS256
+
+ACCESS_TOKEN_EXPIRE_MINUTES=30

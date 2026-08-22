@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}
+Alternative Analysis | Expert Decision Replay Platform
+{% endblock %}
+
+{% block css %}
+
+<link rel="stylesheet" href="/static/css/dashboard.css">
+
+<link rel="stylesheet" href="/static/css/alternatives.css">
+
+<link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    rel="stylesheet">
+
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <!-- ============================= -->
+    <!-- Sidebar -->
+    <!-- ============================= -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <div>
+
+            <div class="sidebar-header">
+
+                <div class="logo-box">
+                    <i class="bi bi-diagram-3-fill"></i>
+                </div>
+
+                <div>
+                    <h3>EDRP</h3>
+                    <small>Enterprise Suite</small>
+                </div>
+
+            </div>
+
+
+            <ul class="sidebar-menu" id="sidebarMenu">
+
+                <li>
+                    <a href="/dashboard-page">
+                        <i class="bi bi-grid-fill"></i>
+                        Dashboard
+                    </a>
+                </li>
+
+
+                <li>
+                    <a href="/decision-page">
+                        <i class="bi bi-file-earmark-text"></i>
+                        Decisions
+                    </a>
+                </li>
+
+
+                <li>
+                    <a href="/approvals-page">
+                        <i class="bi bi-check2-square"></i>
+                        Approvals
+                    </a>
+                </li>
+
+
+                <li>
+                    <a href="/discussion-page">
+                        <i class="bi bi-chat-left-text"></i>
+                        Discussion
+                    </a>
+                </li>
+
+
+                <li>
+                    <a href="/knowledge-page">
+                        <i class="bi bi-book"></i>
+                        Knowledge
+                    </a>
+                </li>
+
+
+                <li>
+                    <a href="/reports-page">
+                        <i class="bi bi-bar-chart-line"></i>
+                        Reports
+                    </a>
+                </li>
+
+                <li>
+                    <a href="/audit-logs">
+                        <i class="bi bi-journal-text"></i>
+                        Audit Logs
+                    </a>
+                </li>
+                <li class="active">
+                    <a href="/alternatives-page">
+                        <i class="bi bi-diagram-3"></i>
+                        Alternative Analysis
+                    </a>
+                </li>
+                <li id="aiAgentMenu">
+
+                    <a href="/ai-agent-page">
+
+                        <i class="bi bi-robot"></i>
+
+                        AI Agent
+
+                    </a>
+
+                </li>
+
+                <li id="usersMenu">
+                    <a href="/users-page">
+                        <i class="bi bi-people-fill"></i>
+                        User Management
+                    </a>
+                </li>
+
+
+                <li id="profileSidebar">
+                    <a href="/profile-page">
+                        <i class="bi bi-person-circle"></i>
+                        My Profile
+                    </a>
+                </li>
+
+            </ul>
+
+        </div>
+
+
+        <div class="sidebar-footer">
+
+            <a href="#" id="logoutBtn">
+                <i class="bi bi-box-arrow-left"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ============================= -->
+    <!-- Main Content -->
+    <!-- ============================= -->
+
+    <main class="main-content">
+
+        <!-- Topbar -->
+
+        <header class="topbar">
+
+            <div class="d-flex align-items-center">
+
+                <button
+                    class="btn btn-light me-3"
+                    id="toggleSidebar"
+                    type="button">
+
+                    <i class="bi bi-list"></i>
+
+                </button>
+
+                <div>
+
+                    <h2>Alternative Analysis</h2>
+
+                    <small>
+                        Compare multiple alternatives before making a final decision.
+                    </small>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- YOUR EXISTING ALTERNATIVE CONTENT STARTS HERE -->
+
+<!-- ================= ADD ALTERNATIVE ================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-header bg-primary text-white">
+
+        <h5 class="mb-0">
+            <i class="bi bi-plus-circle"></i>
+            Add Alternative
+        </h5>
+
+    </div>
+
+
+    <div class="card-body">
+
+        <form id="alternativeForm">
+
+            <input
+                type="hidden"
+                id="alternativeId"
+            >
+
+
+            <!-- Decision + Alternative Name -->
+
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+
+                    <label class="form-label">
+                        Decision
+                    </label>
+
+                    <select
+                        id="decisionSelect"
+                        class="form-select"
+                        required>
+
+                        <option value="">
+                            Select Decision
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="col-md-6 mb-3">
+
+                    <label class="form-label">
+                        Alternative Name
+                    </label>
+
+                    <input
+                        id="alternativeName"
+                        class="form-control"
+                        required>
+
+                </div>
+
+            </div>
+
+
+            <!-- Description -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    Description
+                </label>
+
+                <textarea
+                    id="description"
+                    rows="3"
+                    class="form-control"></textarea>
+
+            </div>
+
+
+            <!-- Advantages + Disadvantages -->
+
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+
+                    <label class="form-label">
+                        Advantages
+                    </label>
+
+                    <textarea
+                        id="advantages"
+                        rows="3"
+                        class="form-control"></textarea>
+
+                </div>
+
+
+                <div class="col-md-6 mb-3">
+
+                    <label class="form-label">
+                        Disadvantages
+                    </label>
+
+                    <textarea
+                        id="disadvantages"
+                        rows="3"
+                        class="form-control"></textarea>
+
+                </div>
+
+            </div>
+
+
+            <!-- Cost + Risk + Score -->
+
+            <div class="row">
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="form-label">
+                        Estimated Cost
+                    </label>
+
+                    <input
+                        id="estimatedCost"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="form-control">
+
+                </div>
+
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="form-label">
+                        Risk Level
+                    </label>
+
+                    <select
+                        id="riskLevel"
+                        class="form-select">
+
+                        <option value="Low">
+                            Low
+                        </option>
+
+                        <option value="Medium" selected>
+                            Medium
+                        </option>
+
+                        <option value="High">
+                            High
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="col-md-4 mb-3">
+
+                    <label class="form-label">
+                        Score
+                    </label>
+
+                    <input
+                        id="score"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value="0"
+                        class="form-control">
+
+                </div>
+
+            </div>
+
+
+            <!-- Buttons -->
+
+            <button
+                type="submit"
+                class="btn btn-primary">
+
+                <i class="bi bi-save"></i>
+                Save Alternative
+
+            </button>
+
+
+            <button
+                type="reset"
+                class="btn btn-secondary">
+
+                Reset
+
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================= SEARCH / FILTER ================= -->
+
+<div class="card shadow-sm mb-3">
+
+    <div class="card-body">
+
+        <div class="row">
+
+            <div class="col-md-6">
+
+                <input
+                    id="searchInput"
+                    class="form-control"
+                    placeholder="Search Alternative">
+
+            </div>
+
+
+            <div class="col-md-6">
+
+                <select
+                    id="decisionFilter"
+                    class="form-select">
+
+                    <option value="">
+                        All Decisions
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ================= ALTERNATIVE TABLE ================= -->
+
+<div class="card shadow-sm">
+
+    <div class="card-header">
+
+        <h5 class="mb-0">
+            Alternative List
+        </h5>
+
+    </div>
+
+
+    <div class="table-responsive">
+
+        <table
+            class="table table-hover align-middle">
+
+            <thead class="table-dark">
+
+                <tr>
+
+                    <th>ID</th>
+
+                    <th>Decision</th>
+
+                    <th>Alternative</th>
+
+                    <th>Risk</th>
+
+                    <th>Cost</th>
+
+                    <th>Score</th>
+
+                    <th>Actions</th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="alternativeTable">
+
+                <tr>
+
+                    <td
+                        colspan="7"
+                        class="text-center">
+
+                        Loading...
+
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block js %}
+
+<script src="/static/js/alternatives.js"></script>
+
+{% endblock %}

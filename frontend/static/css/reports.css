@@ -1,0 +1,582 @@
+/* ======================================================
+   Expert Decision Replay Platform
+   Reports CSS
+====================================================== */
+
+body {
+
+    background: #f5f7fb;
+
+    font-family: "Poppins", sans-serif;
+
+}
+
+/* ======================================================
+   Page Header
+====================================================== */
+
+h2 {
+
+    font-weight: 700;
+
+    color: #1f2937;
+
+}
+
+.text-muted {
+
+    color: #6c757d !important;
+
+}
+
+/* ======================================================
+   Summary Cards
+====================================================== */
+
+.report-card {
+
+    background: #ffffff;
+
+    border-radius: 16px;
+
+    padding: 25px;
+
+    text-align: center;
+
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+
+    transition: all .3s ease;
+
+    height: 100%;
+
+}
+
+.report-card:hover {
+
+    transform: translateY(-6px);
+
+    box-shadow: 0 10px 25px rgba(0,0,0,.15);
+
+}
+
+.report-card i {
+
+    font-size: 40px;
+
+    color: #0d6efd;
+
+    margin-bottom: 12px;
+
+}
+
+.report-card h6 {
+
+    color: #6c757d;
+
+    font-weight: 600;
+
+    margin-bottom: 10px;
+
+}
+
+.report-card h2 {
+
+    font-size: 34px;
+
+    font-weight: 700;
+
+    color: #212529;
+
+}
+
+/* ======================================================
+   Buttons
+====================================================== */
+
+.btn {
+
+    border-radius: 10px;
+
+    font-weight: 600;
+
+    transition: .3s;
+
+}
+
+.btn:hover {
+
+    transform: translateY(-2px);
+
+}
+/* ======================================================
+   Chart Cards
+====================================================== */
+
+.report-chart-card {
+
+    border: none;
+
+    border-radius: 16px;
+
+    overflow: hidden;
+
+}
+
+.report-chart-card .card-header {
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #ececec;
+
+}
+
+.report-chart-card h5 {
+
+    margin: 0;
+
+    font-weight: 600;
+
+}
+
+.report-chart-card .card-body {
+
+    padding: 25px;
+
+}
+
+canvas {
+
+    width: 100% !important;
+
+    max-height: 350px;
+
+}
+/* ======================================================
+   Quick Statistics
+====================================================== */
+
+.progress {
+
+    height: 12px;
+
+    border-radius: 20px;
+
+    background: #e9ecef;
+
+}
+
+.progress-bar {
+
+    border-radius: 20px;
+
+}
+/* ======================================================
+   Tables
+====================================================== */
+
+.table {
+
+    margin-bottom: 0;
+
+}
+
+.table thead {
+
+    background: #f8f9fa;
+
+}
+
+.table th {
+
+    font-weight: 600;
+
+}
+
+.table-hover tbody tr:hover {
+
+    background: #f3f6ff;
+
+}
+/* ======================================================
+   Last Updated Card
+====================================================== */
+
+#lastUpdated {
+
+    font-size: 14px;
+
+    font-weight: 500;
+
+    color: #6c757d;
+
+}
+
+/* ======================================================
+   Loading Spinner
+====================================================== */
+
+#loadingSpinner {
+
+    padding: 40px 0;
+
+}
+
+#loadingSpinner p {
+
+    margin-top: 15px;
+
+    color: #6c757d;
+
+    font-weight: 500;
+
+}
+
+/* ======================================================
+   Information Cards
+====================================================== */
+
+.report-info-card {
+
+    border: none;
+
+    border-radius: 16px;
+
+    transition: all .3s ease;
+
+    height: 100%;
+
+}
+
+.report-info-card:hover {
+
+    transform: translateY(-5px);
+
+    box-shadow: 0 10px 25px rgba(0,0,0,.12);
+
+}
+
+.report-info-card .card-body {
+
+    padding: 30px;
+
+}
+
+.report-info-card i {
+
+    font-size: 48px;
+
+}
+
+.report-info-card h5 {
+
+    margin-top: 15px;
+
+    font-weight: 600;
+
+}
+
+.report-info-card p {
+
+    color: #6c757d;
+
+    margin-bottom: 0;
+
+}
+
+/* ======================================================
+   Dashboard Footer
+====================================================== */
+
+.card.border-0.shadow-sm {
+
+    border-radius: 16px;
+
+}
+
+.card.border-0.shadow-sm h5 {
+
+    font-weight: 700;
+
+}
+
+.card.border-0.shadow-sm small {
+
+    color: #6c757d;
+
+}
+
+/* ======================================================
+   Future Features
+====================================================== */
+
+.feature-box {
+
+    text-align: center;
+
+    padding: 20px;
+
+    border-radius: 12px;
+
+    transition: all .3s ease;
+
+    height: 100%;
+
+}
+
+.feature-box:hover {
+
+    background: #f8f9fa;
+
+    transform: translateY(-5px);
+
+}
+
+.feature-box i {
+
+    font-size: 48px;
+
+}
+
+.feature-box h6 {
+
+    margin-top: 15px;
+
+    font-weight: 600;
+
+}
+
+.feature-box small {
+
+    color: #6c757d;
+
+}
+
+/* ======================================================
+   Cards
+====================================================== */
+
+.card {
+
+    border-radius: 16px;
+
+    overflow: hidden;
+
+}
+
+.card-header {
+
+    background: #ffffff;
+
+    font-weight: 600;
+
+    border-bottom: 1px solid #ececec;
+
+}
+
+.card-body {
+
+    background: #ffffff;
+
+}
+/* ======================================================
+   Form Controls
+====================================================== */
+
+.form-select {
+
+    border-radius: 10px;
+
+    min-width: 180px;
+
+    font-weight: 500;
+
+}
+
+.form-select:focus {
+
+    border-color: #0d6efd;
+
+    box-shadow: 0 0 0 0.2rem rgba(13,110,253,.25);
+
+}
+
+/* ======================================================
+   Alert
+====================================================== */
+
+.alert {
+
+    border: none;
+
+    border-radius: 15px;
+
+}
+
+/* ======================================================
+   Icons
+====================================================== */
+
+.bi {
+
+    vertical-align: middle;
+
+}
+
+/* ======================================================
+   Chart Animation
+====================================================== */
+
+canvas {
+
+    animation: fadeIn .8s ease-in-out;
+
+}
+
+/* ======================================================
+   Card Animation
+====================================================== */
+
+.report-card,
+.report-chart-card,
+.report-info-card,
+.feature-box {
+
+    animation: fadeInUp .6s ease;
+
+}
+
+/* ======================================================
+   Animations
+====================================================== */
+
+@keyframes fadeIn {
+
+    from {
+
+        opacity: 0;
+
+    }
+
+    to {
+
+        opacity: 1;
+
+    }
+
+}
+
+@keyframes fadeInUp {
+
+    from {
+
+        opacity: 0;
+
+        transform: translateY(20px);
+
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform: translateY(0);
+
+    }
+
+}
+
+/* ======================================================
+   Responsive Design
+====================================================== */
+
+@media (max-width: 992px) {
+
+    .report-card {
+
+        margin-bottom: 20px;
+
+    }
+
+    .report-chart-card {
+
+        margin-bottom: 20px;
+
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    .d-flex.gap-2 {
+
+        flex-direction: column;
+
+        gap: 10px !important;
+
+    }
+
+    .form-select {
+
+        width: 100%;
+
+    }
+
+    .btn {
+
+        width: 100%;
+
+    }
+
+    .report-card h2 {
+
+        font-size: 28px;
+
+    }
+
+    .report-card i {
+
+        font-size: 34px;
+
+    }
+
+    canvas {
+
+        max-height: 260px;
+
+    }
+
+}
+
+@media (max-width: 576px) {
+
+    h2 {
+
+        font-size: 24px;
+
+    }
+
+    .report-card {
+
+        padding: 20px;
+
+    }
+
+    .report-chart-card .card-body {
+
+        padding: 15px;
+
+    }
+
+    .feature-box {
+
+        margin-bottom: 20px;
+
+    }
+
+    .table {
+
+        font-size: 14px;
+
+    }
+
+}

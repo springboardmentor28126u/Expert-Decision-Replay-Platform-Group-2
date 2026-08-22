@@ -1,0 +1,284 @@
+/* ======================================================
+   Expert Decision Replay Platform
+   Profile Page
+   ====================================================== */
+
+/* ======================================================
+   PROFILE PAGE
+   ====================================================== */
+
+body {
+    background: #f4f7fb;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/*
+   IMPORTANT:
+   Do not style .dashboard, .sidebar or .main-content here.
+   Those are handled by dashboard.css.
+*/
+
+.main-content {
+    min-height: 100vh;
+}
+
+/* Profile content container */
+
+.main-content > .container,
+.main-content .container {
+    animation: fadeIn .4s ease-in-out;
+}
+
+
+/* ======================================================
+   PROFILE HEADER
+   ====================================================== */
+
+.main-content .card {
+    border: none;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .10);
+    margin-bottom: 20px;
+}
+
+.main-content .card-header {
+    background: linear-gradient(
+        135deg,
+        #0d6efd,
+        #4f8dfd
+    );
+
+    color: #fff;
+    border: none;
+}
+
+.main-content .card-header h4,
+.main-content .card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+
+/* ======================================================
+   PROFILE IMAGE
+   ====================================================== */
+
+#profileImage {
+    width: 180px;
+    height: 180px;
+
+    object-fit: cover;
+
+    border: 5px solid #fff;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, .15);
+
+    transition: .3s;
+}
+
+#profileImage:hover {
+    transform: scale(1.05);
+}
+
+
+/* ======================================================
+   PROFILE NAME
+   ====================================================== */
+
+#profileName {
+    font-weight: 700;
+    color: #212529;
+}
+
+#profileRole {
+    font-size: 16px;
+}
+
+#profileStatus {
+    font-size: 14px;
+    padding: 8px 15px;
+}
+
+
+/* ======================================================
+   FORM
+   ====================================================== */
+
+.main-content .form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.main-content .form-control,
+.main-content .form-select {
+    height: 48px;
+
+    border-radius: 10px;
+
+    border: 1px solid #ced4da;
+}
+
+.main-content textarea.form-control {
+    height: auto;
+}
+
+.main-content .form-control:focus,
+.main-content .form-select:focus {
+    border-color: #0d6efd;
+
+    box-shadow:
+        0 0 0 .2rem rgba(13, 110, 253, .15);
+}
+
+
+/* ======================================================
+   BUTTONS
+   ====================================================== */
+
+.main-content .btn {
+    border-radius: 10px;
+
+    font-weight: 600;
+
+    transition: .3s;
+}
+
+.main-content .btn:hover {
+    transform: translateY(-2px);
+}
+
+#saveProfileBtn {
+    min-width: 170px;
+}
+
+#cancelBtn {
+    min-width: 120px;
+}
+
+
+/* ======================================================
+   ACCOUNT TABLE
+   ====================================================== */
+
+.main-content .table th {
+    width: 40%;
+
+    font-weight: 600;
+
+    color: #495057;
+}
+
+.main-content .table td {
+    color: #212529;
+}
+
+
+/* ======================================================
+   RECENT ACTIVITY
+   ====================================================== */
+
+.main-content .list-group-item {
+    border: none;
+
+    padding: 15px 0;
+}
+
+.main-content .list-group-item i {
+    margin-right: 10px;
+}
+
+
+/* ======================================================
+   BADGES
+   ====================================================== */
+
+.main-content .badge {
+    font-size: 13px;
+
+    padding: 8px 14px;
+}
+
+
+/* ======================================================
+   PROFILE HEADER SPACING
+   ====================================================== */
+
+.main-content .card-body {
+    padding: 24px;
+}
+
+
+/* ======================================================
+   ANIMATION
+   ====================================================== */
+
+@keyframes fadeIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+/* ======================================================
+   RESPONSIVE
+   ====================================================== */
+
+@media (max-width: 768px) {
+
+    #profileImage {
+        width: 130px;
+        height: 130px;
+        margin-bottom: 20px;
+    }
+
+    .main-content .card-body {
+        padding: 20px;
+    }
+
+    .main-content .text-end {
+        text-align: center !important;
+    }
+
+    #saveProfileBtn,
+    #cancelBtn {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .main-content .table th {
+        width: 45%;
+    }
+
+}
+
+
+/* ======================================================
+   SMALL SCREENS
+   ====================================================== */
+
+@media (max-width: 576px) {
+
+    #profileImage {
+        width: 110px;
+        height: 110px;
+    }
+
+    #profileName {
+        font-size: 24px;
+    }
+
+    .main-content .card {
+        border-radius: 14px;
+    }
+
+}

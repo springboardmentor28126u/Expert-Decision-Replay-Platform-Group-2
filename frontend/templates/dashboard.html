@@ -1,0 +1,760 @@
+{% extends "base.html" %}
+
+{% block title %}
+Dashboard | Expert Decision Replay Platform
+{% endblock %}
+
+{% block css %}
+
+<link rel="stylesheet" href="/static/css/dashboard.css">
+
+<link
+href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+rel="stylesheet">
+
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <!-- ========================================= -->
+    <!-- Sidebar -->
+    <!-- ========================================= -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <div>
+
+            <div class="sidebar-header">
+
+                <div class="logo-box">
+
+                    <i class="bi bi-diagram-3-fill"></i>
+
+                </div>
+
+                <div>
+
+                    <h3>EDRP</h3>
+
+                    <small>Enterprise Suite</small>
+
+                </div>
+
+            </div>
+
+            <ul class="sidebar-menu" id="sidebarMenu">
+
+                <li class="active">
+
+                    <a href="/dashboard-page">
+
+                        <i class="bi bi-grid-fill"></i>
+
+                        Dashboard
+
+                    </a>
+
+                </li>
+
+                <li id="decisionMenu">
+
+                    <a href="/decision-page">
+
+                        <i class="bi bi-file-earmark-text"></i>
+
+                        Decisions
+
+                    </a>
+
+                </li>
+
+                <li id="approvalMenu">
+
+                    <a href="/approvals-page">
+
+                        <i class="bi bi-check2-square"></i>
+
+                        Approvals
+
+                    </a>
+
+                </li>
+
+                <li id="discussionMenu">
+
+                    <a href="/discussion-page">
+
+                        <i class="bi bi-chat-left-text"></i>
+
+                        Discussion
+
+                    </a>
+
+                </li>
+
+                <li id="knowledgeMenu">
+
+                    <a href="/knowledge-page">
+
+                        <i class="bi bi-book"></i>
+
+                        Knowledge
+
+                    </a>
+
+                </li>
+
+                <li id="reportsMenu">
+
+                    <a href="/reports-page">
+
+                        <i class="bi bi-bar-chart-line"></i>
+
+                        Reports
+
+                    </a>
+
+                </li>
+                <li>
+                    <a href="/audit-logs">
+                        <i class="bi bi-journal-text"></i>
+                        Audit Logs
+                    </a>
+                </li>
+                <li id="alternativeMenu">
+
+                    <a href="/alternatives-page">
+
+                        <i class="bi bi-diagram-3"></i>
+
+                        Alternative Analysis
+
+                    </a>
+
+                </li>
+                <li id="aiAgentMenu">
+
+                    <a href="/ai-agent-page">
+
+                        <i class="bi bi-robot"></i>
+
+                        AI Agent
+
+                    </a>
+
+                </li>
+
+                <!-- Manager/Admin Only -->
+
+                <li id="usersMenu">
+
+                    <a href="/users-page">
+
+                        <i class="bi bi-people-fill"></i>
+
+                        User Management
+
+                    </a>
+
+                </li>
+                <li id="profileSidebar">
+
+                    <a href="/profile-page">
+
+                    <i class="bi bi-person-circle"></i>
+
+                        My Profile
+
+                    </a>
+
+                </li>
+
+            </ul>
+
+        </div>
+
+        <div class="sidebar-footer">
+
+            <a href="#" id="logoutBtn">
+
+                <i class="bi bi-box-arrow-left"></i>
+
+                Logout
+
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ========================================= -->
+    <!-- Main Content -->
+    <!-- ========================================= -->
+
+    <main class="main-content">
+
+        <!-- Topbar -->
+
+        <header class="topbar">
+
+            <div class="d-flex align-items-center">
+
+                <button
+                    class="btn btn-light me-3"
+                    id="toggleSidebar"
+                    aria-label="Toggle Sidebar">
+
+                    <i class="bi bi-list"></i>
+
+                </button>
+
+                <div>
+
+                    <h2>Dashboard</h2>
+
+                    <small id="welcomeUser">
+
+                        Welcome Back
+
+                    </small>
+
+                </div>
+
+            </div>
+
+                <div class="topbar-right">
+
+                    <div class="search-box">
+                        ...
+                    </div>
+
+                    <!-- Notification Bell -->
+                    <div class="notification-wrapper position-relative me-3">
+
+                        <button
+                            class="btn btn-light position-relative"
+                            id="notificationBtn">
+
+                            <i class="bi bi-bell fs-5"></i>
+
+                            <span
+                                id="notificationCount"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+
+                                0
+
+                            </span>
+
+                        </button>
+
+                        <!-- Notification Dropdown -->
+                        <div id="notificationDropdown" class="notification-dropdown d-none">
+
+                            <div class="notification-header">
+                                <h6>Notifications</h6>
+                            </div>
+
+                            <div id="notificationList">
+
+                                <div class="notification-item">
+                                    No notifications
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                    <div class="profile" id="profileMenu">
+                    <img
+                        id="profileImage"
+                        src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff">
+
+                    <div>
+
+                        <h6 id="profileName">
+
+                            Loading...
+
+                        </h6>
+
+                        <small id="profileRole">
+
+                            Role
+
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
+        <!-- ========================================= -->
+<!-- Welcome Banner -->
+<!-- ========================================= -->
+
+<section class="welcome-banner">
+
+    <div>
+
+        <h2>
+
+            Welcome to Expert Decision Replay Platform
+
+        </h2>
+
+        <p>
+
+            Manage enterprise decisions, approvals,
+            discussions, reports and knowledge from
+            one centralized workspace.
+
+        </p>
+
+    </div>
+
+</section>
+
+<!-- ========================================= -->
+<!-- KPI Cards -->
+<!-- ========================================= -->
+
+<section class="kpi-grid">
+
+    <!-- Total Decisions -->
+
+    <div class="kpi-card">
+
+        <div>
+
+            <p>Total Decisions</p>
+
+            <h2 id="totalDecisions">0</h2>
+
+            <span class="growth positive">
+
+                Enterprise Decisions
+
+            </span>
+
+        </div>
+
+        <div class="kpi-icon blue">
+
+            <i class="bi bi-file-earmark-text"></i>
+
+        </div>
+
+    </div>
+
+    <!-- Pending -->
+
+    <div class="kpi-card">
+
+        <div>
+
+            <p>Pending Approvals</p>
+
+            <h2 id="pendingApprovals">0</h2>
+
+            <span class="growth warning">
+
+                Waiting for Approval
+
+            </span>
+
+        </div>
+
+        <div class="kpi-icon orange">
+
+            <i class="bi bi-clock-history"></i>
+
+        </div>
+
+    </div>
+
+    <!-- Approved -->
+
+    <div class="kpi-card">
+
+        <div>
+
+            <p>Approved Decisions</p>
+
+            <h2 id="approvedDecisions">0</h2>
+
+            <span class="growth positive">
+
+                Successfully Approved
+
+            </span>
+
+        </div>
+
+        <div class="kpi-icon green">
+
+            <i class="bi bi-check-circle-fill"></i>
+
+        </div>
+
+    </div>
+
+    <!-- Knowledge -->
+
+    <div class="kpi-card">
+
+        <div>
+
+            <p>Knowledge Articles</p>
+
+            <h2 id="knowledgeArticles">0</h2>
+
+            <span class="growth positive">
+
+                Repository Size
+
+            </span>
+
+        </div>
+
+        <div class="kpi-icon purple">
+
+            <i class="bi bi-book-fill"></i>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ========================================= -->
+<!-- Quick Statistics -->
+<!-- ========================================= -->
+
+<section class="kpi-grid">
+
+    <div class="kpi-card">
+
+        <div>
+
+            <p>Draft Decisions</p>
+
+            <h2 id="draftDecisions">0</h2>
+
+        </div>
+
+        <div class="kpi-icon blue">
+
+            <i class="bi bi-pencil-square"></i>
+
+        </div>
+
+    </div>
+
+    <div class="kpi-card">
+
+        <div>
+
+            <p>Rejected Decisions</p>
+
+            <h2 id="rejectedDecisions">0</h2>
+
+        </div>
+
+        <div class="kpi-icon orange">
+
+            <i class="bi bi-x-circle-fill"></i>
+
+        </div>
+
+    </div>
+
+    <div class="kpi-card">
+
+        <div>
+
+            <p>Total Discussions</p>
+
+            <h2 id="totalDiscussions">0</h2>
+
+        </div>
+
+        <div class="kpi-icon green">
+
+            <i class="bi bi-chat-dots-fill"></i>
+
+        </div>
+
+    </div>
+
+    <div class="kpi-card">
+
+        <div>
+
+            <p>Total Users</p>
+
+            <h2 id="totalUsers">0</h2>
+
+        </div>
+
+        <div class="kpi-icon purple">
+
+            <i class="bi bi-people-fill"></i>
+
+        </div>
+
+    </div>
+
+</section>
+<!-- ========================================= -->
+<!-- Charts Section -->
+<!-- ========================================= -->
+
+<section class="chart-grid">
+
+    <!-- Decision Trend -->
+
+    <div class="chart-card">
+
+        <div class="card-header">
+
+            <h4>
+
+                Decision Trend
+
+            </h4>
+
+        </div>
+
+        <canvas id="decisionChart"></canvas>
+
+    </div>
+
+    <!-- Approval Chart -->
+
+    <div class="chart-card">
+
+        <div class="card-header">
+
+            <h4>
+
+                Approval Status
+
+            </h4>
+
+        </div>
+
+        <canvas id="approvalChart"></canvas>
+
+    </div>
+
+</section>
+
+<!-- ========================================= -->
+<!-- Bottom Grid -->
+<!-- ========================================= -->
+
+<section class="bottom-grid">
+
+    <!-- Recent Decisions -->
+
+    <div class="table-card">
+
+        <div class="card-header">
+
+            <h4>
+
+                Recent Decisions
+
+            </h4>
+
+        </div>
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Title</th>
+
+                    <th>Department</th>
+
+                    <th>Priority</th>
+
+                    <th>Status</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="recentDecisionTable">
+
+                <tr>
+
+                    <td colspan="4" style="text-align:center">
+
+                        Loading...
+
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- Decision Summary -->
+
+    <div class="activity-card">
+
+        <div class="card-header">
+
+            <h4>
+
+                Decision Summary
+
+            </h4>
+
+        </div>
+
+        <ul>
+
+            <li>
+
+                <i class="bi bi-file-earmark-text-fill"></i>
+
+                Total Decisions
+
+                <strong id="summaryDecision">
+
+                    0
+
+                </strong>
+
+            </li>
+
+            <li>
+
+                <i class="bi bi-check-circle-fill"></i>
+
+                Approved
+
+                <strong id="summaryApproved">
+
+                    0
+
+                </strong>
+
+            </li>
+
+            <li>
+
+                <i class="bi bi-clock-fill"></i>
+
+                Pending
+
+                <strong id="summaryPending">
+
+                    0
+
+                </strong>
+
+            </li>
+
+            <li>
+
+                <i class="bi bi-x-circle-fill"></i>
+
+                Rejected
+
+                <strong id="summaryRejected">
+
+                    0
+
+                </strong>
+
+            </li>
+
+        </ul>
+
+    </div>
+
+</section>
+<!-- ========================================= -->
+<!-- Profile Dropdown -->
+<!-- ========================================= -->
+
+<div id="profileDropdown" class="profile-dropdown">
+
+    <div class="profile-header">
+
+        <img
+            id="dropdownAvatar"
+            src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff">
+
+        <h5 id="dropdownName">
+
+            Loading...
+
+        </h5>
+
+        <small id="dropdownRole">
+
+            Employee
+
+        </small>
+
+    </div>
+
+    <hr>
+
+    <a href="/profile-page">
+
+        <i class="bi bi-person-circle"></i>
+
+        My Profile
+
+    </a>
+
+    <a href="/change-password-page">
+
+        <i class="bi bi-key-fill"></i>
+
+        Change Password
+
+    </a>
+
+    <hr>
+
+    <a
+        href="#"
+        id="logoutDropdown">
+
+        <i class="bi bi-box-arrow-right"></i>
+
+        Logout
+
+    </a>
+
+</div>
+
+</main>
+
+</div>
+
+{% endblock %}
+
+{% block js %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="/static/js/dashboard.js"></script>
+
+{% endblock %}

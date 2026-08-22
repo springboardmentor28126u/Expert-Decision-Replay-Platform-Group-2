@@ -1,0 +1,807 @@
+{% extends "base.html" %}
+
+{% block title %}
+Decision Management | Expert Decision Replay Platform
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/css/decision.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <!-- ==========================================
+         SIDEBAR
+    =========================================== -->
+
+    <aside class="sidebar">
+
+        <div class="sidebar-header">
+
+            <div class="logo-box">
+                <i class="bi bi-diagram-3-fill"></i>
+            </div>
+
+            <div>
+                <h3>EDRP</h3>
+                <small>Enterprise Suite</small>
+            </div>
+
+        </div>
+
+        <ul class="sidebar-menu" id="sidebarMenu">
+
+            <li>
+                <a href="/dashboard-page">
+                    <i class="bi bi-grid-fill"></i>
+                    Dashboard
+                </a>
+            </li>
+
+            <li class="active">
+                <a href="/decision-page">
+                    <i class="bi bi-file-earmark-text"></i>
+                    Decisions
+                </a>
+            </li>
+
+            <li>
+                <a href="/approvals-page">
+                    <i class="bi bi-check2-square"></i>
+                    Approvals
+                </a>
+            </li>
+
+            <li>
+                <a href="/discussion-page">
+                    <i class="bi bi-chat-left-text"></i>
+                    Discussion
+                </a>
+            </li>
+
+            <li>
+                <a href="/knowledge-page">
+                    <i class="bi bi-book"></i>
+                    Knowledge
+                </a>
+            </li>
+
+            <li>
+                <a href="/reports-page">
+                    <i class="bi bi-bar-chart-line"></i>
+                    Reports
+                </a>
+            </li>
+            <li>
+                <a href="/audit-logs">
+                    <i class="bi bi-journal-text"></i>
+                    Audit Logs
+                </a>
+            </li>
+            <li id="alternativeMenu">
+                <a href="/alternatives-page">
+                    <i class="bi bi-diagram-3"></i>
+                    Alternative Analysis
+                </a>
+            </li>
+            <li id="aiAgentMenu">
+
+                 <a href="/ai-agent-page">
+
+                   <i class="bi bi-robot"></i>
+
+                  AI Agent
+
+                </a>
+
+            </li>
+            <li id="usersMenu">
+                <a href="/users-page">
+                    <i class="bi bi-people-fill"></i>
+                    User Management
+                </a>
+            </li>
+
+            <li id="profileSidebar">
+                <a href="/profile-page">
+                    <i class="bi bi-person-circle"></i>
+                    My Profile
+                </a>
+            </li>
+
+        </ul>
+    </aside>
+
+    <!-- ==========================================
+         MAIN CONTENT
+    =========================================== -->
+
+    <main class="main-content">
+
+    <!-- Header -->
+
+    <div class="page-header">
+
+        <div class="d-flex align-items-center">
+
+            <!-- Sidebar Toggle -->
+            <button
+                type="button"
+                id="toggleSidebar"
+                class="btn btn-light me-3"
+                title="Toggle Sidebar">
+
+                <i class="bi bi-list"></i>
+
+            </button>
+
+            <div>
+
+                <h2>Decision Management</h2>
+
+                <p>
+                    Create, manage and track enterprise decisions.
+                </p>
+
+            </div>
+
+    </div>
+
+    <button
+        class="btn-primary"
+        id="newDecisionBtn">
+
+        <i class="bi bi-plus-circle"></i>
+
+        New Decision
+
+    </button>
+
+</div>
+        <!-- Toolbar -->
+
+        <div class="toolbar">
+
+            <input
+                type="text"
+                id="searchDecision"
+                aria-label="Search Decisions"
+                autocomplete="off"
+                placeholder="Search decisions...">
+
+            <select id="statusFilter">
+
+                <option value="">All Status</option>
+                <option value="Draft">Draft</option>
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Rejected">Rejected</option>
+
+            </select>
+
+            <select id="priorityFilter">
+
+                <option value="">All Priority</option>
+                <option>Critical</option>
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+
+            </select>
+
+        </div>
+
+        <!-- ==========================================
+             DECISION TABLE
+        =========================================== -->
+
+        <section class="table-card">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+
+                        <th>Decision</th>
+
+                        <th>Department</th>
+
+                        <th>Priority</th>
+
+                        <th>Status</th>
+
+                        <th>Owner</th>
+
+                        <th>Date</th>
+
+                        <th>Actions</th>
+
+                    </tr>
+
+                </thead>
+
+                <!-- Dynamic Table -->
+
+                <tbody id="decisionTable">
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+        <!-- ==========================================
+             CREATE DECISION MODAL
+        =========================================== -->
+        <div
+    class="modal fade"
+    id="decisionModal"
+    tabindex="-1"
+    aria-labelledby="decisionModalTitle"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+               <h4
+                 class="modal-title"
+                 id="decisionModalTitle">
+
+                 <i class="bi bi-file-earmark-plus-fill"></i>
+
+                    Create New Decision
+
+                </h4>
+                <button
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <form id="decisionForm">
+
+                    <div class="row">
+
+                        <!-- Decision Title -->
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+
+                                Decision Title
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="decisionTitle"
+                                placeholder="Enter decision title"
+                                required>
+
+                        </div>
+
+                        <!-- Department -->
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+
+                                Department
+
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="department"
+                                required>
+
+                                <option>IT</option>
+                                <option>Finance</option>
+                                <option>HR</option>
+                                <option>Operations</option>
+                                <option>Marketing</option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- Category -->
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+
+                                Category
+
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="category"
+                                required>
+
+                                <option>Technology</option>
+                                <option>Infrastructure</option>
+                                <option>Security</option>
+                                <option>Finance</option>
+                                <option>Human Resources</option>
+                                <option>Operations</option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- Priority -->
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+
+                                Priority
+
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="priority"
+                                required>
+
+                                <option>Low</option>
+                                <option selected>Medium</option>
+                                <option>High</option>
+                                <option>Critical</option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Problem Statement -->
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+
+                            Problem Statement
+
+                        </label>
+
+                        <textarea
+                            class="form-control"
+                            id="problemStatement"
+                            rows="6"
+                            placeholder="Describe the business problem or decision..."
+                            required></textarea>
+
+                    </div>
+
+                    <!-- Status & Owner -->
+
+                    <div class="row">
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+
+                                Status
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                value="Draft"
+                                readonly>
+
+                        </div>
+
+                        <div class="col-md-6">
+
+                            <label class="form-label">
+
+                                Owner
+
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="decisionOwner"
+                                readonly>
+
+                        </div>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    class="btn btn-light"
+                    data-bs-dismiss="modal">
+
+                    Cancel
+
+                </button>
+
+               <button
+                    type="submit"
+                    class="btn btn-primary"
+                    id="saveDecisionBtn">
+                    <i class="bi bi-check-circle"></i>
+
+                    Save Decision
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- ==========================================
+     DECISION DETAILS / ATTACHMENTS MODAL
+========================================== -->
+
+<div class="modal fade"
+     id="viewDecisionModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <!-- Header -->
+            <div class="modal-header bg-primary text-white">
+
+                <h5 class="modal-title">
+                    <i class="bi bi-file-earmark-text"></i>
+                    Decision Details
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+
+                <!-- Decision Information -->
+
+                <div class="row g-3 mb-4">
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            Decision Title
+                        </label>
+
+                        <input
+                            type="text"
+                            id="viewDecisionTitle"
+                            class="form-control"
+                            readonly>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Department
+                        </label>
+
+                        <input
+                            type="text"
+                            id="viewDecisionDepartment"
+                            class="form-control"
+                            readonly>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Priority
+                        </label>
+
+                        <input
+                            type="text"
+                            id="viewDecisionPriority"
+                            class="form-control"
+                            readonly>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Category
+                        </label>
+
+                        <input
+                            type="text"
+                            id="viewDecisionCategory"
+                            class="form-control"
+                            readonly>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Status
+                        </label>
+
+                        <input
+                            type="text"
+                            id="viewDecisionStatus"
+                            class="form-control"
+                            readonly>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            Owner
+                        </label>
+
+                        <input
+                            type="text"
+                            id="viewDecisionOwner"
+                            class="form-control"
+                            readonly>
+                    </div>
+
+                </div>
+
+                <!-- Problem Statement -->
+
+                <div class="mb-4">
+
+                    <label class="form-label">
+                        Problem Statement
+                    </label>
+
+                    <textarea
+                        id="viewDecisionProblem"
+                        class="form-control"
+                        rows="5"
+                        readonly>
+                    </textarea>
+
+                </div>
+
+
+                <!-- ======================================
+                     ATTACHMENTS
+                ======================================= -->
+
+                <div class="attachment-section">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+
+                        <div>
+                            <h5 class="mb-1">
+                                <i class="bi bi-paperclip"></i>
+                                Attachments
+                            </h5>
+
+                            <small class="text-muted">
+                                Upload documents related to this decision.
+                            </small>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            id="uploadAttachmentBtn">
+
+                            <i class="bi bi-upload"></i>
+                            Attach File
+
+                        </button>
+
+                    </div>
+
+                    <!-- Hidden File Input -->
+
+                    <input
+                        type="file"
+                        id="attachmentFile"
+                        hidden>
+
+                    <!-- Uploaded File Information -->
+
+                    <div
+                        id="attachmentList"
+                        class="attachment-list">
+
+                        <div class="text-muted text-center py-4">
+
+                            <i class="bi bi-paperclip fs-3"></i>
+
+                            <p class="mb-0">
+                                No files attached yet.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Upload Progress -->
+
+                    <div
+                        id="attachmentUploadStatus"
+                        class="mt-3"
+                        style="display:none;">
+
+                        <div class="progress">
+
+                            <div
+                                class="progress-bar"
+                                id="attachmentProgress"
+                                role="progressbar"
+                                style="width:100%;">
+
+                                Uploading...
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+
+                    Close
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- ==========================================
+     VERSION HISTORY MODAL
+========================================== -->
+
+<div class="modal fade"
+     id="historyModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-primary text-white">
+
+                <h5 class="modal-title">
+                    <i class="bi bi-clock-history"></i>
+                    Version History
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <table class="table table-bordered">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Version</th>
+                            <th>Changed By</th>
+                            <th>Summary</th>
+                            <th>Date</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="historyTable">
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+
+                    Close
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- ==========================================
+     SUCCESS TOAST
+=========================================== -->
+
+<div
+    class="toast-container position-fixed bottom-0 end-0 p-3">
+
+    <div
+        id="successToast"
+        class="toast align-items-center text-bg-success border-0"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true">
+
+        <div class="d-flex">
+
+            <div class="toast-body">
+
+                <i class="bi bi-check-circle-fill"></i>
+
+                Decision saved successfully!
+
+            </div>
+
+            <button
+                type="button"
+                class="btn-close btn-close-white me-2 m-auto"
+                data-bs-dismiss="toast">
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+    </main>
+
+</div>
+
+{% endblock %}
+
+{% block js %}
+
+<script src="/static/js/decision.js"></script>
+
+{% endblock %}

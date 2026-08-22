@@ -1,0 +1,515 @@
+{% extends "base.html" %}
+
+{% block title %}
+Approval Management | Expert Decision Replay Platform
+{% endblock %}
+
+{% block css %}
+
+<link rel="stylesheet" href="/static/css/dashboard.css">
+
+<link rel="stylesheet" href="/static/css/approvals.css">
+
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <!-- ========================= -->
+    <!-- Sidebar -->
+    <!-- ========================= -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <div>
+
+            <div class="sidebar-header">
+
+                <div class="logo-box">
+
+                    <i class="bi bi-diagram-3-fill"></i>
+
+                </div>
+
+                <div>
+
+                    <h3>EDRP</h3>
+
+                    <small>Enterprise Suite</small>
+
+                </div>
+
+            </div>
+
+            <ul class="sidebar-menu" id="sidebarMenu">
+
+                <li>
+
+                    <a href="/dashboard-page">
+
+                        <i class="bi bi-grid-fill"></i>
+
+                        Dashboard
+
+                    </a>
+
+                </li>
+
+                <li>
+
+                    <a href="/decision-page">
+
+                        <i class="bi bi-file-earmark-text"></i>
+
+                        Decisions
+
+                    </a>
+
+                </li>
+
+                <li class="active">
+
+                    <a href="/approvals-page">
+
+                        <i class="bi bi-check2-square"></i>
+
+                        Approvals
+
+                    </a>
+
+                </li>
+
+                <li>
+
+                    <a href="/discussion-page">
+
+                        <i class="bi bi-chat-left-text"></i>
+
+                        Discussion
+
+                    </a>
+
+                </li>
+
+                <li>
+
+                    <a href="/knowledge-page">
+
+                        <i class="bi bi-book"></i>
+
+                        Knowledge
+
+                    </a>
+
+                </li>
+
+                <li>
+
+                    <a href="/reports-page">
+
+                        <i class="bi bi-bar-chart-line"></i>
+
+                        Reports
+
+                    </a>
+
+                </li>
+                <li>
+                    <a href="/audit-logs">
+                        <i class="bi bi-journal-text"></i>
+                        Audit Logs
+                    </a>
+                </li>
+                <li>
+                    <a href="/alternatives-page">
+                        <i class="bi bi-diagram-3"></i>
+                        Alternative Analysis
+                    </a>
+                </li>
+                <li id="aiAgentMenu">
+
+                    <a href="/ai-agent-page">
+
+                        <i class="bi bi-robot"></i>
+
+                        AI Agent
+
+                    </a>
+
+                </li>
+                <li>
+
+                    <a href="/users-page">
+
+                        <i class="bi bi-people-fill"></i>
+
+                        User Management
+
+                    </a>
+
+                </li>
+
+                <li>
+
+                    <a href="/profile-page">
+
+                        <i class="bi bi-person-circle"></i>
+
+                        My Profile
+
+                    </a>
+
+                </li>
+
+            </ul>
+
+        </div>
+
+        <div class="sidebar-footer">
+
+            <a href="#" id="logoutBtn">
+
+                <i class="bi bi-box-arrow-left"></i>
+
+                Logout
+
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- ========================= -->
+    <!-- Main Content -->
+    <!-- ========================= -->
+
+    <main class="main-content">
+
+        <!-- Topbar -->
+
+        <header class="topbar">
+
+            <div class="d-flex align-items-center">
+
+                <button
+                    class="btn btn-light me-3"
+                    id="toggleSidebar">
+
+                    <i class="bi bi-list"></i>
+
+                </button>
+
+                <div>
+
+                    <h2>Approval Management</h2>
+
+                    <small>
+
+                        Review and manage enterprise approval requests.
+
+                    </small>
+
+                </div>
+
+            </div>
+
+            <div class="topbar-right">
+
+                <div class="search-box">
+
+                    <i class="bi bi-search"></i>
+
+                    <input
+                        type="search"
+                        class="form-control"
+                        placeholder="Search approvals...">
+
+                </div>
+
+                <div class="profile">
+
+                    <img
+                        src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff"
+                        alt="Profile">
+
+                    <div>
+
+                        <h6>System Administrator</h6>
+
+                        <small>Administrator</small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- Toolbar -->
+
+        <div class="toolbar">
+
+            <input
+                type="search"
+                id="searchApproval"
+                class="form-control"
+                aria-label="Search Approvals"
+                autocomplete="off"
+                placeholder="Search approvals...">
+
+            <select
+                id="statusFilter"
+                class="form-select">
+
+                <option value="">All Status</option>
+
+                <option value="Pending">Pending</option>
+
+                <option value="Approved">Approved</option>
+
+                <option value="Rejected">Rejected</option>
+
+            </select>
+
+        </div>
+
+        <!-- Approval Table -->
+
+        <section class="table-card">
+
+            <table class="table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+
+                        <th>Decision ID</th>
+
+                        <th>Approver</th>
+
+                        <th>Status</th>
+
+                        <th>Escalation</th>
+                        
+                        <th>Comments</th>
+
+                        <th>Date</th>
+
+                        <th>Actions</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="approvalTable">
+                                    </tbody>
+
+            </table>
+
+        </section>
+
+        <!-- ==========================================
+             Approval Modal
+        ========================================== -->
+
+        <div
+            class="modal fade"
+            id="approvalModal"
+            tabindex="-1"
+            aria-labelledby="approvalModalLabel"
+            aria-hidden="true">
+
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+
+                <div class="modal-content">
+
+                    <div class="modal-header">
+
+                        <h5
+                            class="modal-title"
+                            id="approvalModalLabel">
+
+                            <i class="bi bi-check2-square"></i>
+
+                            Update Approval
+
+                        </h5>
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                        </button>
+
+                    </div>
+
+                    <div class="modal-body">
+
+                        <form id="approvalForm">
+
+                            <input
+                                type="hidden"
+                                id="approvalId">
+
+                            <div class="row">
+
+                                <div class="col-md-6 mb-3">
+
+                                    <label
+                                        for="decisionId"
+                                        class="form-label">
+
+                                        Decision ID
+
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="decisionId"
+                                        class="form-control"
+                                        readonly>
+
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+
+                                    <label
+                                        for="approvalStatus"
+                                        class="form-label">
+
+                                        Approval Status
+
+                                    </label>
+
+                                    <select
+                                        id="approvalStatus"
+                                        class="form-select"
+                                        required>
+
+                                        <option value="Approved">
+
+                                            Approved
+
+                                        </option>
+
+                                        <option value="Rejected">
+
+                                            Rejected
+
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+                            </div>
+
+                            <div class="mb-3">
+
+                                <label
+                                    for="approvalComments"
+                                    class="form-label">
+
+                                    Comments
+
+                                </label>
+
+                                <textarea
+                                    id="approvalComments"
+                                    class="form-control"
+                                    rows="5"
+                                    required
+                                    minlength="10"
+                                    maxlength="500"
+                                    placeholder="Enter approval comments..."></textarea>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                    <div class="modal-footer">
+
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                            Cancel
+
+                        </button>
+
+                        <button
+                            type="submit"
+                            id="saveApprovalBtn"
+                            class="btn btn-success">
+
+                            <i class="bi bi-check-circle-fill"></i>
+
+                            Save Approval
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ==========================================
+             Success Toast
+        ========================================== -->
+
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+
+            <div
+                id="successToast"
+                class="toast align-items-center text-bg-success border-0"
+                role="alert"
+                aria-live="assertive"
+                aria-atomic="true">
+
+                <div class="d-flex">
+
+                    <div class="toast-body">
+
+                        <i class="bi bi-check-circle-fill"></i>
+
+                        Approval updated successfully!
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast"
+                        aria-label="Close">
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+{% endblock %}
+
+{% block js %}
+
+<script src="/static/js/dashboard.js"></script>
+
+<script src="/static/js/approvals.js"></script>
+
+{% endblock %}

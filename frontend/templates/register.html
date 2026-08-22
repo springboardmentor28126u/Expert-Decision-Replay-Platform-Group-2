@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}
+Create Account | Expert Decision Replay Platform
+{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="/static/css/register.css">
+{% endblock %}
+
+{% block content %}
+
+<div class="register-container">
+
+    <div class="register-card">
+
+        <div class="register-header">
+
+            <div class="logo-circle">
+
+                <i class="bi bi-person-plus-fill"></i>
+
+            </div>
+
+            <h2>Create Account</h2>
+
+            <p>
+                Join the Expert Decision Replay Platform
+            </p>
+
+        </div>
+
+        <form id="registerForm">
+
+            <!-- Employee ID -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Employee ID
+
+                </label>
+
+                <input
+                    type="text"
+                    id="employeeId"
+                    class="form-control"
+                    placeholder="Enter Employee ID"
+                    required>
+
+            </div>
+
+            <!-- Full Name -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Full Name
+
+                </label>
+
+                <input
+                    type="text"
+                    id="fullName"
+                    class="form-control"
+                    placeholder="Enter your full name"
+                    required>
+
+            </div>
+
+            <!-- Email -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Official Email
+
+                </label>
+
+                <input
+                    type="email"
+                    id="email"
+                    class="form-control"
+                    placeholder="Enter your official email"
+                    required>
+
+            </div>
+
+            <!-- Department -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Department
+
+                </label>
+
+                <select
+                    id="department"
+                    class="form-select"
+                    required>
+
+                    <option value="">Select Department</option>
+
+                    <option value="IT">IT</option>
+
+                    <option value="HR">HR</option>
+
+                    <option value="Finance">Finance</option>
+
+                    <option value="Marketing">Marketing</option>
+
+                    <option value="Operations">Operations</option>
+
+                </select>
+
+            </div>
+
+            <!-- Role -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Role
+
+                </label>
+
+                <select
+                    id="role"
+                    class="form-select"
+                    required>
+
+                    <option value="">Select Role</option>
+
+                    <option value="Employee">Employee</option>
+
+                    <option value="Reviewer">Reviewer</option>
+
+                </select>
+
+            </div>
+
+            <!-- Password -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Password
+
+                </label>
+
+                <input
+                    type="password"
+                    id="password"
+                    class="form-control"
+                    placeholder="Create Password"
+                    required>
+
+            </div>
+
+            <!-- Confirm Password -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Confirm Password
+
+                </label>
+
+                <input
+                    type="password"
+                    id="confirmPassword"
+                    class="form-control"
+                    placeholder="Confirm Password"
+                    required>
+
+            </div>
+                        <!-- Security Question -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Security Question
+
+                </label>
+
+                <select
+                    id="securityQuestion"
+                    class="form-select"
+                    required>
+
+                    <option value="">
+                        Select Security Question
+                    </option>
+
+                    <option value="What is your favorite color?">
+                        What is your favorite color?
+                    </option>
+
+                    <option value="What is your birthplace?">
+                        What is your birthplace?
+                    </option>
+
+                    <option value="What is your favorite teacher's name?">
+                        What is your favorite teacher's name?
+                    </option>
+
+                    <option value="What is your first school name?">
+                        What is your first school name?
+                    </option>
+
+                    <option value="What is your favorite movie?">
+                        What is your favorite movie?
+                    </option>
+
+                </select>
+
+            </div>
+
+            <!-- Security Answer -->
+
+            <div class="mb-3">
+
+                <label class="form-label">
+
+                    Security Answer
+
+                </label>
+
+                <input
+                    type="text"
+                    id="securityAnswer"
+                    class="form-control"
+                    placeholder="Enter Security Answer"
+                    required>
+
+            </div>
+
+            <!-- Terms -->
+
+            <div class="form-check mb-4">
+
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="terms"
+                    required>
+
+                <label
+                    class="form-check-label"
+                    for="terms">
+
+                    I agree to the Terms & Conditions
+
+                </label>
+
+            </div>
+
+            <!-- Register Button -->
+
+            <button
+                type="submit"
+                class="btn btn-primary w-100">
+
+                <i class="bi bi-person-check-fill"></i>
+
+                Create Account
+
+            </button>
+
+            <!-- Login Link -->
+
+            <div class="text-center mt-4">
+
+                <p>
+
+                    Already have an account?
+
+                    <a
+                        href="/login"
+                        class="login-link">
+
+                        Login
+
+                    </a>
+
+                </p>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block js %}
+
+<script src="/static/js/register.js"></script>
+
+{% endblock %}

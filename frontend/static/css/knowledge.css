@@ -1,0 +1,336 @@
+/* ======================================================
+   Expert Decision Replay Platform
+   Knowledge Repository Styles
+====================================================== */
+
+html{
+
+    scroll-behavior:smooth;
+
+}
+
+.main-content{
+
+    padding:30px;
+
+    background:#f5f7fb;
+
+    min-height:100vh;
+
+}
+
+.page-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:25px;
+
+}
+
+.page-header h2{
+
+    margin:0;
+
+    font-size:30px;
+
+    font-weight:700;
+
+    color:#1f2937;
+
+}
+
+.page-header p{
+
+    margin-top:5px;
+
+    color:#6b7280;
+
+}
+
+.toolbar{
+
+    margin-bottom:20px;
+
+}
+
+.toolbar input{
+
+    width:350px;
+
+    padding:10px;
+
+    border:1px solid #d1d5db;
+
+    border-radius:8px;
+
+    transition:.3s;
+
+}
+
+.toolbar input:focus{
+
+    outline:none;
+
+    border-color:#2563eb;
+
+    box-shadow:0 0 0 4px rgba(37,99,235,.15);
+
+}
+
+.table-card{
+
+    background:#fff;
+
+    border-radius:12px;
+
+    padding:20px;
+
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+
+    overflow-x:auto;
+
+}
+
+.table-card table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+}
+
+.table-card th{
+
+    background:#2563eb;
+
+    color:#fff;
+
+    padding:12px;
+
+    text-align:center;
+
+    vertical-align:middle;
+
+}
+
+.table-card td{
+
+    padding:12px;
+
+    border-bottom:1px solid #e5e7eb;
+
+    text-align:center;
+
+    vertical-align:middle;
+
+}
+
+.table-card tbody tr{
+
+    transition:
+
+        background .3s,
+
+        transform .2s;
+
+}
+
+.table-card tbody tr:hover{
+
+    background:#f9fafb;
+
+    transform:translateX(2px);
+
+}
+
+.btn-primary{
+
+    background:#2563eb;
+
+    border:none;
+
+    transition:.3s;
+
+}
+
+.btn-primary:hover{
+
+    background:#1d4ed8;
+
+}
+
+.btn-primary:focus-visible{
+
+    outline:2px solid #2563eb;
+
+    outline-offset:3px;
+
+}
+
+.modal-header{
+
+    background:#2563eb;
+
+    color:#fff;
+
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+
+}
+
+.modal-title{
+
+    font-weight:600;
+
+}
+
+.form-label{
+
+    font-weight:600;
+
+}
+
+textarea{
+
+    resize:none;
+
+}
+
+.toast-container{
+
+    z-index:9999;
+
+}
+
+.toast{
+
+    min-width:280px;
+
+    animation:fadeIn .3s ease;
+
+}
+
+@keyframes fadeIn{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(20px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0);
+
+    }
+
+}
+
+.bi-pencil-square{
+
+    color:#0d6efd;
+
+    cursor:pointer;
+
+    margin-right:12px;
+
+    transition:.3s;
+
+}
+
+.bi-trash-fill{
+
+    color:#dc3545;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+.bi-pencil-square:hover,
+
+.bi-trash-fill:hover{
+
+    transform:scale(1.15);
+
+}
+
+.bi-pencil-square:focus-visible,
+
+.bi-trash-fill:focus-visible{
+
+    outline:2px solid #2563eb;
+
+    outline-offset:3px;
+
+    border-radius:4px;
+
+}
+
+@media (max-width:768px){
+
+    .main-content{
+
+        padding:20px;
+
+    }
+
+    .page-header{
+
+        flex-direction:column;
+
+        align-items:flex-start;
+
+        gap:15px;
+
+    }
+
+    .toolbar input{
+
+        width:100%;
+
+    }
+
+    .table-card{
+
+        padding:15px;
+
+    }
+
+}
+/* =====================================================
+   KNOWLEDGE PAGE CONTENT LAYOUT
+===================================================== */
+
+.page-content {
+    width: 100%;
+    padding: 25px 30px 40px;
+}
+
+.page-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+}
+
+.toolbar {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.toolbar input {
+    width: 100%;
+    height: 48px;
+}
+
+.table-card {
+    width: 100%;
+}
