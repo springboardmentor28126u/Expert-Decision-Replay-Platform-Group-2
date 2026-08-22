@@ -673,6 +673,7 @@ function Dashboard({ token, onLogout }) {
   console.log(auditChartData);
 
   const handleNavigate = (view, filter) => {
+    console.log("NAVIGATION:", view, filter);
     setSelectedDecision(null);
     if (view === "decisions") setStatusFilter(filter || "all");
     if (view === "reports") setReportTab(filter || "decision");

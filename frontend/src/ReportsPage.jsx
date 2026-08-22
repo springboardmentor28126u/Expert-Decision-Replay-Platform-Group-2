@@ -64,6 +64,12 @@ function ReportsPage({ token, initialTab }) {
   }, [activeReport, token]);
 
   useEffect(() => {
+    if (initialTab) {
+      setActiveReport(initialTab);
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
     fetchReport();
   }, [fetchReport]);
 
@@ -373,10 +379,17 @@ function TeamReportView({ data }) {
 }
 
 function AuditReportView({ data }) {
+  // Safe array fallbacks prevent silent rendering crashes
+  const byAction = data?.by_action || [];
+  const byActor = data?.by_actor || [];
+  const timeline = data?.timeline || [];
+  const securityEvents = data?.security_events || [];
+  const recentEvents = data?.recent_events || [];
+
   return (
     <>
       <div className="stat-grid">
-        <StatCard label="Total Events" value={data.total_events} />
+        <StatCard label="Total Events" value={data?.total_events || 0} />
       </div>
 
       <ReportSection title="By Type">
@@ -385,11 +398,11 @@ function AuditReportView({ data }) {
             <tr><th>Action</th><th>Count</th></tr>
           </thead>
           <tbody>
-            {data.by_action.length === 0 ? (
+            {byAction.length === 0 ? (
               <EmptyRow colSpan={2} />
             ) : (
-              data.by_action.map((a) => (
-                <tr key={a.action} className="dash-table-row">
+              byAction.map((a, idx) => (
+                <tr key={idx} className="dash-table-row">
                   <td>{a.action}</td>
                   <td>{a.count}</td>
                 </tr>
@@ -405,11 +418,11 @@ function AuditReportView({ data }) {
             <tr><th>User</th><th>Events</th></tr>
           </thead>
           <tbody>
-            {data.by_actor.length === 0 ? (
+            {byActor.length === 0 ? (
               <EmptyRow colSpan={2} />
             ) : (
-              data.by_actor.map((a) => (
-                <tr key={a.actor_id} className="dash-table-row">
+              byActor.map((a, idx) => (
+                <tr key={idx} className="dash-table-row">
                   <td>{a.actor_name}</td>
                   <td>{a.count}</td>
                 </tr>
@@ -425,11 +438,11 @@ function AuditReportView({ data }) {
             <tr><th>Date</th><th>Count</th></tr>
           </thead>
           <tbody>
-            {data.timeline.length === 0 ? (
+            {timeline.length === 0 ? (
               <EmptyRow colSpan={2} />
             ) : (
-              data.timeline.map((p) => (
-                <tr key={p.period} className="dash-table-row">
+              timeline.map((p, idx) => (
+                <tr key={idx} className="dash-table-row">
                   <td>{p.period}</td>
                   <td>{p.count}</td>
                 </tr>
@@ -445,11 +458,11 @@ function AuditReportView({ data }) {
             <tr><th>Action</th><th>Actor</th><th>When</th></tr>
           </thead>
           <tbody>
-            {data.security_events.length === 0 ? (
+            {securityEvents.length === 0 ? (
               <EmptyRow colSpan={3} />
             ) : (
-              data.security_events.map((e) => (
-                <tr key={e.id} className="dash-table-row">
+              securityEvents.map((e, idx) => (
+                <tr key={e.id || idx} className="dash-table-row">
                   <td>{e.action}</td>
                   <td>{e.actor?.full_name || "Unknown"}</td>
                   <td>{formatDate(e.created_at)}</td>
@@ -466,11 +479,11 @@ function AuditReportView({ data }) {
             <tr><th>Action</th><th>Entity</th><th>Actor</th><th>When</th></tr>
           </thead>
           <tbody>
-            {data.recent_events.length === 0 ? (
+            {recentEvents.length === 0 ? (
               <EmptyRow colSpan={4} />
             ) : (
-              data.recent_events.map((e) => (
-                <tr key={e.id} className="dash-table-row">
+              recentEvents.map((e, idx) => (
+                <tr key={e.id || idx} className="dash-table-row">
                   <td>{e.action}</td>
                   <td>{e.entity_type}</td>
                   <td>{e.actor?.full_name || "Unknown"}</td>

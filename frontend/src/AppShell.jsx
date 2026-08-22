@@ -153,7 +153,7 @@ function AppShell({
                 <button
                   key={item.key}
                   className={`shell-nav-item ${activeView === item.key ? "active" : ""}`}
-                  onClick={() => onNavigate(item.key)}
+                  onClick={() => handleNavClick(item)}
                 >
                   <span className="shell-nav-icon"> 
                     <item.icon size={18} strokeWidth={1.8} />
