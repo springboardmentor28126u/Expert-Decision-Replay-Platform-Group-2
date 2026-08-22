@@ -14,6 +14,7 @@ from routers import (
     comments,
     approvals,
     admin,
+    copilot,
 )
 
 app = FastAPI(title="Expert Decision Replay Platform API")
@@ -50,3 +51,5 @@ app.include_router(admin.router)
 app.include_router(audit.router)
 app.include_router(notifications.router)
 app.include_router(ratings.router)
+app.include_router(copilot.router)
+
