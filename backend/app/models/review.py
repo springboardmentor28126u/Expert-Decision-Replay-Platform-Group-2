@@ -38,3 +38,24 @@ class Review(Base):
 
     decision = relationship("Decision")
     reviewer = relationship("User")
+
+    @property
+    def reviewer_name(self):
+        return self.reviewer.full_name if self.reviewer else None
+
+    @property
+    def reviewer_role(self):
+        if not self.reviewer:
+            return None
+        return self.reviewer.role.name if getattr(self.reviewer, 'role', None) else getattr(self.reviewer, 'role_name', None)
+
+    @property
+    def employee_id(self):
+        return self.reviewer.employee_id if self.reviewer else None
+
+    @property
+    def reviewer_initials(self):
+        if not self.reviewer or not self.reviewer.full_name:
+            return "U"
+        parts = self.reviewer.full_name.split()
+        return "".join([p[0].upper() for p in parts])[:2]

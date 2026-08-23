@@ -20,8 +20,10 @@ class User(Base):
     full_name = Column(String(100), nullable=False)
 
     email = Column(String(100), unique=True, nullable=False)
+    email_hash = Column(String(64), index=True, nullable=True)
+    email_original = Column(String(100), nullable=True)
 
-    employee_id = Column(String(50))
+    employee_id = Column(String(50), unique=True, index=True)
 
     password = Column(String(255), nullable=False)
 
@@ -37,6 +39,18 @@ class User(Base):
     phone = Column(String(20))
 
     is_active = Column(Boolean, default=True)
+
+    email_verified = Column(Boolean, default=False)
+    approved = Column(Boolean, default=False)
+    status = Column(String(50), default="Pending Approval")
+
+    approved_by = Column(String(100), nullable=True)
+    approved_at = Column(String(50), nullable=True)
+    rejected_by = Column(String(100), nullable=True)
+    rejected_at = Column(String(50), nullable=True)
+
+    created_at = Column(String(50), nullable=True)
+    updated_at = Column(String(50), nullable=True)
 
 
 class VerificationCode(Base):

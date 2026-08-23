@@ -31,7 +31,7 @@
 
 <!-- WIZARD PROGRESS BAR -->
 <div class="bg-white rounded-4 shadow-sm border p-4 mb-4">
-    <div class="d-flex justify-content-between position-relative px-5">
+    <div class="d-flex justify-content-between align-items-center position-relative px-5">
         <div class="position-absolute top-50 start-0 w-100 border-top z-n1" style="transform: translateY(-50%); border-width: 2px !important; border-color: #e2e8f0 !important; left: 10% !important; width: 80% !important;"></div>
         
         <!-- Step 1 Indicator -->
@@ -40,18 +40,42 @@
             <small class="fw-bold text-primary" id="step1-label" style="font-size: 12px;">Basic Info</small>
         </div>
         
+        <!-- Right Arrow Icon 1 -> 2 -->
+        <div class="bg-white px-2 z-1 mb-4 d-flex align-items-center justify-content-center" id="step-arrow-1-2" style="box-shadow: 0 0 0 4px white;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+        </div>
+
         <!-- Step 2 Indicator -->
         <div class="text-center bg-white px-3 z-1">
             <div class="rounded-circle d-flex align-items-center justify-content-center bg-light text-secondary mx-auto mb-2 step-indicator" id="step2-indicator" style="width: 40px; height: 40px; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 0 0 4px white;">2</div>
             <small class="fw-semibold text-secondary" id="step2-label" style="font-size: 12px;">Alternatives</small>
         </div>
         
+        <!-- Right Arrow Icon 2 -> 3 -->
+        <div class="bg-white px-2 z-1 mb-4 d-flex align-items-center justify-content-center" id="step-arrow-2-3" style="box-shadow: 0 0 0 4px white;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+        </div>
+
         <!-- Step 3 Indicator -->
         <div class="text-center bg-white px-3 z-1">
             <div class="rounded-circle d-flex align-items-center justify-content-center bg-light text-secondary mx-auto mb-2 step-indicator" id="step3-indicator" style="width: 40px; height: 40px; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 0 0 4px white;">3</div>
             <small class="fw-semibold text-secondary" id="step3-label" style="font-size: 12px;">Documents</small>
         </div>
         
+        <!-- Right Arrow Icon 3 -> 4 -->
+        <div class="bg-white px-2 z-1 mb-4 d-flex align-items-center justify-content-center" id="step-arrow-3-4" style="box-shadow: 0 0 0 4px white;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+        </div>
+
         <!-- Step 4 Indicator -->
         <div class="text-center bg-white px-3 z-1">
             <div class="rounded-circle d-flex align-items-center justify-content-center bg-light text-secondary mx-auto mb-2 step-indicator" id="step4-indicator" style="width: 40px; height: 40px; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 0 0 4px white;">4</div>
@@ -65,6 +89,50 @@
     
     <!-- STEP 1: BASIC INFO -->
     <div id="wizard-step-1" class="wizard-step">
+        
+        <!-- PREVIOUS REVIEW & REJECTION COMMENTS BANNER -->
+        <div id="rejectionFeedbackBanner" class="card border-0 shadow-sm rounded-4 mb-4 d-none" style="overflow: hidden; border: 1px solid #FCD34D !important;">
+            <div class="card-header bg-warning bg-opacity-10 border-bottom-0 py-3 px-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center shadow-sm" style="width: 36px; height: 36px; flex-shrink: 0;">
+                        <i class="bi bi-exclamation-triangle-fill fs-6"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-0 fs-6">This decision was previously rejected</h5>
+                        <small class="text-muted">Please review the Reviewer and Manager comments below before making changes and resubmitting.</small>
+                    </div>
+                </div>
+                <span class="badge bg-danger text-white fw-bold px-3 py-1 shadow-sm">Action Required</span>
+            </div>
+            <div class="card-body p-4 bg-white">
+                <h6 class="fw-bold text-dark mb-3" style="font-size: 14px;">Previous Review Comments</h6>
+                <div id="bannerCommentsContainer" class="d-flex flex-column gap-3">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Restored Draft Banner -->
+        <div id="restoredDraftBanner" class="alert alert-info border border-info-subtle rounded-4 p-3 mb-4 shadow-sm d-none align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2.5">
+                <div class="rounded-circle bg-info bg-opacity-20 d-flex align-items-center justify-content-center text-info" style="width: 36px; height: 36px;">
+                    <i class="bi bi-clock-history fs-5"></i>
+                </div>
+                <div>
+                    <strong class="text-dark">Auto-Restored Previous Work:</strong>
+                    <span class="text-secondary small ms-1" id="restoredDraftTimeText">Your previously entered decision fields and alternatives have been restored.</span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 text-xs fw-semibold" onclick="saveEnteredProgress(true)">
+                    <i class="bi bi-floppy-fill me-1"></i> Save Now
+                </button>
+                <button type="button" class="btn btn-sm btn-light border text-danger rounded-pill px-3 py-1 text-xs fw-semibold" onclick="clearSavedProgress()">
+                    <i class="bi bi-trash3 me-1"></i> Clear & Start New
+                </button>
+            </div>
+        </div>
+
         <h4 class="fw-bold text-dark mb-4">Basic Information</h4>
         
         <div class="mb-4">
@@ -105,27 +173,85 @@
         </div>
         
         <div class="mb-4">
-            <label class="form-label fw-semibold text-dark text-sm">Decision Description <span class="text-danger">*</span></label>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label fw-semibold text-dark text-sm mb-0">Decision Description <span class="text-danger">*</span></label>
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 text-xs d-flex align-items-center gap-1.5 shadow-sm bg-white" id="btnAiAutoDesc" onclick="autoGenerateDescriptionWithAi(this)">
+                    <i class="bi bi-stars text-warning"></i> <span>Auto-Generate with AI</span>
+                </button>
+            </div>
             <textarea id="cdDescription" class="form-control" rows="4" placeholder="This decision covers the allocation of..."></textarea>
+            <div class="form-text text-muted" style="font-size: 11px;">You can type your own custom description or click 'Auto-Generate with AI' to suggest one based on your Title & Category.</div>
         </div>
         
         <div class="mb-5">
-            <label class="form-label fw-semibold text-dark text-sm">Tags</label>
-            <div class="d-flex align-items-center border rounded-3 p-2">
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 me-2">Budget</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 me-2">Q4</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 me-2">Technology</span>
-                <input type="text" class="form-control border-0 shadow-none p-0 ms-2" placeholder="+ Add tag" style="width: 100px; font-size: 14px;">
+            <label class="form-label fw-semibold text-dark text-sm mb-1">Tags</label>
+            <p class="text-muted small mb-2" style="font-size: 12.5px;">Click or drag and drop tags from the available pool into your decision tags list, or type a custom tag.</p>
+
+            <!-- Selected Tags Drop & List Area -->
+            <div id="selectedTagsDropArea" class="border rounded-3 p-3 mb-3 bg-white shadow-sm d-flex flex-wrap align-items-center gap-2" style="min-height: 54px; border: 2px dashed #CBD5E1 !important; transition: all 0.2s ease;">
+                <div id="selectedTagsList" class="d-flex flex-wrap align-items-center gap-2">
+                    <!-- Selected tags rendered dynamically -->
+                </div>
+                <input type="text" id="customTagInput" class="form-control border-0 shadow-none p-0 ms-1 flex-grow-1" placeholder="+ Type custom tag & press Enter..." style="min-width: 180px; font-size: 13.5px;" onkeydown="handleCustomTagKeydown(event)">
+            </div>
+
+            <!-- Available Tags Pool / Drag & Drop Bank -->
+            <div class="p-3 bg-light rounded-3 border">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold text-secondary uppercase tracking-wider" style="font-size: 11px;"><i class="bi bi-tag-fill me-1 text-primary"></i> AVAILABLE TAGS (CLICK OR DRAG & DROP)</span>
+                    <span class="text-muted" style="font-size: 11px;">Drag tags into the dashed box above</span>
+                </div>
+                <div id="availableTagsBank" class="d-flex flex-wrap gap-2 align-items-center">
+                    <!-- Available tag pills rendered here -->
+                </div>
             </div>
         </div>
     </div>
     
     <!-- STEP 2: ALTERNATIVES -->
     <div id="wizard-step-2" class="wizard-step d-none">
+        <!-- AI Smart Suggestions Banner -->
+        <div class="card border-0 rounded-4 p-4 mb-4 shadow-sm" id="aiAltSuggestionsCard" style="background: linear-gradient(135deg, rgba(238, 242, 255, 0.95), rgba(245, 243, 255, 0.95)); border: 1px solid rgba(99, 102, 241, 0.25) !important;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width: 36px; height: 36px; background: linear-gradient(135deg, #4f46e5, #7c3aed);">
+                        <i class="bi bi-stars fs-6"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h6 class="fw-bold text-dark mb-0 fs-6">AI Smart Alternatives Recommendation</h6>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 10px;">Automated</span>
+                        </div>
+                        <small class="text-muted" id="aiAltContextSubtitle" style="font-size: 12px;">Auto-generated for your decision title and rationale</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1.5 text-xs fw-semibold shadow-sm" onclick="fetchAiAlternativeSuggestions(true)">
+                        <i class="bi bi-arrow-clockwise me-1 text-primary"></i> Regenerate
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 text-xs fw-semibold shadow-sm" id="btnApplyAllAiAlts" onclick="applyAllAiAlternatives()" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none;">
+                        <i class="bi bi-check-all me-1"></i> Apply All Suggestions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Suggestions Grid -->
+            <div id="aiAltSuggestionsGrid" class="row g-3">
+                <div class="col-12 text-center py-3 text-muted">
+                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                    <span class="text-xs fw-semibold">AI is analyzing your decision topic to generate structured alternatives...</span>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-primary border-opacity-10 text-muted" style="font-size: 11.5px;">
+                <span><i class="bi bi-info-circle me-1 text-primary"></i> Review the AI suggestions above: click <strong>Use This Alternative</strong> on any card you like, or add your own custom ones below.</span>
+                <span class="badge bg-white text-secondary border rounded-pill px-2 py-1">Optional & Customizable</span>
+            </div>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4 class="fw-bold text-dark mb-0">Alternative Analysis</h4>
             <button class="btn btn-primary fw-semibold rounded-pill px-4" onclick="openMiniAltModal()">
-                <i data-lucide="plus" style="width:16px;" class="me-1"></i> Add Alternative
+                <i data-lucide="plus" style="width:16px;" class="me-1"></i> Add Custom Alternative
             </button>
         </div>
         
@@ -147,7 +273,7 @@
         </div>
         
         <h4 class="fw-bold text-dark mb-4">Cost Comparison</h4>
-        <div class="table-responsive border rounded-3 mb-4">
+        <div class="table-responsive border rounded-3 mb-5">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
                     <tr>
@@ -163,93 +289,118 @@
                 </tbody>
             </table>
         </div>
+
+        <h4 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-shield-exclamation text-warning"></i> Risk & Resource Assessment
+        </h4>
+        <div class="table-responsive border rounded-3 mb-4 shadow-sm">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="text-muted text-uppercase fw-semibold border-0" style="font-size: 11px; letter-spacing: 0.5px;">Alternative</th>
+                        <th class="text-muted text-uppercase fw-semibold border-0" style="font-size: 11px; letter-spacing: 0.5px;">Allocated Budget</th>
+                        <th class="text-muted text-uppercase fw-semibold border-0" style="font-size: 11px; letter-spacing: 0.5px;">Estimated Cost</th>
+                        <th class="text-muted text-uppercase fw-semibold border-0" style="font-size: 11px; letter-spacing: 0.5px;">Resource Demand</th>
+                        <th class="text-muted text-uppercase fw-semibold border-0" style="font-size: 11px; letter-spacing: 0.5px;">Overall Risk Rating</th>
+                        <th class="text-muted text-uppercase fw-semibold border-0" style="font-size: 11px; letter-spacing: 0.5px;">Risk Mitigation</th>
+                    </tr>
+                </thead>
+                <tbody id="altRiskTable">
+                    <!-- Javascript will populate this -->
+                </tbody>
+            </table>
+        </div>
     </div>
     
     <!-- STEP 3: DOCUMENTS -->
     <div id="wizard-step-3" class="wizard-step d-none">
         <h4 class="fw-bold text-dark mb-4">Upload Supporting Documents</h4>
         
-        <div class="border border-2 border-primary border-dashed rounded-4 p-5 text-center bg-primary-subtle bg-opacity-10 mb-4" style="border-style: dashed !important;">
+        <div class="border border-2 border-primary border-dashed rounded-4 p-5 text-center bg-primary-subtle bg-opacity-10 mb-4" style="border-style: dashed !important; cursor: pointer;" onclick="document.getElementById('fileInput').click()">
             <div class="rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
                 <i data-lucide="upload-cloud" class="text-primary" style="width:28px;"></i>
             </div>
             <h5 class="fw-bold text-dark mb-2">Drop files here or click to upload</h5>
-            <p class="text-muted text-sm mb-4">Supports PDF, DOCX, XLSX, PPTX up to 50 MB</p>
-            <button class="btn btn-outline-primary fw-semibold px-4 rounded-pill">Choose Files</button>
+            <p class="text-muted text-sm mb-4">Supports PDF, DOCX, XLSX, PPTX, CSV up to 200 MB</p>
+            <input type="file" id="fileInput" class="d-none" multiple accept=".pdf,.docx,.xlsx,.pptx,.csv" onchange="handleFileUpload(event)">
+            <button type="button" class="btn btn-outline-primary fw-semibold px-4 rounded-pill">Choose Files</button>
         </div>
         
         <div id="documentList">
-            <!-- Dummy doc 1 -->
-            <div class="d-flex align-items-center border rounded-3 p-3 mb-3 bg-white shadow-sm">
-                <div class="rounded bg-danger-subtle text-danger d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
-                    <i data-lucide="file-text" style="width:24px;"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="fw-bold mb-1">Budget_Proposal_Q4_2024.pdf</h6>
-                    <small class="text-muted">2.4 MB • Uploaded Dec 15</small>
-                </div>
-                <button class="btn btn-light text-muted me-2 border-0"><i data-lucide="eye" style="width:16px;"></i></button>
-                <button class="btn btn-light text-danger border-0"><i data-lucide="trash-2" style="width:16px;"></i></button>
-            </div>
-            <!-- Dummy doc 2 -->
-            <div class="d-flex align-items-center border rounded-3 p-3 mb-3 bg-white shadow-sm">
-                <div class="rounded bg-success-subtle text-success d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
-                    <i data-lucide="file-spreadsheet" style="width:24px;"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="fw-bold mb-1">Cloud_ROI_Analysis.xlsx</h6>
-                    <small class="text-muted">890 KB • Uploaded Dec 15</small>
-                </div>
-                <button class="btn btn-light text-muted me-2 border-0"><i data-lucide="eye" style="width:16px;"></i></button>
-                <button class="btn btn-light text-danger border-0"><i data-lucide="trash-2" style="width:16px;"></i></button>
-            </div>
         </div>
     </div>
     
     <!-- STEP 4: REVIEWERS -->
     <div id="wizard-step-4" class="wizard-step d-none">
-        <h4 class="fw-bold text-dark mb-4">Assign Reviewers & Approvers</h4>
-        
-        <div class="input-group input-group-lg mb-4 shadow-sm rounded-3 overflow-hidden">
-            <span class="input-group-text bg-white border"><i data-lucide="search" class="text-muted" style="width:18px;"></i></span>
-            <input type="text" class="form-control border-start-0" placeholder="Search users by name or department...">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Assign Reviewers & Approvers</h4>
+                <p class="text-muted text-sm mb-0">Select individual reviewers or auto-assign available reviewers based on decision type approval flow.</p>
+            </div>
+            <button type="button" class="btn btn-outline-primary fw-semibold rounded-pill px-3 shadow-sm" onclick="autoAssignReviewers()">
+                <i class="bi bi-magic me-1"></i> Auto-assign Reviewers
+            </button>
         </div>
         
-        <h6 class="fw-bold text-dark mb-3">Assigned Reviewers (3)</h6>
-        <div class="mb-4">
-            <!-- Reviewer 1 -->
-            <div class="d-flex align-items-center border rounded-3 p-3 mb-3 bg-white shadow-sm">
-                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold me-3" style="width: 48px; height: 48px;">ML</div>
-                <div class="flex-grow-1">
-                    <h6 class="fw-bold mb-1">Dr. Mark Lee</h6>
-                    <small class="text-muted">Finance</small>
+        <!-- Decision Type Approval Flow Banner Card -->
+        <div class="card border border-primary-subtle bg-primary-subtle bg-opacity-10 p-3 rounded-4 mb-4 shadow-sm" id="approvalFlowCard">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                        <i class="bi bi-diagram-3-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-primary rounded-pill px-2.5 py-1" id="flowCategoryBadge" style="font-size: 10px; text-transform: uppercase;">Finance Approval Flow</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 10px;" id="flowBadgeStatus">Active Flow</span>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1" id="flowTitle">Assigned Workflow: Financial Governance Flow</h6>
+                        <div class="text-muted small" id="flowDescription">Based on Decision Category: <strong>Finance</strong> and Priority: <strong>High</strong>, this decision is assigned an automated Financial Approval Workflow.</div>
+                    </div>
                 </div>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 me-3">Reviewer</span>
-                <button class="btn btn-light text-muted border-0"><i data-lucide="x" style="width:16px;"></i></button>
+                <button type="button" class="btn btn-primary fw-semibold rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2" onclick="applyDecisionApprovalFlow()">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i> Auto-Assign Decision Approval Flow
+                </button>
             </div>
-            <!-- Reviewer 2 -->
-            <div class="d-flex align-items-center border rounded-3 p-3 mb-3 bg-white shadow-sm">
-                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold me-3" style="width: 48px; height: 48px;">JW</div>
-                <div class="flex-grow-1">
-                    <h6 class="fw-bold mb-1">Jennifer Walsh</h6>
-                    <small class="text-muted">Operations</small>
+        </div>
+        
+        <div class="card border-0 bg-light p-3 rounded-3 mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold text-dark text-sm mb-1">Select Reviewer</label>
+                    <select id="userSelect" class="form-select border-primary-subtle">
+                        <option value="">Loading users...</option>
+                    </select>
                 </div>
-                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-2 me-3">Manager</span>
-                <button class="btn btn-light text-muted border-0"><i data-lucide="x" style="width:16px;"></i></button>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-dark text-sm mb-1">Approval Type</label>
+                    <select id="cdApprovalType" class="form-select border-primary-subtle">
+                        <option value="Sequential">Sequential</option>
+                        <option value="Parallel">Parallel</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-primary w-100 fw-semibold" onclick="addReviewer()">
+                        <i class="bi bi-plus-lg me-1"></i> Add
+                    </button>
+                </div>
             </div>
+            <div class="text-muted text-xs mt-2">
+                <i class="bi bi-info-circle me-1"></i> The decision creator is automatically excluded from reviewer assignment. Reviewers cannot be added more than once.
+            </div>
+        </div>
+        
+        <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+            Assigned Reviewers <span class="badge bg-primary rounded-pill px-2" id="reviewerCount">0</span>
+        </h6>
+        <div class="mb-4" id="selectedReviewersList">
+            <div class="text-muted small py-4 text-center border rounded-3 bg-white">No reviewers added yet. Click "Auto-assign Reviewers" or select a reviewer above.</div>
         </div>
         
         <div class="row g-4">
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-dark text-sm">Review Deadline</label>
-                <input type="date" id="cdReviewDeadline" class="form-control ">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-semibold text-dark text-sm">Approval Type</label>
-                <select id="cdApprovalType" class="form-select ">
-                    <option value="Sequential">Sequential</option>
-                    <option value="Parallel">Parallel</option>
-                </select>
+                <label class="form-label fw-semibold text-dark text-sm">Overall Review Deadline</label>
+                <input type="date" id="cdReviewDeadline" class="form-control">
             </div>
         </div>
     </div>
@@ -265,10 +416,10 @@
             </div>
         </div>
         
-        <!-- Summary Blocks -->
+        <!-- Summary Block: Basic Info -->
         <div class="border rounded-4 p-4 mb-4 bg-white shadow-sm position-relative">
             <button class="btn btn-link position-absolute top-0 end-0 mt-3 me-3 text-decoration-none fw-semibold" onclick="goToStep(1)">Edit</button>
-            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Basic Information</h5>
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4"><i class="bi bi-info-circle me-2 text-primary"></i>Basic Information</h5>
             <div class="row g-4">
                 <div class="col-md-6">
                     <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 11px;">Title</small>
@@ -289,12 +440,30 @@
             </div>
         </div>
         
-        <!-- Summary Block: Alternative -->
+        <!-- Summary Block: Alternatives Evaluation -->
         <div class="border rounded-4 p-4 mb-4 bg-white shadow-sm position-relative">
             <button class="btn btn-link position-absolute top-0 end-0 mt-3 me-3 text-decoration-none fw-semibold" onclick="goToStep(2)">Edit</button>
-            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4">Selected Alternative</h5>
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4"><i class="bi bi-layers me-2 text-primary"></i>Alternatives Evaluation</h5>
             <div class="row g-4" id="sumAlternativeBlock">
-                <div class="col-12 text-muted">No alternatives added.</div>
+                <div class="col-12 text-muted py-2">No alternatives added.</div>
+            </div>
+        </div>
+
+        <!-- Summary Block: Uploaded Supporting Documents -->
+        <div class="border rounded-4 p-4 mb-4 bg-white shadow-sm position-relative">
+            <button class="btn btn-link position-absolute top-0 end-0 mt-3 me-3 text-decoration-none fw-semibold" onclick="goToStep(3)">Edit</button>
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Uploaded Supporting Documents</h5>
+            <div id="sumDocumentsBlock">
+                <div class="text-muted py-2">No documents uploaded.</div>
+            </div>
+        </div>
+
+        <!-- Summary Block: Assigned Reviewers & Overall Deadline -->
+        <div class="border rounded-4 p-4 mb-4 bg-white shadow-sm position-relative">
+            <button class="btn btn-link position-absolute top-0 end-0 mt-3 me-3 text-decoration-none fw-semibold" onclick="goToStep(4)">Edit</button>
+            <h5 class="fw-bold text-dark border-bottom pb-3 mb-4"><i class="bi bi-people me-2 text-primary"></i>Assigned Reviewers & Overall Deadline</h5>
+            <div class="row g-4" id="sumReviewersBlock">
+                <div class="col-12 text-muted py-2">No reviewers assigned.</div>
             </div>
         </div>
     </div>
@@ -305,13 +474,25 @@
             <i data-lucide="arrow-left" style="width:16px;" class="me-2"></i> Previous
         </button>
         
-        <button type="button" id="btnNext" class="btn btn-primary fw-semibold px-5 py-2 rounded-3 shadow-sm d-flex align-items-center" onclick="nextStep()">
-            Next Step <i data-lucide="arrow-right" style="width:18px;" class="ms-2"></i>
-        </button>
-        
-        <button type="button" id="btnSubmit" class="btn btn-success fw-semibold px-5 py-2 rounded-3 shadow-sm d-flex align-items-center d-none" onclick="submitDecision()">
-            Submit Decision <i data-lucide="check" style="width:18px;" class="ms-2"></i>
-        </button>
+        <div class="d-flex align-items-center gap-2.5">
+            <!-- Save Progress Button (Before Next Step) -->
+            <button type="button" id="btnSaveProgress" class="btn btn-outline-primary fw-semibold px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2" onclick="saveEnteredProgress(true)" title="Save entered progress locally so refreshing page retains all your data">
+                <i class="bi bi-floppy-fill text-primary"></i> <span>Save What You Entered</span>
+            </button>
+
+            <button type="button" id="btnNext" class="btn btn-primary fw-semibold px-5 py-2 rounded-3 shadow-sm d-flex align-items-center" onclick="nextStep()">
+                Next Step <i data-lucide="arrow-right" style="width:18px;" class="ms-2"></i>
+            </button>
+            
+            <div class="d-flex gap-2">
+                <button type="button" id="btnDraft" class="btn btn-outline-secondary fw-semibold px-4 py-2 rounded-3 shadow-sm d-flex align-items-center d-none" onclick="submitDecision('Draft')">
+                    <i class="bi bi-file-earmark me-2"></i> Save as Draft
+                </button>
+                <button type="button" id="btnSubmit" class="btn btn-success fw-semibold px-5 py-2 rounded-3 shadow-sm d-flex align-items-center d-none" onclick="submitDecision('Pending')">
+                    Submit Decision <i data-lucide="check" style="width:18px;" class="ms-2"></i>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -338,12 +519,24 @@
                 </div>
                 <div class="row g-3">
                     <div class="col-6">
-                        <label class="form-label fw-semibold">Cost ($)</label>
-                        <input type="number" id="miniAltCost" class="form-control">
+                        <label class="form-label fw-semibold">Estimated Cost ($)</label>
+                        <input type="number" id="miniAltCost" class="form-control" placeholder="e.g. 200">
                     </div>
                     <div class="col-6">
-                        <label class="form-label fw-semibold">Score (0-100)</label>
-                        <input type="number" id="miniAltScore" class="form-control">
+                        <label class="form-label fw-semibold">Allocated Budget ($)</label>
+                        <input type="number" id="miniAltBudget" class="form-control" placeholder="e.g. 500">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Feasibility Score (0-100)</label>
+                        <input type="number" id="miniAltScore" class="form-control" placeholder="e.g. 85">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Resource Demand</label>
+                        <select id="miniAltResource" class="form-select">
+                            <option value="Low">Low (1-2 members)</option>
+                            <option value="Medium">Medium (3-5 members)</option>
+                            <option value="High">High (6+ members)</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -352,6 +545,16 @@
                 <button type="button" class="btn btn-primary fw-semibold" onclick="saveMiniAlt()">Add Alternative</button>
             </div>
         </div>
+    </div>
+<!-- Error Overlay -->
+<div id="errorOverlay" class="d-none position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="bg-white rounded-4 shadow-lg p-4 text-center border border-danger border-2" style="max-width: 400px; width: 90%;">
+        <div class="rounded-circle bg-danger bg-opacity-10 text-danger mx-auto d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+            <i data-lucide="alert-triangle" style="width: 30px; height: 30px;"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-2">Error Occurred</h5>
+        <p id="errorOverlayMessage" class="text-danger fw-medium mb-4">Something went wrong.</p>
+        <button class="btn btn-danger px-4 fw-semibold rounded-pill w-100" onclick="document.getElementById('errorOverlay').classList.add('d-none'); document.getElementById('errorOverlay').classList.remove('d-flex');">Dismiss</button>
     </div>
 </div>
 
@@ -372,11 +575,143 @@
         description: "",
         tags: "",
         alternatives: [],
-        reviewers: [
-            { reviewer_id: 1, approval_type: 'Sequential' } // dummy reviewer
-        ]
+        reviewers: [],
+        temp_file_ids: []
     };
+    
+    const currentUserId = parseInt("{{ session.get('user_id', 2) }}", 10);
+    let allUsers = [];
 
+    async function loadUsers() {
+        const select = document.getElementById("userSelect");
+        if (select && select.options.length <= 1) {
+            select.innerHTML = '<option value="">Loading eligible reviewers...</option>';
+        }
+
+        try {
+            let res = await fetch("/api/users/");
+            if (!res.ok) res = await fetch("/users/");
+            if (!res.ok) res = await fetch("http://localhost:8000/users/");
+
+            if (res.ok) {
+                const rawUsers = await res.json();
+                allUsers = rawUsers.filter(u => {
+                    if (u.id === currentUserId) return false;
+                    const rName = (u.role_name || "").toLowerCase();
+                    const empId = (u.employee_id || "").toLowerCase();
+                    if (rName.includes("admin") || rName.includes("administrator") || empId.startsWith("ad")) return false;
+                    if (rName === "employee" && !rName.includes("reviewer") && !rName.includes("manager")) return false;
+                    return rName.includes("reviewer") || rName.includes("manager") || empId.startsWith("rw") || empId.startsWith("mn") || true;
+                });
+
+                allUsers.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+
+                if (select) {
+                    select.innerHTML = '<option value="">Select Reviewer...</option>';
+                    allUsers.forEach(u => {
+                        select.innerHTML += `<option value="${u.id}">${escapeHtml(u.full_name)} (${u.employee_id || 'ID'} - ${u.role_name || 'Reviewer'})</option>`;
+                    });
+                }
+            } else {
+                throw new Error("HTTP error " + res.status);
+            }
+        } catch (e) {
+            console.error("Failed to load users", e);
+            if (select) {
+                select.innerHTML = '<option value="">Select Reviewer...</option>';
+            }
+        }
+    }
+
+    function addReviewer() {
+        const userId = parseInt(document.getElementById("userSelect").value);
+        if (!userId) {
+            alert("Please select a reviewer.");
+            return;
+        }
+        
+        if (userId === currentUserId) {
+            alert("The decision owner cannot be assigned as a reviewer.");
+            return;
+        }
+        
+        if (decisionPayload.reviewers.some(r => r.reviewer_id === userId)) {
+            alert("This reviewer has already been assigned.");
+            return;
+        }
+
+        const approvalType = document.getElementById("cdApprovalType").value;
+        const deadline = document.getElementById("cdReviewDeadline").value;
+        
+        const user = allUsers.find(u => u.id === userId);
+        if (!user) return;
+        
+        decisionPayload.reviewers.push({
+            reviewer_id: userId,
+            approval_type: approvalType,
+            deadline: deadline ? deadline + "T23:59:59Z" : null,
+            _name: user.full_name,
+            _emp_id: user.employee_id,
+            _role: user.role_name
+        });
+        
+        renderReviewers();
+        document.getElementById("userSelect").value = "";
+    }
+
+    function autoAssignReviewers() {
+        applyDecisionApprovalFlow();
+    }
+    
+    function removeReviewer(userId) {
+        decisionPayload.reviewers = decisionPayload.reviewers.filter(r => r.reviewer_id !== userId);
+        renderReviewers();
+    }
+    
+    function renderReviewers() {
+        const list = document.getElementById("selectedReviewersList");
+        const countSpan = document.getElementById("reviewerCount");
+        
+        countSpan.innerText = decisionPayload.reviewers.length;
+        
+        if (decisionPayload.reviewers.length === 0) {
+            list.innerHTML = '<div class="text-muted small py-4 text-center border rounded-3 bg-white">No reviewers added yet. Select a reviewer above or leave empty for auto-assignment.</div>';
+            return;
+        }
+        
+        list.innerHTML = "";
+        decisionPayload.reviewers.forEach((r, idx) => {
+            const userObj = allUsers.find(u => u.id === r.reviewer_id) || {};
+            const empId = r._emp_id || userObj.employee_id || "ID";
+            const roleName = r._role || userObj.role_name || (idx === 0 ? "Reviewer" : "Manager");
+            const stepName = `Step ${idx + 1}`;
+            const statusName = idx === 0 ? "Pending" : "Queued";
+            const statusClass = idx === 0 ? "bg-warning-subtle text-warning border-warning-subtle" : "bg-secondary-subtle text-secondary border-secondary-subtle";
+            const initials = (r._name || userObj.full_name || "U").split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+
+            list.innerHTML += `
+            <div class="d-flex align-items-center justify-content-between border rounded-3 p-3 mb-3 bg-white shadow-sm">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0" style="width: 44px; height: 44px; font-size: 13px;">${initials}</div>
+                    <div>
+                        <h6 class="fw-bold mb-0.5 text-dark">${r._name || userObj.full_name} <span class="text-muted text-xs">(${empId})</span></h6>
+                        <div class="d-flex align-items-center gap-2 text-xs text-muted">
+                            <span><strong>Role:</strong> ${roleName}</span>
+                            <span>•</span>
+                            <span><strong>Approval:</strong> ${stepName} (${r.approval_type || 'Sequential'})</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge ${statusClass} border px-2.5 py-1 rounded-pill text-xs fw-semibold">Status: ${statusName}</span>
+                    <button type="button" class="btn btn-light text-danger border-0 rounded-circle p-2" onclick="removeReviewer(${r.reviewer_id})" title="Remove"><i data-lucide="x" style="width:18px;"></i></button>
+                </div>
+            </div>`;
+        });
+        
+        if (window.lucide) window.lucide.createIcons();
+    }
+    
     function updateStepUI() {
         // Hide all steps
         for(let i=1; i<=totalSteps; i++) {
@@ -391,7 +726,10 @@
         // Update breadcrumb
         let stepName = "";
         if(currentStep === 1) stepName = "Basic Info";
-        if(currentStep === 2) stepName = "Alternatives";
+        if(currentStep === 2) {
+            stepName = "Alternatives";
+            fetchAiAlternativeSuggestions(false);
+        }
         if(currentStep === 3) stepName = "Documents";
         if(currentStep === 4) stepName = "Reviewers";
         if(currentStep === 5) stepName = "Review";
@@ -404,16 +742,15 @@
             if(!ind) continue;
             
             if (i < currentStep) {
-                // Completed
+                // Completed step: change background to green, BUT step number MUST still be displayed inside the green circle!
                 ind.className = 'rounded-circle d-flex align-items-center justify-content-center text-white bg-success mx-auto mb-2 step-indicator';
-                ind.innerHTML = '<i class="bi bi-check" style="font-size:20px;"></i>';
+                ind.innerHTML = i;
                 ind.style.boxShadow = '0 0 0 4px white';
                 lbl.className = 'fw-bold text-success';
             } else if (i === currentStep || (currentStep === 5 && i === 4)) {
-                // Active (Step 5 keeps step 4 active or all green, let's make all green if 5)
                 if(currentStep === 5 && i < 5) {
                     ind.className = 'rounded-circle d-flex align-items-center justify-content-center text-white bg-success mx-auto mb-2 step-indicator';
-                    ind.innerHTML = '<i class="bi bi-check" style="font-size:20px;"></i>';
+                    ind.innerHTML = i;
                     lbl.className = 'fw-bold text-success';
                 } else {
                     ind.className = 'rounded-circle d-flex align-items-center justify-content-center text-white bg-primary mx-auto mb-2 step-indicator';
@@ -422,11 +759,37 @@
                     lbl.className = 'fw-bold text-primary';
                 }
             } else {
-                // Future
+                // Future step
                 ind.className = 'rounded-circle d-flex align-items-center justify-content-center bg-light text-secondary mx-auto mb-2 step-indicator border';
                 ind.innerHTML = i;
                 ind.style.boxShadow = '0 0 0 4px white';
                 lbl.className = 'fw-semibold text-secondary';
+            }
+        }
+        
+        // Dynamic Arrow Marks Styling (between steps 1-2, 2-3, 3-4)
+        for (let i = 1; i <= 3; i++) {
+            const arrowDiv = document.getElementById(`step-arrow-${i}-${i+1}`);
+            if (!arrowDiv) continue;
+            const svg = arrowDiv.querySelector('svg');
+            if (!svg) continue;
+            
+            if (currentStep > i) {
+                // Step completed -> turn arrow mark green & increase size
+                svg.setAttribute('width', '24');
+                svg.setAttribute('height', '24');
+                svg.setAttribute('stroke', '#10B981');
+                svg.setAttribute('stroke-width', '3.2');
+                arrowDiv.style.transform = 'scale(1.15)';
+                arrowDiv.style.transition = 'all 0.3s ease';
+            } else {
+                // Step not completed / returned -> revert arrow mark to normal color & size
+                svg.setAttribute('width', '20');
+                svg.setAttribute('height', '20');
+                svg.setAttribute('stroke', '#94A3B8');
+                svg.setAttribute('stroke-width', '2.5');
+                arrowDiv.style.transform = 'scale(1)';
+                arrowDiv.style.transition = 'all 0.3s ease';
             }
         }
         
@@ -435,14 +798,17 @@
         
         if (currentStep === totalSteps) {
             document.getElementById('btnNext').classList.add('d-none');
+            if (document.getElementById('btnDraft')) document.getElementById('btnDraft').classList.remove('d-none');
             document.getElementById('btnSubmit').classList.remove('d-none');
             populateSummary();
         } else if (currentStep === 4) {
             document.getElementById('btnNext').classList.remove('d-none');
+            if (document.getElementById('btnDraft')) document.getElementById('btnDraft').classList.add('d-none');
             document.getElementById('btnSubmit').classList.add('d-none');
             document.getElementById('btnNext').innerHTML = 'Review Summary <i class="bi bi-arrow-right ms-2"></i>';
         } else {
             document.getElementById('btnNext').classList.remove('d-none');
+            if (document.getElementById('btnDraft')) document.getElementById('btnDraft').classList.add('d-none');
             document.getElementById('btnSubmit').classList.add('d-none');
             document.getElementById('btnNext').innerHTML = 'Next Step <i class="bi bi-arrow-right ms-2"></i>';
         }
@@ -451,33 +817,36 @@
     function nextStep() {
         try {
             if(currentStep === 1) {
-                // Collect basic info
-                decisionPayload.title = document.getElementById('cdTitle').value;
-                decisionPayload.category_id = parseInt(document.getElementById('cdCategory').value);
-                decisionPayload.priority_level = document.getElementById('cdPriority').value;
-                decisionPayload.department = document.getElementById('cdDepartment').value;
-                decisionPayload.decision_date = document.getElementById('cdDate').value;
-                decisionPayload.description = document.getElementById('cdDescription').value;
-                decisionPayload.tags = 'Budget, Q4, Technology';
+                decisionPayload.title = document.getElementById('cdTitle') ? document.getElementById('cdTitle').value.trim() : '';
+                decisionPayload.category_id = parseInt(document.getElementById('cdCategory')?.value || 1, 10);
+                decisionPayload.priority_level = document.getElementById('cdPriority')?.value || 'Medium';
+                decisionPayload.department = document.getElementById('cdDepartment')?.value || 'Engineering';
+                decisionPayload.decision_date = document.getElementById('cdDate')?.value || '';
+                decisionPayload.description = document.getElementById('cdDescription')?.value.trim() || '';
+                decisionPayload.tags = Array.isArray(selectedTags) ? selectedTags.join(', ') : 'Budget, Technology';
                 
                 if(!decisionPayload.title || decisionPayload.title.trim() === '') {
-                    alert("Title is required");
+                    alert("Decision Title is required");
+                    document.getElementById('cdTitle')?.focus();
                     return;
                 }
             }
             
+            saveEnteredProgress(false);
+
             if (currentStep < totalSteps) {
                 currentStep++;
                 updateStepUI();
             }
         } catch (error) {
             console.error("Error in nextStep:", error);
-            alert("An error occurred while moving to the next step. Check the console for details.");
+            alert("An error occurred while moving to the next step: " + error.message);
         }
     }
 
     function prevStep() {
         if (currentStep > 1) {
+            saveEnteredProgress(false);
             currentStep--;
             updateStepUI();
         }
@@ -488,162 +857,1581 @@
         updateStepUI();
     }
 
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function getApprovalFlowForDecisionType() {
+        const catSelect = document.getElementById('cdCategory');
+        const catText = catSelect && catSelect.selectedIndex >= 0 ? catSelect.options[catSelect.selectedIndex].text : 'Finance';
+        const prioVal = document.getElementById('cdPriority') ? document.getElementById('cdPriority').value : 'Medium';
+        
+        let maxCost = 0;
+        if (decisionPayload.alternatives && decisionPayload.alternatives.length > 0) {
+            maxCost = Math.max(...decisionPayload.alternatives.map(a => parseFloat(a.cost) || 0));
+        }
+
+        if (catText.includes('Finance') || maxCost >= 500) {
+            return {
+                category: "Finance Approval Flow",
+                title: "Assigned Workflow: Financial Governance Flow",
+                description: `Based on Decision Category: <strong>${catText}</strong> and Estimated Cost: <strong>$${maxCost}</strong>, this decision requires Reviewer approval first, followed by Manager sign-off.`,
+                flowType: "Finance",
+                approval_type: "Sequential",
+                requiredRoles: ["Reviewer", "Manager"]
+            };
+        } else if (catText.includes('Tech') || catText.includes('Architecture')) {
+            return {
+                category: "Technology Approval Flow",
+                title: "Assigned Workflow: Technical & Architecture Review Flow",
+                description: `Based on Decision Category: <strong>${catText}</strong>, this decision is assigned to Technical Lead Reviewer first, followed by Manager review.`,
+                flowType: "Technology",
+                approval_type: "Sequential",
+                requiredRoles: ["Reviewer", "Manager"]
+            };
+        } else if (catText.includes('Operations') || catText.includes('HR')) {
+            return {
+                category: "Operations Approval Flow",
+                title: "Assigned Workflow: Operational Governance Flow",
+                description: `Based on Decision Category: <strong>${catText}</strong>, this decision requires Reviewer verification first, followed by Operations Manager sign-off.`,
+                flowType: "Operations",
+                approval_type: "Sequential",
+                requiredRoles: ["Reviewer", "Manager"]
+            };
+        } else {
+            return {
+                category: "Standard Approval Flow",
+                title: "Assigned Workflow: Standard Management Sign-off",
+                description: `Based on Decision Category: <strong>${catText}</strong> and Priority: <strong>${prioVal}</strong>, Reviewer review is assigned first, followed by Manager approval.`,
+                flowType: "Standard",
+                approval_type: "Sequential",
+                requiredRoles: ["Reviewer", "Manager"]
+            };
+        }
+    }
+
+    function updateApprovalFlowCard() {
+        const flow = getApprovalFlowForDecisionType();
+        const catBadge = document.getElementById('flowCategoryBadge');
+        const titleEl = document.getElementById('flowTitle');
+        const descEl = document.getElementById('flowDescription');
+
+        if (catBadge) catBadge.innerText = flow.category;
+        if (titleEl) titleEl.innerText = flow.title;
+        if (descEl) descEl.innerHTML = flow.description;
+    }
+
+    function applyDecisionApprovalFlow() {
+        if (!allUsers || allUsers.length === 0) {
+            alert("Users are still loading. Please try again in a moment.");
+            return;
+        }
+
+        const flow = getApprovalFlowForDecisionType();
+        // Exclude current user AND any Administrators from auto-assign
+        const eligibleUsers = allUsers.filter(u => {
+            if (u.id === currentUserId) return false;
+            const rName = (u.role_name || "").toLowerCase();
+            const empId = (u.employee_id || "").toLowerCase();
+            if (rName.includes("admin") || rName.includes("administrator") || empId.startsWith("ad")) {
+                return false;
+            }
+            return true;
+        });
+
+        const selected = [];
+        flow.requiredRoles.forEach(roleReq => {
+            const matching = eligibleUsers.filter(u => {
+                const rName = (u.role_name || "").toLowerCase();
+                const empId = (u.employee_id || "").toLowerCase();
+                if (roleReq === "Reviewer") return rName.includes("reviewer") || empId.startsWith("rw") || rName.includes("user") || rName.includes("employee");
+                if (roleReq === "Manager") return rName.includes("manager") || empId.startsWith("mn");
+                return true;
+            }).filter(u => !selected.some(s => s.id === u.id));
+
+            if (matching.length > 0) {
+                selected.push(matching[0]);
+            } else {
+                const fallback = eligibleUsers.find(u => !selected.some(s => s.id === u.id));
+                if (fallback) selected.push(fallback);
+            }
+        });
+
+        decisionPayload.reviewers = [];
+        const deadline = document.getElementById("cdReviewDeadline") ? document.getElementById("cdReviewDeadline").value : null;
+
+        selected.forEach(u => {
+            decisionPayload.reviewers.push({
+                reviewer_id: u.id,
+                approval_type: flow.approval_type,
+                deadline: deadline ? deadline + "T23:59:59Z" : null,
+                _name: u.full_name
+            });
+        });
+
+        renderReviewers();
+        alert(`Successfully assigned decision type approval flow: [${flow.category}]\nFirst Approver: Reviewer\nSecond Approver: Manager`);
+    }
+
+    // ── AI Automated Assistant for Decision Description & Alternatives ──
+    let aiCurrentSuggestions = [];
+    let aiLastLoadedTitle = "";
+
+    async function autoGenerateDescriptionWithAi(btn) {
+        const title = document.getElementById('cdTitle') ? document.getElementById('cdTitle').value.trim() : "";
+        if (!title) {
+            alert("Please enter a Decision Title first so AI can suggest an accurate problem statement & description.");
+            document.getElementById('cdTitle')?.focus();
+            return;
+        }
+
+        const catSelect = document.getElementById('cdCategory');
+        const categoryText = catSelect ? catSelect.options[catSelect.selectedIndex].text : "General";
+        const deptSelect = document.getElementById('cdDepartment');
+        const deptText = deptSelect ? deptSelect.options[deptSelect.selectedIndex].text : "Operations";
+
+        const origHtml = btn ? btn.innerHTML : "";
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm text-primary me-1"></span> Generating...`;
+        }
+
+        try {
+            const prompt = `Generate a comprehensive, clear, and professional decision description / problem statement for an enterprise business decision titled '${title}' under Category '${categoryText}' and Department '${deptText}'. Provide 3-4 structured sentences detailing the business context, root challenges, and strategic necessity. Do not include markdown headers, just the rationale text.`;
+            const res = await fetch('/api/support/ai-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: prompt,
+                    user_id: window.CURRENT_USER_ID || 1,
+                    user_name: "{{ session.get('full_name', 'User') }}"
+                })
+            });
+            if (!res.ok) throw new Error("AI service error");
+            const data = await res.json();
+            let desc = data.reply || "";
+            desc = desc.replace(/^["']|["']$/g, '').trim();
+            if (desc) {
+                const descEl = document.getElementById('cdDescription');
+                if (descEl) descEl.value = desc;
+            }
+        } catch (err) {
+            alert("Unable to auto-generate description with AI: " + err.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    }
+
+    async function fetchAiAlternativeSuggestions(forceReload = false) {
+        const title = document.getElementById('cdTitle') ? document.getElementById('cdTitle').value.trim() : "";
+        const desc = document.getElementById('cdDescription') ? document.getElementById('cdDescription').value.trim() : "";
+        const grid = document.getElementById('aiAltSuggestionsGrid');
+        const subtitle = document.getElementById('aiAltContextSubtitle');
+        if (!grid) return;
+
+        if (!title) {
+            grid.innerHTML = `
+                <div class="col-12 text-center py-3 text-muted">
+                    <i class="bi bi-lightbulb text-warning me-1"></i> Enter a <strong>Decision Title</strong> on Step 1 to generate smart AI alternative recommendations.
+                </div>
+            `;
+            return;
+        }
+
+        if (!forceReload && aiLastLoadedTitle === title && aiCurrentSuggestions.length > 0) {
+            return;
+        }
+
+        if (subtitle) {
+            subtitle.innerText = `Auto-generated recommendations for "${title}"`;
+        }
+
+        grid.innerHTML = `
+            <div class="col-12 text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                <span class="text-xs fw-semibold">AI is analyzing "${escapeHtml(title)}" to create tailored alternative models...</span>
+            </div>
+        `;
+
+        try {
+            const prompt = `Based on the enterprise decision title '${title}' and description '${desc}', generate 3 realistic, structured alternatives for an evaluation matrix in strict JSON format.
+Return ONLY a valid JSON array of objects with the following exact keys:
+- title (string: clear descriptive alternative title, e.g. "Alternative 1: Hybrid Cloud Migration")
+- pros (string: key benefits, concise)
+- cons (string: key trade-offs, concise)
+- cost (number: realistic estimated cost e.g. 75000)
+- budget (number: allocated budget e.g. 85000)
+- feasibility_score (integer 1-10)
+- resource_demand (string: 'Low', 'Medium', or 'High')
+- risk_level (string: 'Low Risk', 'Medium Risk', or 'High Risk')
+- notes (string: short evaluation summary)`;
+
+            const res = await fetch('/api/support/ai-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: prompt,
+                    user_id: window.CURRENT_USER_ID || 1,
+                    user_name: "{{ session.get('full_name', 'User') }}"
+                })
+            });
+
+            if (!res.ok) throw new Error("AI service error");
+            const data = await res.json();
+            let rawReply = data.reply || "";
+
+            let jsonText = rawReply;
+            if (rawReply.includes('[') && rawReply.includes(']')) {
+                const startIdx = rawReply.indexOf('[');
+                const endIdx = rawReply.lastIndexOf(']');
+                jsonText = rawReply.substring(startIdx, endIdx + 1);
+            }
+
+            let alts = [];
+            try {
+                alts = JSON.parse(jsonText);
+            } catch (e) {
+                console.warn("Direct JSON parse fallback for", title);
+                alts = [
+                    {
+                        title: `Option A: Comprehensive Modernization & Upgrade for ${title}`,
+                        pros: "Full enterprise-scale capacity, high performance, robust reliability",
+                        cons: "Higher upfront capital expenditure and thorough testing cycle",
+                        cost: 120000,
+                        budget: 140000,
+                        feasibility_score: 9,
+                        resource_demand: "Medium",
+                        risk_level: "Low Risk",
+                        notes: "Primary strategic recommendation with maximum long-term benefit"
+                    },
+                    {
+                        title: `Option B: Phased Modular Rollout for ${title}`,
+                        pros: "Lower immediate expenditure, minimal downtime, quick milestone delivery",
+                        cons: "Requires temporary hybrid bridging and dual maintenance",
+                        cost: 75000,
+                        budget: 90000,
+                        feasibility_score: 8,
+                        resource_demand: "Low",
+                        risk_level: "Low Risk",
+                        notes: "Cost-effective phased deployment model"
+                    },
+                    {
+                        title: `Option C: Managed Outsourced Solution / Specialized Vendor Service`,
+                        pros: "Zero internal maintenance overhead, backed by 24/7 enterprise SLA",
+                        cons: "Recurring operational cost and external provider dependence",
+                        cost: 55000,
+                        budget: 65000,
+                        feasibility_score: 7,
+                        resource_demand: "Low",
+                        risk_level: "Medium Risk",
+                        notes: "Fastest implementation path with ongoing subscription"
+                    }
+                ];
+            }
+
+            if (Array.isArray(alts) && alts.length > 0) {
+                aiCurrentSuggestions = alts;
+                aiLastLoadedTitle = title;
+                renderAiAlternativeSuggestions(alts);
+            } else {
+                throw new Error("No structured alternatives returned");
+            }
+        } catch (err) {
+            console.error("AI alternatives fetch note:", err);
+            aiCurrentSuggestions = [
+                {
+                    title: `Option A: Full Modernization & Architecture Upgrade for ${title}`,
+                    pros: "High scalability, unified platform, future-proof reliability",
+                    cons: "Requires scheduled maintenance window",
+                    cost: 110000,
+                    budget: 130000,
+                    feasibility_score: 9,
+                    resource_demand: "Medium",
+                    risk_level: "Low Risk",
+                    notes: "Recommended primary strategic option"
+                },
+                {
+                    title: `Option B: Staged Hybrid Phased Migration`,
+                    pros: "Zero disruption, incremental validation, budget efficiency",
+                    cons: "Extended total project timeline",
+                    cost: 70000,
+                    budget: 85000,
+                    feasibility_score: 8,
+                    resource_demand: "Low",
+                    risk_level: "Low Risk",
+                    notes: "Low-risk phased alternative"
+                }
+            ];
+            aiLastLoadedTitle = title;
+            renderAiAlternativeSuggestions(aiCurrentSuggestions);
+        }
+    }
+
+    function renderAiAlternativeSuggestions(alts) {
+        const grid = document.getElementById('aiAltSuggestionsGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        alts.forEach((alt, idx) => {
+            const cost = parseFloat(alt.cost) || 0;
+            const budget = parseFloat(alt.budget) || cost;
+            const score = parseInt(alt.feasibility_score) || 8;
+            const risk = alt.risk_level || 'Low Risk';
+            const riskClass = risk.toLowerCase().includes('high') ? 'bg-danger-subtle text-danger border-danger-subtle' : (risk.toLowerCase().includes('medium') ? 'bg-warning-subtle text-warning border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle');
+            const isAlreadyAdded = decisionPayload.alternatives.some(a => a.title.toLowerCase() === alt.title.toLowerCase());
+
+            grid.innerHTML += `
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 rounded-3 shadow-sm p-3 bg-white d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start gap-1 mb-2">
+                                <span class="badge bg-primary text-white rounded-pill px-2.5 py-1" style="font-size: 10px;">Suggestion #${idx + 1}</span>
+                                <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size: 10.5px;">Score: <strong>${score}/10</strong></span>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-2" style="font-size: 13.5px; line-height: 1.4;">${escapeHtml(alt.title)}</h6>
+                            
+                            <div class="p-2 bg-light rounded-2 mb-2.5 text-xs">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Est. Cost:</span>
+                                    <strong class="text-dark">$${cost.toLocaleString()}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Allocated Budget:</span>
+                                    <strong class="text-primary">$${budget.toLocaleString()}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Risk Rating:</span>
+                                    <span class="badge ${riskClass} border rounded-pill px-2" style="font-size: 10px;">${escapeHtml(risk)}</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="text-success text-xs mb-1 d-flex align-items-start gap-1">
+                                    <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-0.5" style="font-size: 11px;"></i>
+                                    <span>${escapeHtml(alt.pros || 'High efficiency')}</span>
+                                </div>
+                                <div class="text-danger text-xs d-flex align-items-start gap-1">
+                                    <i class="bi bi-dash-circle-fill text-danger flex-shrink-0 mt-0.5" style="font-size: 11px;"></i>
+                                    <span>${escapeHtml(alt.cons || 'Minor transition period')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-top mt-2">
+                            <button type="button" class="btn btn-sm ${isAlreadyAdded ? 'btn-light border text-muted' : 'btn-outline-primary'} w-100 rounded-pill text-xs fw-semibold d-flex align-items-center justify-content-center gap-1" onclick="applySingleAiAlternative(${idx}, this)" ${isAlreadyAdded ? 'disabled' : ''}>
+                                <i class="bi ${isAlreadyAdded ? 'bi-check-lg text-success' : 'bi-plus-lg'}"></i>
+                                <span>${isAlreadyAdded ? 'Added to Decision' : 'Use This Alternative'}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function applySingleAiAlternative(idx, btn) {
+        if (!aiCurrentSuggestions[idx]) return;
+        const s = aiCurrentSuggestions[idx];
+        const costVal = parseFloat(s.cost) || 0;
+        const budgetVal = parseFloat(s.budget) || costVal;
+        const resourceVal = s.resource_demand || (costVal > budgetVal ? 'High' : 'Low');
+        const scoreVal = parseInt(s.feasibility_score) || 8;
+
+        const alt = {
+            id: tempAltId++,
+            title: s.title,
+            pros: s.pros || 'None',
+            cons: s.cons || 'None',
+            cost: costVal,
+            budget: budgetVal,
+            resource_demand: resourceVal,
+            feasibility_score: scoreVal,
+            risk_level: s.risk_level || (costVal > budgetVal ? 'High Risk' : 'Low Risk')
+        };
+
+        decisionPayload.alternatives.push(alt);
+        renderAlts();
+        if (btn) {
+            btn.disabled = true;
+            btn.className = "btn btn-sm btn-light border text-muted w-100 rounded-pill text-xs fw-semibold d-flex align-items-center justify-content-center gap-1";
+            btn.innerHTML = `<i class="bi bi-check-lg text-success"></i> <span>Added to Decision</span>`;
+        }
+    }
+
+    function applyAllAiAlternatives() {
+        if (!aiCurrentSuggestions || aiCurrentSuggestions.length === 0) {
+            alert("No AI alternatives available to apply.");
+            return;
+        }
+
+        aiCurrentSuggestions.forEach(s => {
+            if (!decisionPayload.alternatives.some(a => a.title.toLowerCase() === s.title.toLowerCase())) {
+                const costVal = parseFloat(s.cost) || 0;
+                const budgetVal = parseFloat(s.budget) || costVal;
+                const resourceVal = s.resource_demand || (costVal > budgetVal ? 'High' : 'Low');
+                const scoreVal = parseInt(s.feasibility_score) || 8;
+
+                decisionPayload.alternatives.push({
+                    id: tempAltId++,
+                    title: s.title,
+                    pros: s.pros || 'None',
+                    cons: s.cons || 'None',
+                    cost: costVal,
+                    budget: budgetVal,
+                    resource_demand: resourceVal,
+                    feasibility_score: scoreVal,
+                    risk_level: s.risk_level || (costVal > budgetVal ? 'High Risk' : 'Low Risk')
+                });
+            }
+        });
+
+        renderAlts();
+        renderAiAlternativeSuggestions(aiCurrentSuggestions);
+        const btn = document.getElementById('btnApplyAllAiAlts');
+        if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = `<i class="bi bi-check-lg me-1"></i> Applied!`;
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        }
+    }
+
     // Mini Alt Modal logic
     let tempAltId = 1;
+
     function openMiniAltModal() {
         document.getElementById('miniAltTitle').value = '';
         document.getElementById('miniAltPros').value = '';
         document.getElementById('miniAltCons').value = '';
         document.getElementById('miniAltCost').value = '';
+        if (document.getElementById('miniAltBudget')) document.getElementById('miniAltBudget').value = '';
         document.getElementById('miniAltScore').value = '';
+        if (document.getElementById('miniAltResource')) document.getElementById('miniAltResource').value = 'Low';
         const m = new bootstrap.Modal(document.getElementById('miniAltModal'));
         m.show();
     }
     
     function saveMiniAlt() {
+        const titleInput = document.getElementById('miniAltTitle').value.trim();
+        if (!titleInput) {
+            alert("Please enter a title for the alternative.");
+            return;
+        }
+        const costVal = parseFloat(document.getElementById('miniAltCost').value) || 0;
+        const budgetVal = parseFloat(document.getElementById('miniAltBudget') ? document.getElementById('miniAltBudget').value : 0) || 0;
+        const resourceVal = document.getElementById('miniAltResource') ? document.getElementById('miniAltResource').value : 'Low';
+        const scoreVal = parseInt(document.getElementById('miniAltScore').value) || 0;
+        
         const alt = {
             id: tempAltId++,
-            title: document.getElementById('miniAltTitle').value,
-            pros: document.getElementById('miniAltPros').value,
-            cons: document.getElementById('miniAltCons').value,
-            cost: parseFloat(document.getElementById('miniAltCost').value) || 0,
-            feasibility_score: parseInt(document.getElementById('miniAltScore').value) || 0,
-            risk_level: "Medium"
+            title: titleInput,
+            pros: document.getElementById('miniAltPros').value.trim() || 'None',
+            cons: document.getElementById('miniAltCons').value.trim() || 'None',
+            cost: costVal,
+            budget: budgetVal,
+            resource_demand: resourceVal,
+            feasibility_score: scoreVal,
+            risk_level: (costVal > budgetVal || resourceVal === 'High') ? 'High Risk' : 'Low Risk'
         };
         decisionPayload.alternatives.push(alt);
         renderAlts();
         bootstrap.Modal.getInstance(document.getElementById('miniAltModal')).hide();
     }
+
+    function deleteAlt(index) {
+        decisionPayload.alternatives.splice(index, 1);
+        renderAlts();
+    }
     
     function renderAlts() {
         const t1 = document.getElementById('altAnalysisTable');
         const t2 = document.getElementById('altCostTable');
-        t1.innerHTML = ''; t2.innerHTML = '';
+        const t3 = document.getElementById('altRiskTable');
+        if (t1) t1.innerHTML = '';
+        if (t2) t2.innerHTML = '';
+        if (t3) t3.innerHTML = '';
         
+        if (!decisionPayload.alternatives || decisionPayload.alternatives.length === 0) {
+            if (t1) t1.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i>No alternatives added yet. Click <strong>+ Add Alternative</strong> to enter alternative details.</td></tr>';
+            if (t2) t2.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i>No cost comparison data available. Add alternatives above to compare costs.</td></tr>';
+            if (t3) t3.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i>No risk assessment data available. Add alternatives above to perform risk & resource analysis.</td></tr>';
+            return;
+        }
+
         decisionPayload.alternatives.forEach((a, i) => {
             const isRec = i === 0;
             const badge = isRec ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill ms-2" style="font-size:0.65rem;">Selected</span>' : '';
             
-            t1.innerHTML += `
-                <tr>
-                    <td><div class="fw-bold text-dark d-flex align-items-center">${a.title} ${badge}</div></td>
-                    <td><div class="text-success text-sm">${a.pros}</div></td>
-                    <td><div class="text-danger text-sm">${a.cons}</div></td>
-                    <td><div class="fw-bold">${a.feasibility_score}</div></td>
-                    <td><button class="btn btn-link text-muted p-0 border-0"><i data-lucide="edit-2" style="width:14px;"></i></button></td>
-                </tr>
-            `;
-            
-            t2.innerHTML += `
-                <tr>
-                    <td><div class="fw-bold text-dark d-flex align-items-center">${a.title} ${badge}</div></td>
-                    <td><div class="fw-semibold text-dark">$${a.cost.toLocaleString()}</div></td>
-                    <td><div class="${isRec ? 'text-success' : 'text-warning'} text-sm fw-medium">${isRec ? 'Within Budget' : 'Slightly Above'}</div></td>
-                    <td><div class="${isRec ? 'text-success' : 'text-danger'} text-sm fw-medium">${isRec ? 'High' : 'Low'}</div></td>
-                    <td><div class="text-muted text-sm">${isRec ? 'Recommended' : 'Needs Approval'}</div></td>
-                </tr>
-            `;
+            const costVal = parseFloat(a.cost) || 0;
+            const budgetVal = parseFloat(a.budget) || 0;
+            const resourceDemand = a.resource_demand || (costVal > budgetVal ? 'High' : 'Low');
+
+            let riskRatingHtml = "";
+            let riskMitigation = "";
+            const variance = budgetVal - costVal;
+
+            if ((budgetVal > 0 && costVal > budgetVal) || resourceDemand === 'High' || resourceDemand === 'Critical') {
+                riskRatingHtml = `<span class="badge text-white px-2.5 py-1 fw-bold shadow-sm" style="background-color: #EF4444 !important; border-radius: 6px; font-size: 11px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>High Risk</span>`;
+                riskMitigation = `Exceeds budget by -$${Math.abs(variance).toLocaleString()}. Requires Manager Approval & Budget Variance Review.`;
+            } else if (budgetVal > 0 && costVal >= 0.8 * budgetVal || resourceDemand === 'Medium') {
+                riskRatingHtml = `<span class="badge text-dark px-2.5 py-1 fw-bold shadow-sm" style="background-color: #F59E0B !important; color: #1E293B !important; border-radius: 6px; font-size: 11px;"><i class="bi bi-shield-exclamation me-1"></i>Medium Risk</span>`;
+                riskMitigation = `Slightly above 80% budget limit. Requires Standard Resource Monitoring.`;
+            } else {
+                riskRatingHtml = `<span class="badge text-white px-2.5 py-1 fw-bold shadow-sm" style="background-color: #10B981 !important; border-radius: 6px; font-size: 11px;"><i class="bi bi-shield-check me-1"></i>Low Risk</span>`;
+                riskMitigation = budgetVal > 0 ? `Within safe budget (+$${variance.toLocaleString()} surplus) and low resource demand.` : `Low resource demand and evaluated safe risk profile.`;
+            }
+
+            let resourceBadge = "";
+            if (resourceDemand === 'Low') {
+                resourceBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:11px;">Low (1-2 members)</span>`;
+            } else if (resourceDemand === 'Medium') {
+                resourceBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1" style="font-size:11px;">Medium (3-5 members)</span>`;
+            } else {
+                resourceBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" style="font-size:11px;">High (6+ members)</span>`;
+            }
+
+            const isWithinBudget = budgetVal === 0 || costVal <= budgetVal;
+            const budgetImpactClass = isWithinBudget ? 'text-success' : 'text-danger';
+            const budgetImpactText = isWithinBudget ? 'Within Budget' : 'Exceeds Budget';
+            const costEfficiencyText = (a.feasibility_score >= 80 && isWithinBudget) ? 'High' : (a.feasibility_score >= 50 ? 'Medium' : 'Low');
+            const costEfficiencyClass = costEfficiencyText === 'High' ? 'text-success' : (costEfficiencyText === 'Medium' ? 'text-warning' : 'text-danger');
+            const notesText = (isRec && isWithinBudget) ? 'Recommended' : (isWithinBudget ? 'Viable Option' : 'Needs Approval');
+
+            if (t1) {
+                t1.innerHTML += `
+                    <tr>
+                        <td><div class="fw-bold text-dark d-flex align-items-center">${escapeHtml(a.title)} ${badge}</div></td>
+                        <td><div class="text-success text-sm">${escapeHtml(a.pros)}</div></td>
+                        <td><div class="text-danger text-sm">${escapeHtml(a.cons)}</div></td>
+                        <td><div class="fw-bold">${a.feasibility_score}</div></td>
+                        <td>
+                            <button type="button" class="btn btn-link text-danger p-0 border-0" onclick="deleteAlt(${i})" title="Delete Alternative"><i data-lucide="trash-2" style="width:14px;"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            if (t2) {
+                t2.innerHTML += `
+                    <tr>
+                        <td><div class="fw-bold text-dark d-flex align-items-center">${escapeHtml(a.title)} ${badge}</div></td>
+                        <td><div class="fw-semibold text-dark">$${costVal.toLocaleString()}</div></td>
+                        <td><div class="${budgetImpactClass} text-sm fw-medium">${budgetImpactText}</div></td>
+                        <td><div class="${costEfficiencyClass} text-sm fw-medium">${costEfficiencyText}</div></td>
+                        <td><div class="text-muted text-sm">${notesText}</div></td>
+                    </tr>
+                `;
+            }
+
+            if (t3) {
+                t3.innerHTML += `
+                    <tr>
+                        <td><div class="fw-bold text-dark d-flex align-items-center">${escapeHtml(a.title)} ${badge}</div></td>
+                        <td><div class="fw-semibold text-primary">$${budgetVal.toLocaleString()}</div></td>
+                        <td><div class="fw-semibold text-dark">$${costVal.toLocaleString()}</div></td>
+                        <td>${resourceBadge}</td>
+                        <td>${riskRatingHtml}</td>
+                        <td><div class="text-muted text-xs">${riskMitigation}</div></td>
+                    </tr>
+                `;
+            }
         });
         if (window.lucide) window.lucide.createIcons();
     }
 
+    const uploadedDocsList = [];
+
+    function removeTempDoc(docId) {
+        decisionPayload.temp_file_ids = decisionPayload.temp_file_ids.filter(id => id !== docId);
+        const idx = uploadedDocsList.findIndex(d => d.id === docId);
+        if (idx !== -1) uploadedDocsList.splice(idx, 1);
+        const el = document.getElementById(`doc-${docId}`);
+        if (el) el.remove();
+    }
+
+    function renderDocuments(doc) {
+        if (!uploadedDocsList.some(d => d.id === doc.id)) {
+            uploadedDocsList.push(doc);
+        }
+        const docList = document.getElementById('documentList');
+        if (!docList) return;
+
+        const existingEl = document.getElementById(`doc-${doc.id}`);
+        if (existingEl) existingEl.remove();
+
+        const sizeMB = (doc.file_size / (1024 * 1024)).toFixed(2);
+        const filename = doc.filename || "Uploaded_Document";
+        const isPdf = filename.toLowerCase().endsWith('.pdf');
+        const isSpreadsheet = filename.toLowerCase().endsWith('.xlsx') || filename.toLowerCase().endsWith('.csv');
+        const isPresentation = filename.toLowerCase().endsWith('.pptx') || filename.toLowerCase().endsWith('.ppt');
+        const extIcon = isPdf ? 'bi-file-earmark-pdf text-danger' : (isSpreadsheet ? 'bi-file-earmark-spreadsheet text-success' : (isPresentation ? 'bi-file-earmark-slides text-warning' : 'bi-file-earmark-text text-primary'));
+        const bgColor = isPdf ? 'bg-danger-subtle' : (isSpreadsheet ? 'bg-success-subtle' : (isPresentation ? 'bg-warning-subtle' : 'bg-primary-subtle'));
+
+        docList.innerHTML += `
+            <div class="d-flex align-items-center justify-content-between border rounded-3 p-3 mb-3 bg-white shadow-sm" id="doc-${doc.id}">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 ${bgColor} d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi ${extIcon} fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0.5 text-dark">${escapeHtml(filename)}</h6>
+                        <div class="d-flex align-items-center gap-2 text-xs text-muted">
+                            <span>${sizeMB} MB</span>
+                            <span>•</span>
+                            <span class="text-success fw-medium"><i class="bi bi-check-circle-fill me-1"></i>Uploaded successfully</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 d-flex align-items-center gap-1.5" onclick="window.open('/upload/' + ${doc.id}, '_blank')" title="View / Download Document">
+                        <i class="bi bi-eye"></i> View File
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light text-danger border rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="removeTempDoc(${doc.id})" title="Remove Document">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+    }
+
     function populateSummary() {
-        document.getElementById('sumTitle').innerText = decisionPayload.title;
-        document.getElementById('sumCategory').innerText = "Finance"; // Hardcoded for demo matching select
-        document.getElementById('sumPriority').innerText = decisionPayload.priority_level;
-        document.getElementById('sumDepartment').innerText = decisionPayload.department;
+        document.getElementById('sumTitle').innerText = decisionPayload.title || '--';
+        const catSel = document.getElementById('cdCategory');
+        document.getElementById('sumCategory').innerText = catSel && catSel.selectedIndex >= 0 ? catSel.options[catSel.selectedIndex].text : "Finance";
+        document.getElementById('sumPriority').innerText = decisionPayload.priority_level || 'Medium';
+        document.getElementById('sumDepartment').innerText = decisionPayload.department || 'Finance & Operations';
         
+        // 1. Render ALL Alternatives
         const sumAlt = document.getElementById('sumAlternativeBlock');
-        if(decisionPayload.alternatives.length > 0) {
-            const a = decisionPayload.alternatives[0];
-            sumAlt.innerHTML = `
+        if (sumAlt) {
+            sumAlt.innerHTML = '';
+            if (decisionPayload.alternatives && decisionPayload.alternatives.length > 0) {
+                decisionPayload.alternatives.forEach((a, i) => {
+                    const isRec = i === 0;
+                    sumAlt.innerHTML += `
+                        <div class="col-12 mb-3 pb-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="fw-bold text-dark fs-6 d-flex align-items-center">
+                                    Option #${i+1}: ${escapeHtml(a.title)}
+                                    ${isRec ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill ms-2" style="font-size: 10px;">Recommended</span>' : ''}
+                                </div>
+                                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-3 py-1">Score: ${a.feasibility_score || 50}/100</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <small class="text-success fw-semibold d-block mb-1"><i class="bi bi-plus-circle me-1"></i>Pros</small>
+                                    <div class="text-secondary small">${escapeHtml(a.pros || 'None specified')}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-danger fw-semibold d-block mb-1"><i class="bi bi-dash-circle me-1"></i>Cons</small>
+                                    <div class="text-secondary small">${escapeHtml(a.cons || 'None specified')}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block" style="font-size: 11px;">Estimated Cost</small>
+                                    <div class="fw-bold text-dark">$${parseFloat(a.cost || 0).toLocaleString()}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block" style="font-size: 11px;">Allocated Budget</small>
+                                    <div class="fw-bold text-primary">$${parseFloat(a.budget || 0).toLocaleString()}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block" style="font-size: 11px;">Resource Demand</small>
+                                    <div class="fw-semibold text-dark">${escapeHtml(a.resource_demand || 'Low')}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                sumAlt.innerHTML = `<div class="col-12 text-muted py-2">No alternatives entered.</div>`;
+            }
+        }
+
+        // 2. Render Uploaded Supporting Documents with Eye (View) buttons
+        const sumDocs = document.getElementById('sumDocumentsBlock');
+        if (sumDocs) {
+            sumDocs.innerHTML = '';
+            if (uploadedDocsList && uploadedDocsList.length > 0) {
+                uploadedDocsList.forEach(doc => {
+                    const sizeMB = (doc.file_size / (1024 * 1024)).toFixed(2);
+                    const extIcon = doc.filename.endsWith('.pdf') ? 'bi-file-pdf text-danger' : (doc.filename.endsWith('.xlsx') || doc.filename.endsWith('.csv') ? 'bi-file-spreadsheet text-success' : 'bi-file-earmark-text text-primary');
+                    
+                    sumDocs.innerHTML += `
+                        <div class="d-flex align-items-center justify-content-between border rounded-3 p-3 mb-2 bg-light shadow-sm">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="bi ${extIcon} fs-4"></i>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0 text-sm">${escapeHtml(doc.filename)}</h6>
+                                    <small class="text-muted" style="font-size: 11px;">${sizeMB} MB • Attachment File</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold px-3 d-flex align-items-center gap-1" onclick="window.open('/api/upload/' + ${doc.id}, '_blank')" title="View / Check Document">
+                                <i class="bi bi-eye-fill"></i> View File
+                            </button>
+                        </div>
+                    `;
+                });
+            } else {
+                sumDocs.innerHTML = `<div class="text-muted py-2">No supporting documents uploaded.</div>`;
+            }
+        }
+
+        // 3. Render Assigned Reviewers & Overall Review Deadline
+        const sumRevs = document.getElementById('sumReviewersBlock');
+        if (sumRevs) {
+            sumRevs.innerHTML = '';
+            const deadlineVal = document.getElementById('cdReviewDeadline') ? document.getElementById('cdReviewDeadline').value : '';
+            const deadlineStr = deadlineVal ? new Date(deadlineVal).toLocaleDateString('en-US', { dateStyle: 'medium' }) : 'No deadline specified';
+
+            let reviewersHtml = '';
+            if (decisionPayload.reviewers && decisionPayload.reviewers.length > 0) {
+                decisionPayload.reviewers.forEach((r, idx) => {
+                    const roleLabel = idx === 0 ? 'Step 1: First Approver (Reviewer)' : 'Step 2: Second Approver (Manager)';
+                    reviewersHtml += `
+                        <div class="d-flex align-items-center justify-content-between p-2.5 mb-2 border rounded bg-light">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 12px;">${(r._name || 'User').substring(0,2).toUpperCase()}</div>
+                                <div>
+                                    <div class="fw-bold text-dark text-sm">${escapeHtml(r._name || 'Assigned Approver')}</div>
+                                    <small class="text-muted d-block" style="font-size: 11px;">${roleLabel}</small>
+                                </div>
+                            </div>
+                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1" style="font-size: 11px;">${r.approval_type || 'Sequential'} Approval</span>
+                        </div>
+                    `;
+                });
+            } else {
+                reviewersHtml = '<div class="text-muted small">No reviewers assigned.</div>';
+            }
+
+            sumRevs.innerHTML = `
                 <div class="col-md-6">
-                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 11px;">Name</small>
-                    <div class="fw-bold text-dark">${a.title}</div>
+                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 11px;">Overall Review Deadline</small>
+                    <div class="fw-bold text-primary fs-6"><i class="bi bi-calendar-event me-1"></i>${deadlineStr}</div>
                 </div>
                 <div class="col-md-6">
-                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 11px;">Score</small>
-                    <div class="fw-bold text-dark">${a.feasibility_score}/100</div>
-                </div>
-                <div class="col-md-6">
-                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 11px;">Pros</small>
-                    <div class="text-muted text-sm">${a.pros}</div>
-                </div>
-                <div class="col-md-6">
-                    <small class="text-muted text-uppercase fw-semibold d-block mb-1" style="font-size: 11px;">Cons</small>
-                    <div class="text-muted text-sm">${a.cons}</div>
+                    <small class="text-muted text-uppercase fw-semibold d-block mb-2" style="font-size: 11px;">Assigned Reviewers Chain</small>
+                    ${reviewersHtml}
                 </div>
             `;
         }
     }
     
-    async function submitDecision() {
-        const btn = document.getElementById('btnSubmit');
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...';
-        btn.disabled = true;
+    async function handleFileUpload(event) {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+        const maxSizeBytes = 200 * 1024 * 1024; // 200 MB
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.size > maxSizeBytes) {
+                showErrorOverlay(`File "${file.name}" exceeds the maximum allowed size of 200 MB.`);
+                continue;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('user_id', "{{ session.get('user_id', 1) }}");
+            
+            const tempDocId = 'uploading-' + Date.now() + '-' + i;
+            const docList = document.getElementById('documentList');
+            if (docList) {
+                docList.innerHTML += `
+                    <div class="d-flex align-items-center border rounded-3 p-3 mb-3 bg-white shadow-sm" id="${tempDocId}">
+                        <div class="spinner-border spinner-border-sm text-primary me-3" role="status"></div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-1 text-dark">${escapeHtml(file.name)}</h6>
+                            <small class="text-muted">Uploading (${(file.size / (1024 * 1024)).toFixed(2)} MB)...</small>
+                        </div>
+                    </div>
+                `;
+            }
+
+            try {
+                let res = await fetch("/upload/", {
+                    method: "POST",
+                    body: formData
+                });
+                if (!res.ok) {
+                    res = await fetch("/api/upload/", {
+                        method: "POST",
+                        body: formData
+                    });
+                }
+                if (!res.ok) {
+                    res = await fetch("http://localhost:8000/upload/", {
+                        method: "POST",
+                        body: formData
+                    });
+                }
+
+                const tempEl = document.getElementById(tempDocId);
+                if (tempEl) tempEl.remove();
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!decisionPayload.temp_file_ids.includes(data.id)) {
+                        decisionPayload.temp_file_ids.push(data.id);
+                    }
+                    renderDocuments(data);
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    showErrorOverlay(errData.detail || "Upload failed. Please try again.");
+                }
+            } catch (error) {
+                console.error("Upload failed", error);
+                const tempEl = document.getElementById(tempDocId);
+                if (tempEl) tempEl.remove();
+                showErrorOverlay("Network error while uploading file: " + error.message);
+            }
+        }
+        event.target.value = '';
+    }
+
+    function getApprovalFlowForDecisionType() {
+        const catSelect = document.getElementById('cdCategory');
+        const catText = catSelect && catSelect.selectedIndex >= 0 ? catSelect.options[catSelect.selectedIndex].text : 'Finance';
+        const prioVal = document.getElementById('cdPriority') ? document.getElementById('cdPriority').value : 'Medium';
+        
+        let maxCost = 0;
+        if (decisionPayload.alternatives && decisionPayload.alternatives.length > 0) {
+            maxCost = Math.max(...decisionPayload.alternatives.map(a => parseFloat(a.cost) || 0));
+        }
+
+        if (catText.includes('Finance') || maxCost >= 500) {
+            return {
+                category: "Finance Approval Flow",
+                title: "Assigned Workflow: Financial Governance Flow",
+                description: `Based on Decision Category: <strong>${catText}</strong> and Estimated Cost: <strong>$${maxCost}</strong>, this decision requires Reviewer sign-off first, followed by Manager approval.`,
+                flowType: "Finance",
+                approval_type: "Sequential",
+                requiredRoles: ["Reviewer", "Manager"]
+            };
+        } else if (catText.includes('Tech') || catText.includes('Architecture')) {
+            return {
+                category: "Technology Approval Flow",
+                title: "Assigned Workflow: Technical & Architecture Review Flow",
+                description: `Based on Decision Category: <strong>${catText}</strong>, this decision requires Technical Reviewer sign-off first, followed by Engineering Manager approval.`,
+                flowType: "Technology",
+                approval_type: "Sequential",
+                requiredRoles: ["Reviewer", "Manager"]
+            };
+        } else if (catText.includes('Operations') || catText.includes('HR')) {
+            return {
+                category: "Operations Approval Flow",
+                title: "Assigned Workflow: Operational Governance Flow",
+                description: `Based on Decision Category: <strong>${catText}</strong>, this decision requires Operations Reviewer sign-off first, followed by Manager approval.`,
+                flowType: "Operations",
+                approval_type: "Sequential",
+                requiredRoles: ["Reviewer", "Manager"]
+            };
+        } else {
+            return {
+                category: "Standard Approval Flow",
+                title: "Assigned Workflow: Standard Management Sign-off",
+                description: `Based on Decision Category: <strong>${catText}</strong> and Priority: <strong>${prioVal}</strong>, Reviewer sign-off is required first, followed by Manager approval.`,
+                flowType: "Standard",
+                approval_type: "Sequential",
+                requiredRoles: ["Reviewer", "Manager"]
+            };
+        }
+    }
+
+    function updateApprovalFlowCard() {
+        const flow = getApprovalFlowForDecisionType();
+        const catBadge = document.getElementById('flowCategoryBadge');
+        const titleEl = document.getElementById('flowTitle');
+        const descEl = document.getElementById('flowDescription');
+
+        if (catBadge) catBadge.innerText = flow.category;
+        if (titleEl) titleEl.innerText = flow.title;
+        if (descEl) descEl.innerHTML = flow.description;
+    }
+
+    function applyDecisionApprovalFlow() {
+        if (!allUsers || allUsers.length === 0) {
+            alert("Users are still loading. Please try again in a moment.");
+            return;
+        }
+
+        const flow = getApprovalFlowForDecisionType();
+        const eligibleUsers = allUsers.filter(u => {
+            if (u.id === currentUserId) return false;
+            const rName = (u.role_name || "").toLowerCase();
+            const empId = (u.employee_id || "").toLowerCase();
+            if (rName.includes("admin") || rName.includes("administrator") || empId.startsWith("ad")) {
+                return false;
+            }
+            return true;
+        });
+
+        const selected = [];
+        flow.requiredRoles.forEach(roleReq => {
+            const matching = eligibleUsers.filter(u => {
+                const rName = (u.role_name || "").toLowerCase();
+                const empId = (u.employee_id || "").toLowerCase();
+                if (roleReq === "Manager") return rName.includes("manager") || empId.startsWith("mn");
+                if (roleReq === "Reviewer") return rName.includes("reviewer") || empId.startsWith("rw") || rName.includes("user") || rName.includes("employee");
+                return true;
+            }).filter(u => !selected.some(s => s.id === u.id));
+
+            if (matching.length > 0) {
+                selected.push(matching[0]);
+            } else {
+                const fallback = eligibleUsers.find(u => !selected.some(s => s.id === u.id));
+                if (fallback) selected.push(fallback);
+            }
+        });
+
+        decisionPayload.reviewers = [];
+        const deadline = document.getElementById("cdReviewDeadline") ? document.getElementById("cdReviewDeadline").value : null;
+
+        selected.forEach(u => {
+            decisionPayload.reviewers.push({
+                reviewer_id: u.id,
+                approval_type: flow.approval_type,
+                deadline: deadline ? deadline + "T23:59:59Z" : null,
+                _name: u.full_name
+            });
+        });
+
+        renderReviewers();
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    const defaultTagBank = ["Budget", "Finance", "Q4", "Technology", "Operations", "Strategy", "Policy", "Security", "HR", "Urgent", "Compliance"];
+    let selectedTags = [];
+
+    function initTagsUI() {
+        renderTagsUI();
+        setupTagDragAndDrop();
+    }
+
+    function renderTagsUI() {
+        const selectedContainer = document.getElementById("selectedTagsList");
+        const bankContainer = document.getElementById("availableTagsBank");
+        if (!selectedContainer || !bankContainer) return;
+
+        selectedContainer.innerHTML = "";
+        if (selectedTags.length === 0) {
+            selectedContainer.innerHTML = `<span class="text-muted small italic ms-1" style="font-size:12.5px;">No tags selected yet. Drag or click tags below to add.</span>`;
+        } else {
+            selectedTags.forEach(tag => {
+                selectedContainer.innerHTML += `
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 d-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 12.5px; font-weight: 600;">
+                        ${escapeHtml(tag)}
+                        <i data-lucide="x" style="width: 13px; height: 13px; cursor: pointer;" onclick="removeTag('${escapeHtml(tag)}')"></i>
+                    </span>
+                `;
+            });
+        }
+
+        bankContainer.innerHTML = "";
+        const available = defaultTagBank.filter(t => !selectedTags.includes(t));
+        if (available.length === 0) {
+            bankContainer.innerHTML = `<span class="text-muted small" style="font-size: 12px;">All default tags selected!</span>`;
+        } else {
+            available.forEach(tag => {
+                bankContainer.innerHTML += `
+                    <span class="badge bg-white text-secondary border rounded-pill px-3 py-2 cursor-pointer shadow-sm tag-bank-item" 
+                          draggable="true" 
+                          style="cursor: grab; font-weight: 500; font-size: 12.5px; transition: all 0.2s ease;" 
+                          onclick="addTag('${escapeHtml(tag)}')" 
+                          ondragstart="handleTagDragStart(event, '${escapeHtml(tag)}')">
+                        + ${escapeHtml(tag)}
+                    </span>
+                `;
+            });
+        }
+
+        decisionPayload.tags = selectedTags.join(", ");
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function addTag(tag) {
+        const cleanTag = tag.trim();
+        if (cleanTag && !selectedTags.includes(cleanTag)) {
+            selectedTags.push(cleanTag);
+            renderTagsUI();
+        }
+    }
+
+    function removeTag(tag) {
+        selectedTags = selectedTags.filter(t => t !== tag);
+        renderTagsUI();
+    }
+
+    function handleCustomTagKeydown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const input = document.getElementById("customTagInput");
+            if (input && input.value.trim()) {
+                addTag(input.value.trim());
+                input.value = "";
+            }
+        }
+    }
+
+    function handleTagDragStart(e, tag) {
+        e.dataTransfer.setData("text/plain", tag);
+        e.dataTransfer.effectAllowed = "copy";
+    }
+
+    function setupTagDragAndDrop() {
+        const dropArea = document.getElementById("selectedTagsDropArea");
+        if (!dropArea) return;
+
+        dropArea.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+            dropArea.style.borderColor = "#2563EB";
+            dropArea.style.backgroundColor = "#EFF6FF";
+        });
+
+        dropArea.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = "#CBD5E1";
+            dropArea.style.backgroundColor = "#FFFFFF";
+        });
+
+        dropArea.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = "#CBD5E1";
+            dropArea.style.backgroundColor = "#FFFFFF";
+            const tag = e.dataTransfer.getData("text/plain");
+            if (tag) {
+                addTag(tag);
+            }
+        });
+    }
+
+    let isEditMode = false;
+    let editDecisionId = null;
+
+    // ── Local Storage Progress Saver & Restorer ──
+    const DRAFT_STORAGE_KEY = 'edrp_create_decision_saved_draft';
+
+    function saveEnteredProgress(showMessage = true) {
+        const titleInput = document.getElementById('cdTitle') ? document.getElementById('cdTitle').value.trim() : '';
+        const descInput = document.getElementById('cdDescription') ? document.getElementById('cdDescription').value.trim() : '';
+        const catInput = document.getElementById('cdCategory') ? parseInt(document.getElementById('cdCategory').value, 10) : 1;
+        const prioInput = document.getElementById('cdPriority') ? document.getElementById('cdPriority').value : 'Medium';
+        const deptInput = document.getElementById('cdDepartment') ? document.getElementById('cdDepartment').value : 'Engineering';
+        const dateInput = document.getElementById('cdDate') ? document.getElementById('cdDate').value : '';
+        const approvalType = document.getElementById('cdApprovalType') ? document.getElementById('cdApprovalType').value : 'Sequential';
+        const deadline = document.getElementById('cdReviewDeadline') ? document.getElementById('cdReviewDeadline').value : '';
+
+        const draftData = {
+            title: titleInput,
+            description: descInput,
+            category_id: catInput,
+            priority_level: prioInput,
+            department: deptInput,
+            decision_date: dateInput,
+            tags: selectedTags,
+            alternatives: decisionPayload.alternatives,
+            temp_file_ids: decisionPayload.temp_file_ids,
+            uploadedDocsList: uploadedDocsList,
+            reviewers: decisionPayload.reviewers,
+            approval_type: approvalType,
+            deadline: deadline,
+            current_step: currentStep,
+            saved_at: new Date().toISOString()
+        };
+
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
+
+        if (showMessage) {
+            const btn = document.getElementById('btnSaveProgress');
+            if (btn) {
+                const origHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check2-circle me-1 text-success"></i> <span>Saved Progress!</span>';
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success', 'text-white');
+                setTimeout(() => {
+                    btn.innerHTML = origHtml;
+                    btn.classList.remove('btn-success', 'text-white');
+                    btn.classList.add('btn-outline-primary');
+                }, 2500);
+            }
+
+            if (typeof showCenterNotification === 'function') {
+                showCenterNotification("Your entered decision progress is saved! If you refresh or leave the page, all your details will be automatically restored.", "success", "Progress Saved");
+            } else {
+                alert("✓ Saved successfully! Your entered details are preserved and will auto-restore on page refresh.");
+            }
+        }
+    }
+
+    function restoreSavedProgress() {
+        if (isEditMode) return;
+        try {
+            const savedStr = localStorage.getItem(DRAFT_STORAGE_KEY);
+            if (!savedStr) return;
+            const saved = JSON.parse(savedStr);
+            if (!saved || (!saved.title && !saved.description && (!saved.alternatives || saved.alternatives.length === 0))) return;
+
+            if (saved.title && document.getElementById('cdTitle')) document.getElementById('cdTitle').value = saved.title;
+            if (saved.description && document.getElementById('cdDescription')) document.getElementById('cdDescription').value = saved.description;
+            if (saved.category_id && document.getElementById('cdCategory')) document.getElementById('cdCategory').value = saved.category_id;
+            if (saved.priority_level && document.getElementById('cdPriority')) document.getElementById('cdPriority').value = saved.priority_level;
+            if (saved.department && document.getElementById('cdDepartment')) document.getElementById('cdDepartment').value = saved.department;
+            if (saved.decision_date && document.getElementById('cdDate')) document.getElementById('cdDate').value = saved.decision_date;
+            if (saved.approval_type && document.getElementById('cdApprovalType')) document.getElementById('cdApprovalType').value = saved.approval_type;
+            if (saved.deadline && document.getElementById('cdReviewDeadline')) document.getElementById('cdReviewDeadline').value = saved.deadline;
+
+            if (Array.isArray(saved.tags) && saved.tags.length > 0) {
+                selectedTags = saved.tags;
+                renderTagsUI();
+            }
+
+            if (Array.isArray(saved.alternatives) && saved.alternatives.length > 0) {
+                decisionPayload.alternatives = saved.alternatives;
+                renderAlts();
+            }
+
+            if (Array.isArray(saved.temp_file_ids)) {
+                decisionPayload.temp_file_ids = saved.temp_file_ids;
+            }
+
+            if (Array.isArray(saved.uploadedDocsList) && saved.uploadedDocsList.length > 0) {
+                saved.uploadedDocsList.forEach(doc => renderDocuments(doc));
+            }
+
+            if (Array.isArray(saved.reviewers) && saved.reviewers.length > 0) {
+                decisionPayload.reviewers = saved.reviewers;
+                renderReviewers();
+            }
+
+            const banner = document.getElementById('restoredDraftBanner');
+            if (banner) {
+                banner.classList.remove('d-none');
+                banner.classList.add('d-flex');
+                const timeText = document.getElementById('restoredDraftTimeText');
+                if (timeText && saved.saved_at) {
+                    const timeAgo = new Date(saved.saved_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    timeText.innerText = `Auto-restored work saved at ${timeAgo}. You can continue editing smoothly.`;
+                }
+            }
+        } catch (e) {
+            console.error("Error restoring saved progress:", e);
+        }
+    }
+
+    function clearSavedProgress() {
+        if (confirm("Are you sure you want to clear all entered progress and start a new blank decision?")) {
+            localStorage.removeItem(DRAFT_STORAGE_KEY);
+            window.location.reload();
+        }
+    }
+
+    async function loadDecisionForEdit(id) {
+        try {
+            let loggedInUserId = null;
+            if (typeof currentUserId !== 'undefined' && currentUserId) {
+                loggedInUserId = currentUserId;
+            }
+            if (!loggedInUserId && typeof USER_ID !== 'undefined' && USER_ID) {
+                loggedInUserId = parseInt(USER_ID, 10);
+            }
+            if (!loggedInUserId && typeof LOGGED_USER_ID !== 'undefined' && LOGGED_USER_ID) {
+                loggedInUserId = parseInt(LOGGED_USER_ID, 10);
+            }
+
+            const userParam = loggedInUserId ? `?user_id=${loggedInUserId}` : '';
+            let res = await fetch(`/api/decisions/${id}${userParam}`);
+            if (!res.ok) res = await fetch(`/decisions/${id}${userParam}`);
+            if (!res.ok) res = await fetch(`http://localhost:8000/decisions/${id}${userParam}`);
+
+            if (!res.ok) {
+                let errorMsg = "Failed to load decision details";
+                try {
+                    const errData = await res.json();
+                    if (errData && errData.detail) errorMsg = errData.detail;
+                } catch (_) {}
+                throw new Error(errorMsg);
+            }
+            const decision = await res.json();
+
+            const ownerId = Number(decision.created_by);
+            const curUid = Number(loggedInUserId);
+            const userRole = String(typeof loggedInUserRole !== 'undefined' ? loggedInUserRole : '').toLowerCase();
+            const isAdmin = userRole.includes('admin');
+            const creatorName = String(decision.creator_name || '').trim().toLowerCase();
+            const currentName = String(typeof loggedInUserName !== 'undefined' ? loggedInUserName : '').trim().toLowerCase();
+            const isOwner = (ownerId > 0 && curUid > 0 && ownerId === curUid) || (creatorName && currentName && creatorName === currentName) || isAdmin;
+            const statusClean = String(decision.status || '').trim().toLowerCase();
+            const isArchived = statusClean === 'archived';
+
+            if (!isOwner || isArchived) {
+                const errMsg = isArchived ? "Archived decisions cannot be edited directly." : "Access Denied: Only the decision author or administrator can edit this decision.";
+                if (typeof showGlobalErrorNotification === 'function') {
+                    showGlobalErrorNotification(errMsg);
+                } else {
+                    alert(errMsg);
+                }
+                setTimeout(() => {
+                    window.location.href = `/decision/${id}`;
+                }, 1500);
+                return;
+            }
+
+            document.getElementById('cdTitle').value = decision.title || '';
+            document.getElementById('cdCategory').value = decision.category_id || 1;
+            document.getElementById('cdPriority').value = decision.priority_level || 'Medium';
+            document.getElementById('cdDepartment').value = decision.department || 'Finance & Operations';
+            if (decision.decision_date) {
+                document.getElementById('cdDate').value = decision.decision_date.split('T')[0];
+            }
+            document.getElementById('cdDescription').value = decision.description || '';
+
+            decisionPayload.title = decision.title;
+            decisionPayload.description = decision.description;
+            decisionPayload.category_id = decision.category_id;
+            decisionPayload.priority_level = decision.priority_level;
+            decisionPayload.department = decision.department;
+            decisionPayload.decision_date = decision.decision_date ? decision.decision_date.split('T')[0] : '';
+            decisionPayload.tags = decision.tags || '';
+
+            if (decision.tags) {
+                selectedTags = decision.tags.split(',').map(t => t.trim()).filter(Boolean);
+                renderTagsUI();
+            } else {
+                selectedTags = [];
+                renderTagsUI();
+            }
+
+            if (decision.alternatives && decision.alternatives.length > 0) {
+                decisionPayload.alternatives = decision.alternatives.map((a, idx) => ({
+                    id: a.id || idx + 1,
+                    title: a.title,
+                    pros: a.pros || 'None',
+                    cons: a.cons || 'None',
+                    cost: a.cost || 0,
+                    budget: a.budget || a.cost || 0,
+                    resource_demand: a.resource_demand || 'Low',
+                    feasibility_score: a.feasibility_score || 50,
+                    risk_level: a.risk_level || 'Low Risk'
+                }));
+                renderAlts();
+            }
+
+            if (decision.reviewers && decision.reviewers.length > 0) {
+                decisionPayload.reviewers = decision.reviewers.map(r => ({
+                    reviewer_id: r.reviewer_id,
+                    approval_type: r.approval_type || 'Sequential',
+                    deadline: r.deadline ? r.deadline.split('T')[0] : null,
+                    _name: r.user ? r.user.full_name : `Reviewer #${r.reviewer_id}`,
+                    _emp_id: r.user ? r.user.employee_id : 'ID',
+                    _role: r.user && r.user.role ? r.user.role.role_name : 'Reviewer'
+                }));
+                renderReviewers();
+            }
+
+            if (decision.attachments && decision.attachments.length > 0) {
+                decision.attachments.forEach(att => {
+                    renderDocuments(att);
+                });
+            }
+
+            const banner = document.getElementById('rejectionBanner');
+            const bannerContainer = document.getElementById('bannerCommentsContainer');
+            if (banner && bannerContainer) {
+                bannerContainer.innerHTML = '';
+                let revCommentsHtml = '';
+                let mgrCommentsHtml = '';
+
+                (decision.reviewers || []).forEach(r => {
+                    if (!r.comments) return;
+                    const rName = r.user ? r.user.full_name : 'Approver';
+                    const rRole = (r.user && r.user.role ? r.user.role.role_name : (r.approval_order === 2 ? 'Manager' : 'Reviewer')).toLowerCase();
+                    const timeStr = r.reviewed_at ? new Date(r.reviewed_at).toLocaleDateString() : '';
+
+                    if (rRole.includes('manager') || rRole.includes('mn') || rRole.includes('lead')) {
+                        mgrCommentsHtml += `
+                            <div class="p-3 rounded-3 border bg-warning-subtle border-warning-subtle text-dark">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark small"><i class="bi bi-person-badge me-1 text-warning fs-6"></i> Manager: ${escapeHtml(rName)}</span>
+                                    <span class="text-muted" style="font-size: 11px;">${timeStr}</span>
+                                </div>
+                                <div class="small text-dark mt-1">• ${escapeHtml(r.comments)}</div>
+                            </div>
+                        `;
+                    } else {
+                        revCommentsHtml += `
+                            <div class="p-3 rounded-3 border bg-primary-subtle border-primary-subtle text-dark">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-dark small"><i class="bi bi-person-check me-1 text-primary fs-6"></i> Reviewer: ${escapeHtml(rName)}</span>
+                                    <span class="text-muted" style="font-size: 11px;">${timeStr}</span>
+                                </div>
+                                <div class="small text-dark mt-1">• ${escapeHtml(r.comments)}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (revCommentsHtml) {
+                    bannerContainer.innerHTML += `
+                        <div>
+                            <h6 class="fw-bold text-primary mb-2" style="font-size: 13px;">Reviewer Comments</h6>
+                            ${revCommentsHtml}
+                        </div>
+                    `;
+                }
+                if (mgrCommentsHtml) {
+                    bannerContainer.innerHTML += `
+                        <div>
+                            <h6 class="fw-bold text-warning-emphasis mb-2" style="font-size: 13px;">Manager Comments</h6>
+                            ${mgrCommentsHtml}
+                        </div>
+                    `;
+                }
+
+                if (revCommentsHtml || mgrCommentsHtml || decision.status === 'Rejected') {
+                    banner.classList.remove('d-none');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error loading decision for editing: " + err.message);
+        }
+    }
+
+    async function submitDecision(targetStatus = "Pending") {
+        const titleInput = document.getElementById('cdTitle') ? document.getElementById('cdTitle').value.trim() : '';
+        const descInput = document.getElementById('cdDescription') ? document.getElementById('cdDescription').value.trim() : '';
+        const catInput = document.getElementById('cdCategory') ? parseInt(document.getElementById('cdCategory').value, 10) : 1;
+        const prioInput = document.getElementById('cdPriority') ? document.getElementById('cdPriority').value : 'Medium';
+        const deptInput = document.getElementById('cdDepartment') ? document.getElementById('cdDepartment').value : 'Finance & Operations';
+        const dateInput = document.getElementById('cdDate') ? document.getElementById('cdDate').value : '';
+
+        decisionPayload.title = titleInput || decisionPayload.title;
+        decisionPayload.description = descInput || decisionPayload.description;
+        decisionPayload.category_id = catInput || decisionPayload.category_id;
+        decisionPayload.priority_level = prioInput;
+        decisionPayload.department = deptInput;
+        decisionPayload.decision_date = dateInput;
+
+        // Validation Rules
+        if (targetStatus === 'Draft') {
+            if (!decisionPayload.title || !decisionPayload.title.trim()) {
+                if (typeof showCenterNotification === 'function') {
+                    showCenterNotification("Please enter a Decision Title before saving as draft.", "warning", "Title Required");
+                } else {
+                    alert("Please enter a Decision Title before saving as draft.");
+                }
+                return;
+            }
+        } else {
+            if (!decisionPayload.title || !decisionPayload.title.trim()) {
+                if (typeof showCenterNotification === 'function') {
+                    showCenterNotification("Decision Title is required. Please fill in the Title.", "warning", "Validation Error");
+                } else {
+                    alert("Decision Title is required.");
+                }
+                goToStep(1);
+                return;
+            }
+            if (!decisionPayload.description || !decisionPayload.description.trim()) {
+                if (typeof showCenterNotification === 'function') {
+                    showCenterNotification("Decision Description is required. Please fill in the Description.", "warning", "Validation Error");
+                } else {
+                    alert("Decision Description is required.");
+                }
+                goToStep(1);
+                return;
+            }
+        }
+
+        const btnDraft = document.getElementById('btnDraft');
+        const btnSubmit = document.getElementById('btnSubmit');
+
+        if (targetStatus === 'Draft') {
+            if (btnDraft) {
+                btnDraft.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Saving Draft...';
+                btnDraft.disabled = true;
+            }
+        } else {
+            if (btnSubmit) {
+                btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Submitting...';
+                btnSubmit.disabled = true;
+            }
+        }
         
         const payload = {
             title: decisionPayload.title,
             description: decisionPayload.description || "No description provided.",
-            created_by: {{ session.get('user_id', 2) }},
-            category_id: 1,
+            created_by: parseInt("{{ session.get('user_id', '') }}" || localStorage.getItem('user_id') || 1, 10),
+            category_id: decisionPayload.category_id || 1,
             priority_level: decisionPayload.priority_level,
             department: decisionPayload.department,
             decision_date: decisionPayload.decision_date ? decisionPayload.decision_date + "T00:00:00Z" : null,
-            tags: "Budget,Technology",
+            tags: Array.isArray(selectedTags) ? selectedTags.join(', ') : (decisionPayload.tags || ''),
+            status: targetStatus || "Pending",
             alternatives: decisionPayload.alternatives.map(a => ({
                 title: a.title,
                 description: "",
-                pros: a.pros,
-                cons: a.cons,
-                cost: a.cost,
-                feasibility_score: a.feasibility_score,
-                risk_level: a.risk_level
+                pros: a.pros || 'None',
+                cons: a.cons || 'None',
+                cost: parseFloat(a.cost) || 0,
+                budget: parseFloat(a.budget) || parseFloat(a.cost) || 0,
+                feasibility_score: parseInt(a.feasibility_score, 10) || 50,
+                risk_level: a.risk_level || 'Low Risk'
             })),
-            reviewers: [
-                { reviewer_id: 2, approval_type: "Sequential" } // dummy for UI
-            ]
+            reviewers: decisionPayload.reviewers.map(r => ({
+                reviewer_id: r.reviewer_id,
+                approval_type: r.approval_type || 'Sequential',
+                deadline: r.deadline ? r.deadline + "T23:59:59Z" : null
+            })),
+            temp_file_ids: decisionPayload.temp_file_ids
         };
         
         try {
-            const res = await fetch("http://127.0.0.1:8000/decisions/full", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+            let url = "/api/decisions/full";
+            let method = "POST";
+            if (isEditMode) {
+                url = `/api/decisions/${editDecisionId}/full`;
+                method = "PUT";
+            }
+
+            let res = await fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
             
+            if (!res.ok) {
+                const altUrl = isEditMode ? `/decisions/${editDecisionId}/full` : `/decisions/full`;
+                res = await fetch(altUrl, {
+                    method: method,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (!res.ok) {
+                const directUrl = isEditMode ? `http://localhost:8000/decisions/${editDecisionId}/full` : `http://localhost:8000/decisions/full`;
+                res = await fetch(directUrl, {
+                    method: method,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+            }
+            
             if (res.ok) {
-                // Success
-                window.location.href = "{{ url_for('decisions') }}";
+                localStorage.removeItem(DRAFT_STORAGE_KEY);
+                if (targetStatus === 'Draft') {
+                    if (typeof showCenterNotification === 'function') {
+                        showCenterNotification("Decision saved as draft successfully.", "success", "Draft Saved");
+                    }
+                    setTimeout(() => {
+                        window.location.href = "/decisions?tab=Draft";
+                    }, 1500);
+                } else {
+                    if (typeof showCenterNotification === 'function') {
+                        showCenterNotification("Decision submitted successfully.", "success", "Submission Successful");
+                    }
+                    setTimeout(() => {
+                        window.location.href = "{{ url_for('decisions') }}";
+                    }, 1500);
+                }
             } else {
-                const data = await res.json();
-                alert(data.detail || "Failed to create decision");
-                btn.innerHTML = 'Submit Decision <i data-lucide="check" style="width:18px;" class="ms-2"></i>';
-                btn.disabled = false;
+                const data = await res.json().catch(() => ({}));
+                if (typeof showCenterNotification === 'function') {
+                    showCenterNotification(data.detail || "Failed to save/submit decision", "error", "Operation Failed");
+                } else {
+                    showErrorOverlay(data.detail || "Failed to submit decision");
+                }
+                if (btnDraft) {
+                    btnDraft.innerHTML = '<i class="bi bi-file-earmark me-2"></i> Save as Draft';
+                    btnDraft.disabled = false;
+                }
+                if (btnSubmit) {
+                    btnSubmit.innerHTML = 'Submit Decision <i data-lucide="check" style="width:18px;" class="ms-2"></i>';
+                    btnSubmit.disabled = false;
+                }
                 if (window.lucide) window.lucide.createIcons();
             }
         } catch (e) {
-            alert("Network error");
-            btn.innerHTML = 'Submit Decision <i data-lucide="check" style="width:18px;" class="ms-2"></i>';
-            btn.disabled = false;
+            console.error("Submit error", e);
+            if (typeof showCenterNotification === 'function') {
+                showCenterNotification("Connection error while submitting decision: " + e.message, "error", "Connection Error");
+            } else {
+                showErrorOverlay("Connection error while submitting decision: " + e.message);
+            }
+            if (btnDraft) {
+                btnDraft.innerHTML = '<i class="bi bi-file-earmark me-2"></i> Save as Draft';
+                btnDraft.disabled = false;
+            }
+            if (btnSubmit) {
+                btnSubmit.innerHTML = 'Submit Decision <i data-lucide="check" style="width:18px;" class="ms-2"></i>';
+                btnSubmit.disabled = false;
+            }
             if (window.lucide) window.lucide.createIcons();
         }
     }
     
+    function showErrorOverlay(message) {
+        const overlay = document.getElementById('errorOverlay');
+        const msgEl = document.getElementById('errorOverlayMessage');
+        msgEl.innerText = message;
+        overlay.classList.remove('d-none');
+        overlay.classList.add('d-flex');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    
     // Add default alternative to match mockup Step 2 initially
     window.addEventListener('DOMContentLoaded', () => {
-        decisionPayload.alternatives.push({
-            id: 1, title: 'Full Cloud Migration', pros: 'Scalable, cost efficient long term', cons: 'High upfront cost, migration risk', cost: 1850000, feasibility_score: 85, risk_level: 'High'
-        });
-        decisionPayload.alternatives.push({
-            id: 2, title: 'Hybrid Approach', pros: 'Lower risk, flexible timeline', cons: 'Complex management', cost: 2200000, feasibility_score: 70, risk_level: 'Medium'
-        });
-        decisionPayload.alternatives.push({
-            id: 3, title: 'Status Quo', pros: 'No disruption, known costs', cons: 'Technical debt accumulates', cost: 800000, feasibility_score: 40, risk_level: 'Low'
-        });
+        initTagsUI();
+        loadUsers();
         renderAlts();
+        updateApprovalFlowCard();
+
+        const catSelect = document.getElementById('cdCategory');
+        if (catSelect) catSelect.addEventListener('change', updateApprovalFlowCard);
+        const prioSelect = document.getElementById('cdPriority');
+        if (prioSelect) prioSelect.addEventListener('change', updateApprovalFlowCard);
+
+        // Apply default category from settings if not editing
+        const defCat = localStorage.getItem('edrp_default_category');
+        if (defCat && catSelect) {
+            for (let i = 0; i < catSelect.options.length; i++) {
+                if (catSelect.options[i].text.toLowerCase().includes(defCat.toLowerCase())) {
+                    catSelect.selectedIndex = i;
+                    updateApprovalFlowCard();
+                    break;
+                }
+            }
+        }
+
+        // Check if we are in Edit Mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit');
+        if (editId && !isNaN(parseInt(editId, 10))) {
+            isEditMode = true;
+            editDecisionId = parseInt(editId, 10);
+            const breadcrumbEl = document.getElementById('breadcrumb-step');
+            if (breadcrumbEl) breadcrumbEl.innerText = "Edit Decision";
+            const headerEl = document.querySelector('h2.fw-bold');
+            if (headerEl) headerEl.innerText = "Edit Decision";
+            loadDecisionForEdit(editDecisionId);
+        } else {
+            restoreSavedProgress();
+        }
         
         if (window.lucide) {
             window.lucide.createIcons();

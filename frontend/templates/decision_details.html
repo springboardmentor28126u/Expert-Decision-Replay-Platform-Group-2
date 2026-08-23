@@ -58,14 +58,145 @@
         border-radius: 4px;
     }
     .avatar-sm {
-        width: 24px;
-        height: 24px;
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    /* Modern Discussion Chat Styling */
+    .chat-msg-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 12px;
+        width: 100%;
+    }
+    .chat-msg-row.own-msg {
+        flex-direction: row-reverse;
+    }
+
+    .chat-avatar {
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
-        display: inline-flex;
+        display: flex;
         align-items: center;
         justify-content: center;
+        font-weight: 700;
+        font-size: 11.5px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+    }
+
+    .chat-bubble-wrap {
+        max-width: 78%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-msg-row.own-msg .chat-bubble-wrap {
+        align-items: flex-end;
+    }
+
+    .chat-msg-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+        font-size: 11px;
+    }
+
+    .chat-msg-author {
+        font-weight: 700;
+        color: #1E293B;
+    }
+
+    .chat-msg-empid {
+        background: #E2E8F0;
+        color: #0F172A;
+        padding: 1px 6px;
+        border-radius: 4px;
         font-size: 10px;
-        font-weight: bold;
+        font-weight: 700;
+        font-family: monospace;
+        border: 1px solid #CBD5E1;
+    }
+
+    .chat-msg-time {
+        color: #94A3B8;
+        font-size: 10px;
+    }
+
+    .chat-bubble {
+        padding: 11px 15px;
+        border-radius: 16px;
+        font-size: 13.5px;
+        line-height: 1.5;
+        word-break: break-word;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+
+    .chat-msg-row.own-msg .chat-bubble {
+        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+        color: #FFFFFF;
+        border-bottom-right-radius: 4px;
+    }
+
+    .chat-msg-row.other-msg .chat-bubble {
+        background: #FFFFFF;
+        color: #0F172A;
+        border: 1px solid #E2E8F0;
+        border-bottom-left-radius: 4px;
+    }
+
+    /* Rendered Mention Pill */
+    .mention-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #E0F2FE;
+        color: #0284C7;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        border: 1px solid #BAE6FD;
+        margin: 0 2px;
+    }
+
+    .chat-msg-row.own-msg .mention-pill {
+        background: rgba(255, 255, 255, 0.25);
+        color: #FFFFFF;
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .mention-empid {
+        background: rgba(2, 132, 199, 0.15);
+        color: #0369A1;
+        font-size: 10px;
+        padding: 0 4px;
+        border-radius: 3px;
+        font-family: monospace;
+    }
+
+    .chat-msg-row.own-msg .mention-empid {
+        background: rgba(255, 255, 255, 0.3);
+        color: #FFFFFF;
+    }
+
+    /* Mention Dropdown Menu Items */
+    .mention-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .mention-dropdown-item:hover, .mention-dropdown-item.active {
+        background: #F1F5F9;
     }
 </style>
 
@@ -85,187 +216,485 @@
         </div>
     </div>
     <div class="d-flex gap-2">
-        <button class="btn btn-white border shadow-sm fw-semibold text-secondary d-flex align-items-center">
+        <button id="btnSubmitDraft" class="btn btn-success shadow-sm fw-semibold d-flex align-items-center d-none" onclick="submitDraftForReview()">
+            <i class="bi bi-send-check-fill me-2"></i> Submit for Review
+        </button>
+        <button id="btnEditDecision" class="btn btn-white border shadow-sm fw-semibold text-secondary d-flex align-items-center" onclick="window.location.href='/create_decision?edit={{ decision_id }}'">
             <i class="bi bi-pencil me-2"></i> Edit
         </button>
-        <button class="btn btn-primary shadow-sm fw-semibold d-flex align-items-center">
+        <button id="btnArchiveDecision" class="btn btn-white border shadow-sm fw-semibold text-secondary d-flex align-items-center" onclick="archiveCurrentDecision()">
+            <i class="bi bi-archive me-2"></i> Archive
+        </button>
+        <button class="btn btn-primary shadow-sm fw-semibold d-flex align-items-center" onclick="sendReminder()">
             <i class="bi bi-bell me-2"></i> Send Reminder
+        </button>
+        <button id="btnDeleteDecision" class="btn btn-outline-danger shadow-sm fw-semibold d-flex align-items-center" onclick="deleteCurrentDecision()">
+            <i class="bi bi-trash me-2"></i> Delete
         </button>
     </div>
 </div>
 
-<div class="row g-4">
-    <!-- Left Column -->
-    <div class="col-lg-8">
-        
-        <!-- Context Card -->
-        <div class="premium-card mb-4 p-4">
-            <h5 class="fw-bold text-dark mb-3">Decision Context</h5>
-            <p class="text-muted" id="detailDescription" style="line-height: 1.7;"></p>
-            
-            <!-- Quick Meta inline -->
-            <div class="d-flex gap-4 mt-4 pt-3 border-top">
-                <div>
-                    <small class="text-muted d-block mb-1">Owner</small>
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm bg-primary text-white me-2">O</div>
-                        <span class="fw-semibold text-dark text-sm" id="detailCreator">...</span>
+<!-- Tab Navigation Header (Workflow 3/3b) -->
+<ul class="nav nav-pills mb-4 bg-white p-2 rounded-3 border shadow-sm" id="decisionTabs" style="gap: 0.5rem;">
+    <li class="nav-item">
+        <a class="nav-link active fw-bold text-sm px-4" href="#" id="tab-link-overview" onclick="switchTab('overview')">
+            <i class="bi bi-info-circle me-2"></i>Overview
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link fw-semibold text-secondary text-sm px-4" href="#" id="tab-link-rationale" onclick="switchTab('rationale')">
+            <i class="bi bi-file-earmark-text me-2"></i>Rationale
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link fw-semibold text-secondary text-sm px-4" href="#" id="tab-link-discussions" onclick="switchTab('discussions')">
+            <i class="bi bi-chat-left-text me-2"></i>Discussions
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link fw-semibold text-secondary text-sm px-4" href="#" id="tab-link-meeting_notes" onclick="switchTab('meeting_notes')">
+            <i class="bi bi-calendar-event me-2"></i>Meeting Notes
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link fw-semibold text-secondary text-sm px-4" href="#" id="tab-link-documents" onclick="switchTab('documents')">
+            <i class="bi bi-paperclip me-2"></i>Supporting Documents
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link fw-semibold text-secondary text-sm px-4" href="#" id="tab-link-history" onclick="switchTab('history')">
+            <i class="bi bi-clock-history me-2"></i>Version History
+        </a>
+    </li>
+</ul>
+
+<!-- Overview Tab -->
+<div id="tab-pane-overview" class="tab-pane-content">
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Review Action Card for Pending Reviewers -->
+            <div id="pendingReviewActionCard" class="card border-0 bg-primary bg-opacity-10 border-start border-primary border-4 p-4 rounded-3 mb-4 d-none">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h5 class="fw-bold text-primary mb-1"><i class="bi bi-shield-check me-2"></i>Review Action Required</h5>
+                        <p class="text-muted text-sm mb-0">You are requested to review this decision. Please choose your decision below.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success fw-semibold px-4 shadow-sm" onclick="submitDetailReviewAction('Approved')">
+                            <i class="bi bi-check-circle me-1"></i> Accept
+                        </button>
+                        <button class="btn btn-danger fw-semibold px-4 shadow-sm" onclick="submitDetailReviewAction('Rejected')">
+                            <i class="bi bi-x-circle me-1"></i> Reject
+                        </button>
                     </div>
                 </div>
-                <div>
-                    <small class="text-muted d-block mb-1">Created Date</small>
-                    <span class="fw-semibold text-dark text-sm" id="detailDate">...</span>
-                </div>
-                <div>
-                    <small class="text-muted d-block mb-1">Due Date</small>
-                    <span class="fw-semibold text-dark text-sm" id="detailDueDate">Not set</span>
-                </div>
             </div>
-        </div>
 
-        <!-- Alternatives Evaluation (Workflow 3b) -->
-        <div class="premium-card p-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h5 class="fw-bold text-dark mb-1">Alternatives Considered</h5>
-                    <p class="text-muted text-sm mb-0">Evaluate and compare the options for this decision.</p>
-                </div>
-                <button class="btn btn-outline-primary btn-sm fw-semibold" onclick="openAlternativeModal()">
-                    <i class="bi bi-plus"></i> Add Option
-                </button>
-            </div>
-            
-            <div id="alternativesEvaluatorList">
-                <!-- Data populated by JS, placeholder here for layout -->
-                <div class="border rounded-3 p-3 mb-3 hover-shadow transition">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+            <!-- Context Card -->
+            <div class="premium-card mb-4 p-4">
+                <h5 class="fw-bold text-dark mb-3">Decision Context</h5>
+                <p class="text-muted" id="detailDescription" style="line-height: 1.7;"></p>
+                
+                <!-- Quick Meta inline -->
+                <div class="d-flex gap-4 mt-4 pt-3 border-top">
+                    <div>
+                        <small class="text-muted d-block mb-1">Owner</small>
                         <div class="d-flex align-items-center">
-                            <i class="bi bi-circle text-muted me-2"></i>
-                            <h6 class="fw-bold mb-0">Alternative 1 (Placeholder)</h6>
+                            <div class="avatar-sm bg-primary text-white me-2">O</div>
+                            <span class="fw-semibold text-dark text-sm" id="detailCreator">...</span>
                         </div>
-                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Recommended</span>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-6">
-                            <small class="text-muted d-block mb-1">Alignment Score</small>
-                            <div class="d-flex align-items-center">
-                                <div class="alt-progress-bar w-100 me-2">
-                                    <div class="alt-progress-fill bg-success" style="width: 85%;"></div>
-                                </div>
-                                <span class="fw-bold text-sm">85%</span>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <small class="text-muted d-block mb-1">Cost</small>
-                            <span class="fw-semibold text-sm">$--</span>
-                        </div>
-                        <div class="col-3">
-                            <small class="text-muted d-block mb-1">Risk</small>
-                            <span class="fw-semibold text-sm">--</span>
-                        </div>
+                    <div>
+                        <small class="text-muted d-block mb-1">Created Date</small>
+                        <span class="fw-semibold text-dark text-sm" id="detailDate">...</span>
+                    </div>
+                    <div>
+                        <small class="text-muted d-block mb-1">Due Date</small>
+                        <span class="fw-semibold text-dark text-sm" id="detailDueDate">Not set</span>
                     </div>
                 </div>
-                <!-- End placeholder -->
             </div>
-            
-            <div class="text-center mt-3">
-                <button class="btn btn-link text-decoration-none fw-semibold">View Detailed Comparison Matrix <i class="bi bi-arrow-right"></i></button>
-            </div>
-        </div>
-        
-    </div>
 
-    <!-- Right Column -->
-    <div class="col-lg-4">
-        
-        <!-- Decision Info / Meta -->
-        <div class="premium-card p-4 mb-4">
-            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Decision Info</h6>
-            
-            <div class="mb-3">
-                <small class="text-muted d-block mb-1">Category</small>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">General</span>
-            </div>
-            
-            <div class="mb-3">
-                <small class="text-muted d-block mb-1">Impact Level</small>
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-arrow-up-circle-fill text-danger me-2"></i>
-                    <span class="fw-semibold text-dark">High Impact</span>
+            <!-- Alternatives Evaluation (Workflow 3b) -->
+            <div class="premium-card p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1">Alternatives Considered</h5>
+                        <p class="text-muted text-sm mb-0">Evaluate and compare the options for this decision.</p>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm fw-semibold" onclick="openAlternativeModal()">
+                        <i class="bi bi-plus"></i> Add Option
+                    </button>
                 </div>
-            </div>
-            
-            <div>
-                <small class="text-muted d-block mb-2">Tags</small>
-                <div class="d-flex flex-wrap gap-1">
-                    <span class="badge bg-light text-secondary border">Q4</span>
-                    <span class="badge bg-light text-secondary border">Budget</span>
+                
+                <div id="alternativesEvaluatorList">
+                    <!-- Data populated by JS -->
                 </div>
             </div>
         </div>
 
-        <!-- Approval Chain Timeline -->
-        <div class="premium-card p-4">
-            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                <h6 class="fw-bold text-dark mb-0">Approval Chain</h6>
-                <button class="btn btn-link btn-sm p-0 text-decoration-none"><i class="bi bi-gear"></i></button>
-            </div>
-            
-            <div class="timeline-vertical mt-3">
-                <div class="timeline-item completed">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="fw-bold mb-0 text-sm">Draft Created</h6>
-                            <p class="text-muted mb-0" style="font-size: 12px;">John Doe</p>
-                        </div>
-                        <small class="text-muted" style="font-size: 11px;">Oct 10</small>
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Decision Info / Meta -->
+            <div class="premium-card p-4 mb-4">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Decision Info</h6>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Category</small>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" id="infoCategory">General</span>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Impact Level</small>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-up-circle-fill text-danger me-2"></i>
+                        <span class="fw-semibold text-dark" id="infoImpact">High Impact</span>
                     </div>
                 </div>
-                <div class="timeline-item completed">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="fw-bold mb-0 text-sm">Peer Review</h6>
-                            <p class="text-muted mb-0" style="font-size: 12px;">Sarah Chen <i class="bi bi-check-circle-fill text-success ms-1"></i></p>
-                        </div>
-                        <small class="text-muted" style="font-size: 11px;">Oct 12</small>
-                    </div>
-                </div>
-                <div class="timeline-item active">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="fw-bold mb-0 text-sm text-primary">Director Approval</h6>
-                            <p class="text-muted mb-0" style="font-size: 12px;">Pending: Michael Scott</p>
-                        </div>
-                        <small class="text-primary fw-bold" style="font-size: 11px;">Current</small>
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="fw-semibold text-secondary mb-0 text-sm">Final Sign-off</h6>
-                            <p class="text-muted mb-0" style="font-size: 12px;">VP Finance</p>
-                        </div>
+                
+                <div>
+                    <small class="text-muted d-block mb-2">Tags</small>
+                    <div class="d-flex flex-wrap gap-1" id="infoTags">
+                        <!-- Tags populated by JS -->
                     </div>
                 </div>
             </div>
-            
-            <!-- Admin override for demo purposes -->
-            <div class="mt-4 pt-3 border-top">
-                <label class="form-label fw-semibold text-sm">Override Status (Demo)</label>
-                <div class="input-group input-group-sm">
-                    <select id="statusSelect" class="form-select border-end-0">
-                        <option value="Pending">Pending</option>
-                        <option value="Under Review">Under Review</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Rejected">Rejected</option>
-                    </select>
-                    <button class="btn btn-outline-secondary" onclick="updateStatus()">Update</button>
+
+            <!-- Approval Chain Timeline -->
+            <div class="premium-card p-4">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold text-dark mb-0">Approval Chain</h6>
                 </div>
+                
+                <div class="timeline-vertical mt-3" id="approvalChainContainer">
+                    <div class="text-center py-4 text-muted small">Loading approval chain...</div>
+                </div>
+                
+                <!-- Admin override section (Only for Administrators) -->
+                {% set role_name = session.get('role_name', 'User') %}
+                {% if role_name in ['Administrator', 'Admin'] %}
+                <div class="mt-4 pt-3 border-top" id="updateStatusContainer">
+                    <label class="form-label fw-semibold text-sm">Update Decision Status</label>
+                    <div class="input-group input-group-sm">
+                        <select id="statusSelect" class="form-select border-end-0">
+                            <option value="Draft">Draft</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Archived">Archived</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" onclick="updateStatus()">Update</button>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
-
     </div>
 </div>
+
+<!-- Rationale Tab -->
+<div id="tab-pane-rationale" class="tab-pane-content d-none">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="premium-card p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3">Reason for Decision</h5>
+                <p class="text-muted" style="line-height: 1.7;">
+                    The core justification for this decision aligns with the strategic imperative to optimize technology investments, reduce infrastructure constraints, and comply with regulatory security guidelines.
+                </p>
+                <div class="alert alert-info border-0 bg-light-subtle d-flex align-items-center mb-0 mt-3" style="border-radius: 8px;">
+                    <i class="bi bi-info-circle-fill text-primary fs-5 me-3"></i>
+                    <span class="text-muted text-sm">Decision rationale is auto-generated based on the recommended alternative comparison score and business requirements.</span>
+                </div>
+            </div>
+
+            <div class="premium-card p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3">Alternatives pros & cons</h5>
+                <div class="row g-3" id="rationaleProsCons">
+                    <!-- Loaded dynamically via JS -->
+                </div>
+            </div>
+
+            <div class="premium-card p-4">
+                <h5 class="fw-bold text-dark mb-3">Risk Assessment</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle text-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Risk Description</th>
+                                <th>Impact Level</th>
+                                <th>Mitigation Strategy</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rationaleRiskTable">
+                            <!-- Loaded dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="premium-card p-4 mb-4">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Business Justification</h6>
+                <div class="row g-3 text-center mb-3">
+                    <div class="col-6">
+                        <div class="border rounded p-3 bg-light">
+                            <h4 class="fw-bold text-primary mb-1">$2.4M</h4>
+                            <small class="text-muted text-xs">Total Investment</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 bg-light">
+                            <h4 class="fw-bold text-success mb-1">$4.3M</h4>
+                            <small class="text-muted text-xs">3-Year Savings</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 bg-light">
+                            <h4 class="fw-bold text-info mb-1">180%</h4>
+                            <small class="text-muted text-xs">Expected ROI</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3 bg-light">
+                            <h4 class="fw-bold text-warning mb-1">Q2 2025</h4>
+                            <small class="text-muted text-xs">Break-even</small>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted text-sm mb-0" style="line-height: 1.6;">
+                    Consolidation of licenses and shifting from capital expenses to an elastic operational model guarantees lower maintenance costs and standardizes security governance.
+                </p>
+            </div>
+
+            <div class="premium-card p-4">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Expected Outcome Timeline</h6>
+                <div class="timeline-vertical mt-3" style="padding-left: 20px;">
+                    <div class="timeline-item completed">
+                        <h6 class="fw-bold text-sm mb-0">Q1 2025 Planned</h6>
+                        <small class="text-muted">Infrastructure baseline deployed</small>
+                    </div>
+                    <div class="timeline-item active">
+                        <h6 class="fw-bold text-sm mb-0">Q2 2025 Planned</h6>
+                        <small class="text-muted">Primary workloads migrated</small>
+                    </div>
+                    <div class="timeline-item">
+                        <h6 class="fw-bold text-sm mb-0">Q3 2025 Projected</h6>
+                        <small class="text-muted">Break-even achieved</small>
+                    </div>
+                    <div class="timeline-item">
+                        <h6 class="fw-bold text-sm mb-0">Q4 2025 Planned</h6>
+                        <small class="text-muted">Full legacy decommissioned</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Discussions Tab (Workflow 3b) -->
+<div id="tab-pane-discussions" class="tab-pane-content d-none">
+    <div class="row g-4">
+        <!-- Threads List Panel -->
+        <div class="col-md-5 col-lg-4">
+            <div class="premium-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0">Discussion Threads</h6>
+                    <button class="btn btn-primary btn-sm px-3" onclick="openNewThreadModal()">
+                        <i class="bi bi-plus-circle me-1"></i>New Thread
+                    </button>
+                </div>
+                <input type="text" id="threadSearch" class="form-control form-control-sm mb-3" placeholder="Search threads...">
+                
+                <div id="threadsListContainer" class="d-flex flex-column gap-2" style="max-height: 500px; overflow-y: auto;">
+                    <!-- Loaded dynamically via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Comments Feed Panel (Modern Chat Page Experience) -->
+        <div class="col-md-7 col-lg-8">
+            <div class="premium-card p-0 d-flex flex-column h-100 overflow-hidden border" style="min-height: 540px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.06);">
+                <!-- Chat Header -->
+                <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 38px; height: 38px; font-size: 15px;">
+                            💬
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h6 class="fw-bold text-dark mb-0 fs-6" id="currentThreadTopic">Select a Thread</h6>
+                                <span class="badge bg-primary-subtle text-primary border rounded-pill text-xs" id="currentThreadStatus" style="display: none;">Open</span>
+                            </div>
+                            <small class="text-muted" style="font-size: 11px;" id="currentThreadSubtext">Join the team discussion</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm text-xs rounded-3 d-none align-items-center gap-1 fw-semibold shadow-2xs" id="btnDeleteActiveThread" onclick="deleteActiveThread()">
+                        <i class="bi bi-trash"></i> Delete Thread
+                    </button>
+                </div>
+
+                <!-- Chat Body (Scrollable Messages Container) -->
+                <div id="commentsFeedContainer" class="flex-grow-1 p-4 d-flex flex-column gap-2" style="max-height: 430px; min-height: 380px; overflow-y: auto; background: #F8FAFC;">
+                    <div class="text-center text-muted py-5 my-auto">
+                        <div class="rounded-circle bg-white border d-inline-flex align-items-center justify-content-center p-3 mb-3 shadow-sm">
+                            <i class="bi bi-chat-dots text-primary fs-2"></i>
+                        </div>
+                        <h6 class="fw-bold text-dark">No Thread Selected</h6>
+                        <p class="small text-muted mb-0">Select a thread from the panel on the left to view conversation messages.</p>
+                    </div>
+                </div>
+
+                <!-- Chat Input Box with Mention Support -->
+                <div class="p-3 border-top bg-white position-relative" id="addCommentFormBox" style="display: none;">
+                    <!-- Mention Autocomplete Popup Dropdown -->
+                    <div id="mentionDropdown" class="dropdown-menu shadow-lg border p-1 position-absolute" style="display: none; max-height: 220px; overflow-y: auto; z-index: 1050; bottom: 100%; left: 16px; width: 320px; border-radius: 12px; background: #FFFFFF; border-color: #E2E8F0 !important;">
+                        <!-- Mention items populated via JS -->
+                    </div>
+
+                    <div class="d-flex align-items-end gap-2">
+                        <div class="flex-grow-1 position-relative">
+                            <textarea class="form-control border-light-subtle rounded-3 p-2.5" id="newCommentContent" rows="2" placeholder="Write a message... Type @ to mention team members by Name or Employee ID" style="resize: none; font-size: 13.5px; line-height: 1.45;"></textarea>
+                            <small class="text-muted position-absolute bottom-0 end-0 pe-2 pb-1" style="font-size: 10px; pointer-events: none; opacity: 0.7;">Press Enter to send (Shift+Enter for new line)</small>
+                        </div>
+                        <button class="btn btn-primary px-3 py-2.5 fw-bold d-flex align-items-center gap-1.5 rounded-3 shadow-sm" type="button" onclick="submitComment()">
+                            <i class="bi bi-send-fill"></i>
+                            <span>Send</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Meeting Notes Tab (Workflow 3b) -->
+<div id="tab-pane-meeting_notes" class="tab-pane-content d-none">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="premium-card p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-3 gap-2">
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1">Meeting Notes Log</h5>
+                        <p class="text-muted text-sm mb-0">Review documented session records and action items.</p>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm fw-semibold rounded-pill px-3 shadow-2xs" onclick="openNewMeetingNoteModal()">
+                        <i class="bi bi-calendar-plus me-1"></i> Add Notes
+                    </button>
+                </div>
+
+                <!-- Status Filter Pills Bar -->
+                <div class="d-flex align-items-center gap-2 mb-4 p-1.5 rounded-3 bg-light border">
+                    <button type="button" class="btn btn-sm filter-pill-btn btn-primary text-white fw-bold px-3 py-1.5 rounded-2 shadow-2xs" id="filter-btn-all" onclick="filterMeetingNotes('all')">
+                        All <span class="badge bg-white text-primary rounded-pill ms-1" id="count-all">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm filter-pill-btn text-secondary fw-semibold px-3 py-1.5 rounded-2" id="filter-btn-scheduled" onclick="filterMeetingNotes('scheduled')">
+                        Scheduled <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill ms-1" id="count-scheduled">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm filter-pill-btn text-secondary fw-semibold px-3 py-1.5 rounded-2" id="filter-btn-in_progress" onclick="filterMeetingNotes('in_progress')">
+                        In Progress <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill ms-1" id="count-in_progress">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm filter-pill-btn text-secondary fw-semibold px-3 py-1.5 rounded-2" id="filter-btn-completed" onclick="filterMeetingNotes('completed')">
+                        Completed <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1" id="count-completed">0</span>
+                    </button>
+                </div>
+
+                <div id="meetingNotesContainer">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="premium-card p-4">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Next Scheduled Session</h6>
+                <div id="nextScheduledSessionContainer">
+                    <div class="text-muted text-xs py-3 text-center">No upcoming meeting scheduled.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Supporting Documents Tab (Workflow 3b) -->
+<div id="tab-pane-documents" class="tab-pane-content d-none">
+    <div class="premium-card p-4">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+            <div>
+                <h5 class="fw-bold text-dark mb-1">Supporting Documents</h5>
+                <p class="text-muted text-sm mb-0">Attached materials and reference templates.</p>
+            </div>
+        </div>
+
+        <!-- Drag and drop zone -->
+        <div class="border rounded-3 p-5 text-center mb-4 border-dashed bg-light bg-opacity-50" id="dropzone" style="cursor: pointer;">
+            <i class="bi bi-cloud-arrow-up text-primary fs-1 mb-2"></i>
+            <h6 class="fw-bold text-dark mb-1">Click to upload or drag & drop files here</h6>
+            <p class="text-xs text-muted mb-0">Supports PDF, DOCX, XLSX, PPTX up to 50MB</p>
+            <input type="file" id="fileInput" class="d-none" multiple>
+        </div>
+
+        <!-- Documents List -->
+        <div class="table-responsive">
+            <table class="table align-middle text-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Document Title</th>
+                        <th>File Size</th>
+                        <th>Uploaded By</th>
+                        <th>Uploaded Date</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="documentsTableBody">
+                    <!-- Populated dynamically via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Version History Tab -->
+<div id="tab-pane-history" class="tab-pane-content d-none">
+    <div class="premium-card p-4">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+            <div>
+                <h5 class="fw-bold text-dark mb-1">Version History</h5>
+                <p class="text-muted text-sm mb-0">Timeline of updates and changes to this decision.</p>
+            </div>
+        </div>
+
+        <div class="timeline-vertical mt-3" id="versionHistoryContainer">
+            <div class="text-center py-4 text-muted small">Loading version history...</div>
+        </div>
+    </div>
+</div>
+
+<!-- New Thread Modal -->
+<div class="modal fade" id="newThreadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold">Start New Thread</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Thread Topic</label>
+                    <input type="text" id="newThreadTopicInput" class="form-control" placeholder="E.g., Scalability considerations...">
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4" onclick="submitNewThread()">Start Thread</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 
 <!-- Alternative Add/Edit Modal (Multi-Step Wizard) -->
 <div class="modal fade" id="alternativeModal" tabindex="-1">
@@ -429,6 +858,30 @@
     </div>
 </div>
 
+<!-- New Discussion Thread Modal -->
+<div class="modal fade" id="newThreadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold">Start Discussion Thread</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-0">
+                    <label class="form-label fw-semibold text-secondary">Thread Topic</label>
+                    <input type="text" id="newThreadTopicInput" class="form-control" placeholder="E.g., Scalability considerations...">
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4" onclick="submitNewThread()">Start Thread</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 <script>
     let currentAltStep = 1;
     const totalAltSteps = 3;
@@ -537,19 +990,20 @@
 </script>
 
 <script>
-    const API_URL = "http://127.0.0.1:8000";
-    const DECISION_ID = "{{ decision_id }}";
+
+    function sendReminder() {
+        showToast("Success", "A notification reminder has been successfully sent to the pending reviewers.");
+    }
     
     // Override the displayAlternatives function from decision_details.js to render the new beautiful cards instead of a basic table
     window.addEventListener('load', function() {
-        if(typeof displayAlternatives === 'function') {
-            const originalDisplayAlternatives = displayAlternatives;
-            displayAlternatives = function(alternatives) {
+        if(typeof renderAlternativesTable === 'function') {
+            renderAlternativesTable = function() {
                 const list = document.getElementById('alternativesEvaluatorList');
                 if (!list) return;
                 
                 list.innerHTML = '';
-                if (alternatives.length === 0) {
+                if (currentAlternatives.length === 0) {
                     list.innerHTML = `
                         <div class="text-center p-4 border rounded-3 bg-light border-dashed">
                             <i class="bi bi-ui-checks-grid text-muted fs-3 mb-2"></i>
@@ -560,49 +1014,59 @@
                     return;
                 }
                 
-                alternatives.forEach((alt, index) => {
-                    // Generate a random alignment score for visual demonstration if we don't have one
-                    const score = (alt.feasibility * 10) || Math.floor(Math.random() * 40 + 60);
-                    const isRecommended = index === 0; // Just for demo, mark first as recommended
+                currentAlternatives.forEach((alt, index) => {
+                    let score = 50;
+                    if (alt.feasibility_score !== null && alt.feasibility_score !== undefined && !isNaN(alt.feasibility_score)) {
+                        let val = parseFloat(alt.feasibility_score);
+                        if (val > 0 && val <= 1.0) {
+                            score = val * 100;
+                        } else if (val > 1.0 && val <= 10.0) {
+                            score = val * 10;
+                        } else {
+                            score = val;
+                        }
+                        score = Math.min(100, Math.max(0, Math.round(score)));
+                    }
+                    const isRecommended = index === 0; // Mark first as recommended
                     
-                    let riskColor = alt.risk === 'High' ? 'danger' : (alt.risk === 'Medium' ? 'warning' : 'success');
+                    let riskColor = alt.risk_level === 'High' ? 'danger' : (alt.risk_level === 'Medium' ? 'warning' : 'success');
                     
                     const card = document.createElement('div');
-                    card.className = \`border rounded-3 p-3 mb-3 position-relative \${isRecommended ? 'border-primary-subtle bg-primary-subtle bg-opacity-10' : ''}\`;
+                    card.className = `border rounded-3 p-3 mb-3 position-relative ${isRecommended ? 'border-primary-subtle bg-primary-subtle bg-opacity-10' : ''}`;
                     
-                    card.innerHTML = \`
+                    card.innerHTML = `
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="d-flex align-items-center">
-                                <i class="bi \${isRecommended ? 'bi-check-circle-fill text-primary' : 'bi-circle text-muted'} me-2"></i>
-                                <h6 class="fw-bold mb-0">\${alt.title}</h6>
+                                <i class="bi ${isRecommended ? 'bi-check-circle-fill text-primary' : 'bi-circle text-muted'} me-2"></i>
+                                <h6 class="fw-bold mb-0">${alt.title}</h6>
                             </div>
                             <div>
-                                \${isRecommended ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill me-2">Recommended</span>' : ''}
-                                <button class="btn btn-sm btn-link text-muted p-0" onclick="editAlternative(\${alt.id})"><i class="bi bi-pencil"></i></button>
-                                <button class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="deleteAlternative(\${alt.id})"><i class="bi bi-trash"></i></button>
+                                ${isRecommended ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill me-2">Recommended</span>' : ''}
+                                <button class="btn btn-sm btn-link text-muted p-0" onclick="editAlternative(${alt.id})"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="deleteAlternative(${alt.id})"><i class="bi bi-trash"></i></button>
                             </div>
                         </div>
-                        <p class="text-sm text-muted mb-3">\${alt.description || 'No description provided.'}</p>
+                        <p class="text-sm text-muted mb-3">${alt.description || 'No description provided.'}</p>
                         <div class="row align-items-center">
                             <div class="col-sm-5 mb-2 mb-sm-0">
                                 <small class="text-muted d-block mb-1" style="font-size: 11px;">Alignment Score</small>
                                 <div class="d-flex align-items-center">
                                     <div class="alt-progress-bar w-100 me-2">
-                                        <div class="alt-progress-fill bg-\${score > 75 ? 'success' : (score > 50 ? 'warning' : 'danger')}" style="width: \${score}%;"></div>
+                                        <div class="alt-progress-fill bg-${score > 75 ? 'success' : (score > 50 ? 'warning' : 'danger')}" style="width: ${score}%;"></div>
                                     </div>
-                                    <span class="fw-bold" style="font-size: 12px;">\${score}%</span>
+                                    <span class="fw-bold" style="font-size: 12px;">${score}%</span>
                                 </div>
                             </div>
                             <div class="col-sm-3 col-6">
                                 <small class="text-muted d-block mb-1" style="font-size: 11px;">Cost</small>
-                                <span class="fw-semibold" style="font-size: 13px;">$\${alt.cost || '0.00'}</span>
+                                <span class="fw-semibold" style="font-size: 13px;">$${alt.cost || '0.00'}</span>
                             </div>
                             <div class="col-sm-4 col-6 text-end text-sm-start">
                                 <small class="text-muted d-block mb-1" style="font-size: 11px;">Risk</small>
-                                <span class="badge bg-\${riskColor}-subtle text-\${riskColor} border border-\${riskColor}-subtle px-2 py-1">\${alt.risk || 'Unknown'}</span>
+                                <span class="badge bg-${riskColor}-subtle text-${riskColor} border border-${riskColor}-subtle px-2 py-1">${alt.risk_level || 'Unknown'}</span>
                             </div>
                         </div>
-                    \`;
+                    `;
                     list.appendChild(card);
                 });
             };
@@ -614,5 +1078,153 @@
         }
     });
 </script>
-<script src="{{ url_for('static', filename='js/decision_details.js') }}"></script>
+<!-- New Discussion Thread Modal -->
+<div class="modal fade" id="newThreadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom py-3">
+                <h5 class="modal-title fw-bold text-dark fs-6"><i class="bi bi-chat-left-dots-fill text-primary me-2"></i>Start New Discussion Thread</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label for="newThreadTopicInput" class="form-label fw-semibold text-dark small">Discussion Topic / Subject <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="newThreadTopicInput" placeholder="e.g. Budget Allocation & Vendor Alternatives">
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top py-2">
+                <button type="button" class="btn btn-light border fw-semibold text-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary fw-semibold" onclick="submitNewThread()">Start Thread</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Meeting Note Modal -->
+<div class="modal fade" id="newMeetingNoteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+            <div class="modal-header bg-light border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-dark fs-6"><i class="bi bi-calendar-plus text-primary me-2"></i>Schedule Session & Record Notes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label for="newMeetingTitle" class="form-label fw-semibold text-dark small">Meeting Title / Topic <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-3" id="newMeetingTitle" placeholder="e.g. Architecture Alignment Sync">
+                    </div>
+                    <div class="col-md-5">
+                        <label for="newMeetingDate" class="form-label fw-semibold text-dark small">Meeting Date & Time <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control rounded-3" id="newMeetingDate">
+                    </div>
+                    
+                    <div class="col-md-7 position-relative">
+                        <label for="newMeetingParticipants" class="form-label fw-semibold text-dark small">Participants / Tag Teammates (@ Mention)</label>
+                        <input type="text" class="form-control rounded-3" id="newMeetingParticipants" placeholder="Type @ to tag participants by Name or Employee ID">
+                        <div id="mentionDropdownParticipants" class="dropdown-menu shadow-lg border p-1 position-absolute" style="display: none; max-height: 200px; overflow-y: auto; z-index: 1060; width: 100%; border-radius: 12px; background: #FFFFFF;"></div>
+                    </div>
+                    
+                    <div class="col-md-5">
+                        <label for="newMeetingLink" class="form-label fw-semibold text-dark small">Google Meet / Location Link</label>
+                        <input type="url" class="form-control rounded-3" id="newMeetingLink" placeholder="https://meet.google.com/abc-defg-hij">
+                    </div>
+
+                    <div class="col-12 position-relative">
+                        <label for="newMeetingNotes" class="form-label fw-semibold text-dark small">Key Meeting Notes, Agenda & Decisions <span class="text-danger">*</span></label>
+                        <textarea class="form-control rounded-3" id="newMeetingNotes" rows="4" placeholder="Document agenda items, key discussions, and @mention attendees..."></textarea>
+                        <div id="mentionDropdownNotes" class="dropdown-menu shadow-lg border p-1 position-absolute" style="display: none; max-height: 200px; overflow-y: auto; z-index: 1060; bottom: 100%; left: 0; width: 100%; border-radius: 12px; background: #FFFFFF;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top py-2.5 px-4">
+                <button type="button" class="btn btn-light border fw-semibold text-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary fw-semibold px-4 rounded-3" onclick="submitNewMeetingNote()">Save & Schedule Session</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Meeting Note Detail & Live Chat Modal -->
+<div class="modal fade" id="meetingNoteDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-light border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-2xs" style="width: 38px; height: 38px; font-size: 16px;">
+                        📅
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark fs-6 mb-0" id="detailNoteTitle">Meeting Detail</h5>
+                        <div class="text-muted text-xs" id="detailNoteDate">N/A</div>
+                    </div>
+                    <span id="detailNoteStatus" class="badge rounded-pill text-xs ms-2">Scheduled</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row g-0">
+                    <!-- Left Column: Session Info & Notes -->
+                    <div class="col-lg-6 p-4 border-end bg-white custom-scrollbar" style="max-height: 520px; overflow-y: auto;">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                            <span class="text-muted text-xs fw-semibold">SESSION DETAILS</span>
+                            <div id="detailJoinMeetBtnContainer"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark text-xs mb-1">Participants</label>
+                            <div id="detailNoteParticipants" class="d-flex flex-wrap gap-1.5 text-xs"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark text-xs mb-1">Key Notes & Decisions</label>
+                            <div class="p-3 bg-light rounded-3 border text-dark text-sm" id="detailNoteContent" style="white-space: pre-wrap; line-height: 1.6;"></div>
+                        </div>
+
+                        <div class="text-muted text-xs mt-3 pt-2 border-top d-flex justify-content-between">
+                            <span>Recorded by: <strong id="detailNoteAuthor">User</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Live Meeting Chat & Links -->
+                    <div class="col-lg-6 p-0 d-flex flex-column bg-light" style="min-height: 500px; max-height: 520px;">
+                        <div class="p-3 border-bottom bg-white d-flex align-items-center gap-2">
+                            <i class="bi bi-chat-dots-fill text-primary"></i>
+                            <h6 class="fw-bold text-dark mb-0 text-sm">Session Live Chat & Links</h6>
+                        </div>
+
+                        <!-- Chat Feed -->
+                        <div id="meetingChatFeedContainer" class="flex-grow-1 p-3 d-flex flex-column gap-2.5 custom-scrollbar" style="overflow-y: auto; background: #F8FAFC;">
+                            <div class="text-center text-muted py-5 my-auto">
+                                <i class="bi bi-chat-text text-secondary fs-3 d-block mb-1"></i>
+                                <span class="small">No messages in meeting chat yet.</span>
+                            </div>
+                        </div>
+
+                        <!-- Chat Input Bar -->
+                        <div class="p-3 border-top bg-white position-relative" id="meetingChatInputBox">
+                            <div id="mentionDropdownMeetingChat" class="dropdown-menu shadow-lg border p-1 position-absolute" style="display: none; max-height: 200px; overflow-y: auto; z-index: 1060; bottom: 100%; left: 16px; width: 300px; border-radius: 12px; background: #FFFFFF;"></div>
+                            <div class="d-flex align-items-end gap-2">
+                                <textarea class="form-control border-light-subtle rounded-3 p-2 text-sm" id="meetingChatInputText" rows="2" placeholder="Send Google Meet links, updates... Type @ to tag teammates" style="resize: none;"></textarea>
+                                <button class="btn btn-primary px-3 py-2 fw-bold d-flex align-items-center gap-1 rounded-3 shadow-sm flex-shrink-0" onclick="submitMeetingNoteComment()">
+                                    <i class="bi bi-send-fill text-xs"></i>
+                                    <span>Send</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "/api";
+    const DECISION_ID = parseInt("{{ decision_id }}", 10);
+    const USER_ID = parseInt("{{ session.get('user_id', 1) }}", 10);
+    const CURRENT_USER_ROLE = "{{ session.get('role_name', '') }}" || localStorage.getItem('role_name') || 'Employee';
+    const CURRENT_USER_NAME = "{{ session.get('full_name', '') }}" || localStorage.getItem('full_name') || '';
+</script>
+<script src="{{ url_for('static', filename='js/decision_details.js') }}?v=20260818_details_v7"></script>
 {% endblock %}
