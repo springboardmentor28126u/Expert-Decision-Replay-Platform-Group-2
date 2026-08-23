@@ -17,8 +17,9 @@ Built as a college mentorship project (Springboard), Group 2, across four milest
 7. [Setup Instructions](#setup-instructions)
 8. [Environment Variables](#environment-variables)
 9. [Challenges Faced & How We Solved Them](#challenges-faced--how-we-solved-them)
-10. [API Documentation](#api-documentation)
-11. [Future Scope](#future-scope)
+10. [Screenshots](#screenshots)
+11. [API Documentation](#api-documentation)
+12. [Future Scope](#future-scope)
 
 ---
 
@@ -269,6 +270,40 @@ One teammate's branch restructured the entire backend into a different folder ar
 
 **10. Merge conflicts across shared files**
 With multiple people editing `main.py`, `models.py`, and migration files simultaneously, conflicts were resolved by manually combining both sides' genuine additions rather than picking one side, and verifying final state against the shared Neon database when in doubt.
+
+---
+
+## Screenshots
+
+### Landing Page
+![Landing Page](screenshots/01-landing.png)
+
+### Admin Dashboard
+![Admin Dashboard](screenshots/02-admin-dashboard.png)
+
+### Decision List
+![Decision List](screenshots/03-decisions-list.png)
+
+### Create Decision (AI-Generated Problem Statement)
+![Create Decision](screenshots/04-create-decision.png)
+
+### Decision Details
+![Decision Details](screenshots/05-decision-details.png)
+
+### Approval Workflow with AI Recommendation
+![Approval AI Recommendation](screenshots/06-approval-ai-recommendation.png)
+
+### AI Assistant — Summary
+![AI Summary](screenshots/07-ai-summary.png)
+
+### AI Assistant — Ask a Question
+![AI Ask a Question](screenshots/08-ai-ask-question.png)
+
+### Reports — Audit Log
+![Reports Audit](screenshots/09-reports-audit.png)
+
+### Email Alert
+![Email Alert](screenshots/10-email-alert.png)
 
 ---
 

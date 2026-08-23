@@ -1433,6 +1433,9 @@ def reject_decision(
         link=f"/decisions/{decision.id}"
     )
 
+    print("EMAIL DEBUG - Creator:", decision.creator)
+    print("EMAIL DEBUG - Creator email:", decision.creator.email if decision.creator else None)
+
     if decision.creator and decision.creator.email:
         queue_email(
             background_tasks,

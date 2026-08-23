@@ -25,6 +25,11 @@ def is_configured() -> bool:
 
 
 def send_email(*, to_email: str, subject: str, text_body: str, html_body: str) -> None:
+    print("EMAIL SEND START")
+    print("EMAIL TO:", to_email)
+    print("SMTP HOST:", SMTP_HOST)
+    print("SMTP FROM:", SMTP_FROM_EMAIL)
+    
     global _warned_unconfigured
 
     if not is_configured():
