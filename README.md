@@ -140,7 +140,7 @@ Accessible as a floating, dockable, resizable panel available from anywhere in t
 
 **Reliability design:**
 - Primary model: Google Gemini (`gemini-2.5-flash`)
-- Automatic fallback to Groq (`llama-3.3-70b-versatile`) if Gemini's free-tier quota is exhausted
+- Automatic fallback to Groq (`openai/gpt-oss-120b`) if Gemini's free-tier quota is exhausted
 - AI-generated summaries are cached in the database and only regenerated when the underlying decision changes
 - All rate-limit and error states are handled gracefully with clear in-app messaging, never a raw crash
 
