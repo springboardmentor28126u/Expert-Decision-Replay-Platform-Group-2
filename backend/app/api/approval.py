@@ -83,6 +83,8 @@ def assign_reviewer(
     )
     db.add(approval)
 
+    decision.status = "Pending"
+
     notification = Notification(
         user_id=reviewer_id,
         message=f"You've been assigned to review '{decision.title}' (Level {level})."

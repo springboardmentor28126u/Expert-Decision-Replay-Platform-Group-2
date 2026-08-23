@@ -66,6 +66,7 @@ def run_ai_review(decision, doc_count: int) -> dict:
             model="openrouter/free",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
+            response_format={"type": "json_object"},
             timeout=20,
         )
     except Exception as e:
@@ -76,10 +77,18 @@ def run_ai_review(decision, doc_count: int) -> dict:
             raise RuntimeError("AI service rate limit reached. Please wait a minute and try again.")
         raise ConnectionError(f"Could not reach AI service: {e}")
 
-    raw_text = response.choices[0].message.content
+    raw_text = response.choices[0].message.content or ""
     raw_text = raw_text.replace("```json", "").replace("```", "").strip()
 
     try:
         return json.loads(raw_text)
     except json.JSONDecodeError:
-        raise ValueError("AI response was not valid JSON: " + raw_text)
+        # Some routed models may still add text around the JSON object.
+        start = raw_text.find("{")
+        end = raw_text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(raw_text[start:end + 1])
+            except json.JSONDecodeError:
+                pass
+        raise RuntimeError("AI provider returned an unusable response. Please try again.")
