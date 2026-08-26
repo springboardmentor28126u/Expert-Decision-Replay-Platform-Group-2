@@ -165,7 +165,7 @@ python -m venv venv
 Activate it on Windows PowerShell:
 
 ```powershell
-.\venv\Scripts\activate
+./venv/Scripts/activate
 ```
 
 ### 4\. Install the backend dependencies
