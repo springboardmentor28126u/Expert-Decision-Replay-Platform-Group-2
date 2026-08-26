@@ -84,7 +84,11 @@ def home():
     return {
         "message": "Expert Decision Replay Platform API is Running!"
     }
-
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy"
+    }
 # ==========================================
 # Frontend Pages
 # ==========================================

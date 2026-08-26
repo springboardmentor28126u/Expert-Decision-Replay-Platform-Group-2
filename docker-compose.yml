@@ -1,5 +1,32 @@
 services:
 
+  db:
+    image: postgres:16
+    container_name: edrp-database
+
+    environment:
+      POSTGRES_DB: expert_decision_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "suhi@2928"
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d expert_decision_db"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -14,6 +41,14 @@ services:
       - .env
 
     environment:
-      OLLAMA_URL: http://host.docker.internal:11434/api/generate
+      DATABASE_URL: "postgresql://postgres:suhi%402928@db:5432/expert_decision_db"
+      OLLAMA_URL: "http://host.docker.internal:11434/api/generate"
+
+    depends_on:
+      db:
+        condition: service_healthy
 
     restart: unless-stopped
+
+volumes:
+  postgres_data:
